@@ -36,3 +36,43 @@ func canWriteTask(u *model.User, t *model.Task) bool {
 func canDeleteTask(u *model.User, t *model.Task) bool {
 	return t.CreatedBy == u.ID || (u.Role == "admin" && t.Visibility != "private")
 }
+
+func hasEventAssignee(ev *model.CalendarEvent, userID int64) bool {
+	for _, a := range ev.Assignees {
+		if a.ID == userID {
+			return true
+		}
+	}
+	return false
+}
+
+func canReadEvent(u *model.User, ev *model.CalendarEvent) bool {
+	switch ev.Visibility {
+	case "private":
+		return ev.CreatedBy == u.ID
+	case "selected":
+		return ev.CreatedBy == u.ID || hasEventAssignee(ev, u.ID)
+	default:
+		return true
+	}
+}
+
+func canWriteEvent(u *model.User, ev *model.CalendarEvent) bool {
+	return canReadEvent(u, ev)
+}
+
+func canDeleteEvent(u *model.User, ev *model.CalendarEvent) bool {
+	return ev.CreatedBy == u.ID || (u.Role == "admin" && ev.Visibility != "private")
+}
+
+func canReadContact(u *model.User, c *model.Contact) bool {
+	return c.OwnerScope != "private" || c.CreatedBy == u.ID
+}
+
+func canWriteContact(u *model.User, c *model.Contact) bool {
+	return canReadContact(u, c)
+}
+
+func canDeleteContact(u *model.User, c *model.Contact) bool {
+	return c.CreatedBy == u.ID || (u.Role == "admin" && c.OwnerScope != "private")
+}

@@ -163,6 +163,78 @@ type Reminder struct {
 	DeliveredAt    *int64  `json:"deliveredAt"`
 }
 
+// CalendarEvent 是日历事件；重复系列以单条记录存储，occurrenceDate 表示展开后的发生日期。
+type CalendarEvent struct {
+	ID              int64   `json:"id"`
+	Title           string  `json:"title"`
+	Description     *string `json:"description"`
+	StartLocal      string  `json:"startLocal"`
+	EndLocal        *string `json:"endLocal"`
+	AllDay          bool    `json:"allDay"`
+	Location        *string `json:"location"`
+	Color           *string `json:"color"`
+	Icon            *string `json:"icon"`
+	RecurrenceRule  *string `json:"recurrenceRule"`
+	SeriesID        *string `json:"seriesId"`
+	OccurrenceDate  *string `json:"occurrenceDate"`
+	Visibility      string  `json:"visibility"`
+	Source          string  `json:"source"`
+	SourceRef       *string `json:"-"`
+	CreatedBy       int64   `json:"createdBy"`
+	CreatedAt       int64   `json:"createdAt"`
+	UpdatedAt       int64   `json:"updatedAt"`
+	ReminderOffsets []int   `json:"reminderOffsets"`
+	Assignees       []User  `json:"assignees"`
+}
+
+// Contact 是家庭通讯录联系人。
+type Contact struct {
+	ID           int64         `json:"id"`
+	Name         string        `json:"name"`
+	Organization *string       `json:"organization"`
+	Title        *string       `json:"title"`
+	Note         *string       `json:"note"`
+	BirthdayOn   *string       `json:"birthdayOn"`
+	Category     *string       `json:"category"`
+	AvatarKey    *string       `json:"avatarKey"`
+	OwnerScope   string        `json:"ownerScope"`
+	CreatedBy    int64         `json:"createdBy"`
+	Items        []ContactItem `json:"items"`
+	CreatedAt    int64         `json:"createdAt"`
+	UpdatedAt    int64         `json:"updatedAt"`
+}
+
+// ContactItem 是联系人的电话/邮箱/地址。
+type ContactItem struct {
+	ID        int64   `json:"id"`
+	ContactID int64   `json:"contactId,omitempty"`
+	Kind      string  `json:"kind"`
+	Label     *string `json:"label"`
+	Value     string  `json:"value"`
+	Position  int     `json:"position,omitempty"`
+}
+
+// Birthday 是生日记录；月日必填，年份可未知。
+type Birthday struct {
+	ID              int64   `json:"id"`
+	Name            string  `json:"name"`
+	Month           int     `json:"month"`
+	Day             int     `json:"day"`
+	YearUnknown     bool    `json:"yearUnknown"`
+	BirthYear       *int    `json:"birthYear"`
+	Note            *string `json:"note"`
+	AvatarKey       *string `json:"avatarKey"`
+	ContactID       *int64  `json:"contactId"`
+	UserID          *int64  `json:"userId"`
+	ReminderOffset  *int    `json:"reminderOffset"`
+	CalendarEventID *int64  `json:"-"`
+	CreatedBy       int64   `json:"createdBy"`
+	CreatedAt       int64   `json:"createdAt"`
+	UpdatedAt       int64   `json:"updatedAt"`
+	DaysUntil       *int    `json:"daysUntil,omitempty"`
+	Age             *int    `json:"age,omitempty"`
+}
+
 // APIToken 是长期访问令牌，Hash 为令牌哈希。
 type APIToken struct {
 	ID         int64

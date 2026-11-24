@@ -11,14 +11,26 @@ import (
 
 // ReminderSpec 描述一条待写入提醒。
 type ReminderSpec struct {
-	UserID   int64
-	RemindAt int64
+	UserID         int64
+	RemindAt       int64
+	OccurrenceDate *string
+	Title          string
 }
 
 // ReplaceTaskReminders 替换待办未投递提醒。
 func (s *Store) ReplaceTaskReminders(ctx context.Context, task *model.Task, specs []ReminderSpec) error {
+	for i := range specs {
+		specs[i].OccurrenceDate = task.OccurrenceDate
+		specs[i].Title = task.Title
+	}
+	return s.ReplaceSourceReminders(ctx, "task", task.ID, specs)
+}
+
+// ReplaceSourceReminders 替换某一业务对象未投递的提醒。
+func (s *Store) ReplaceSourceReminders(ctx context.Context, sourceType string, sourceID int64, specs []ReminderSpec) error {
 	return s.Tx(ctx, func(tx *sql.Tx) error {
-		if _, err := tx.ExecContext(ctx, `DELETE FROM reminders WHERE source_type='task' AND source_id=? AND status='pending'`, task.ID); err != nil {
+		if _, err := tx.ExecContext(ctx, `DELETE FROM reminders WHERE source_type=? AND source_id=? AND status='pending'`,
+			sourceType, sourceID); err != nil {
 			return err
 		}
 		now := time.Now().Unix()
@@ -26,16 +38,22 @@ func (s *Store) ReplaceTaskReminders(ctx context.Context, task *model.Task, spec
 			if spec.RemindAt <= now {
 				continue
 			}
-			key := fmt.Sprintf("task:%d:%s:%d:%d", task.ID, strOrEmpty(task.OccurrenceDate), spec.UserID, spec.RemindAt)
+			key := fmt.Sprintf("%s:%d:%s:%d:%d", sourceType, sourceID, strOrEmpty(spec.OccurrenceDate), spec.UserID, spec.RemindAt)
 			if _, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO reminders
 				(user_id, source_type, source_id, occurrence_date, title, remind_at, status, idempotency_key, created_at)
-				VALUES (?, 'task', ?, ?, ?, ?, 'pending', ?, ?)`,
-				spec.UserID, task.ID, ps2(task.OccurrenceDate), task.Title, spec.RemindAt, key, now); err != nil {
+				VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
+				spec.UserID, sourceType, sourceID, ps2(spec.OccurrenceDate), spec.Title, spec.RemindAt, key, now); err != nil {
 				return err
 			}
 		}
 		return nil
 	})
+}
+
+// DeleteSourceReminders 删除某业务对象的所有提醒。
+func (s *Store) DeleteSourceReminders(ctx context.Context, sourceType string, sourceID int64) error {
+	_, err := s.DB.ExecContext(ctx, `DELETE FROM reminders WHERE source_type=? AND source_id=?`, sourceType, sourceID)
+	return err
 }
 
 func strOrEmpty(v *string) string {

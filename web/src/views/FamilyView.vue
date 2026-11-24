@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { ApiError } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { useFamilyStore } from '@/stores/family';
@@ -16,10 +17,32 @@ import AppIcon from '@/components/base/AppIcon.vue';
 import AppIconButton from '@/components/base/AppIconButton.vue';
 import AppInput from '@/components/base/AppInput.vue';
 import AppStatusTag from '@/components/base/AppStatusTag.vue';
+import AppTabs from '@/components/base/AppTabs.vue';
+import BirthdayManager from '@/components/business/BirthdayManager.vue';
+import ContactManager from '@/components/business/ContactManager.vue';
 
 const auth = useAuthStore();
 const family = useFamilyStore();
 const toast = useToastStore();
+const route = useRoute();
+
+type FamilyTab = 'members' | 'contacts' | 'birthdays';
+const tab = ref<FamilyTab>('members');
+const tabs = [
+  { key: 'members', label: '成员' },
+  { key: 'contacts', label: '通讯录' },
+  { key: 'birthdays', label: '生日' },
+];
+const pageTitle = computed(() => {
+  if (tab.value === 'contacts') return '通讯录';
+  if (tab.value === 'birthdays') return '生日';
+  return '家庭成员';
+});
+const pageSubtitle = computed(() => {
+  if (tab.value === 'contacts') return '记下家人常联系的人，电话、邮箱和地址集中在一处。';
+  if (tab.value === 'birthdays') return '记录家人和重要的人的生日，按家庭时区提醒。';
+  return '每位成员使用独立账号登录，管理员负责邀请与账号安全。';
+});
 
 const loading = ref(false);
 const loadError = ref('');
@@ -202,7 +225,17 @@ function roleLabel(role: string): string {
   return role === 'admin' ? '管理员' : '成员';
 }
 
-onMounted(load);
+function applyQueryTab(): void {
+  const value = String(route.query.tab ?? '');
+  if (value === 'contacts' || value === 'birthdays' || value === 'members') tab.value = value;
+}
+
+watch(() => route.query.tab, applyQueryTab);
+
+onMounted(() => {
+  applyQueryTab();
+  void load();
+});
 </script>
 
 <template>
@@ -210,52 +243,59 @@ onMounted(load);
     <header class="at-page__header">
       <div>
         <p class="at-caption-upper">家庭</p>
-        <h1 class="at-page__title">家庭成员</h1>
-        <p class="at-page__subtitle">每位成员使用独立账号登录，管理员负责邀请与账号安全。</p>
+        <h1 class="at-page__title">{{ pageTitle }}</h1>
+        <p class="at-page__subtitle">{{ pageSubtitle }}</p>
       </div>
-      <div v-if="auth.isAdmin" class="at-page__actions">
+      <div v-if="auth.isAdmin && tab === 'members'" class="at-page__actions">
         <AppButton @click="openCreate"><AppIcon name="user-plus" :size="16" />添加成员</AppButton>
       </div>
     </header>
 
-    <AppErrorState v-if="loadError" title="成员加载失败" :description="loadError" @retry="load" />
-    <div v-else-if="loading" class="family__loading">正在加载成员…</div>
+    <AppTabs v-model="tab" :tabs="tabs" aria-label="家庭内容" class="family__tabs" />
 
-    <AppEmptyState
-      v-else-if="sortedMembers.length === 0"
-      icon="family"
-      title="还没有家庭成员"
-      description="管理员可以添加家庭成员账号。"
-    >
-      <AppButton v-if="auth.isAdmin" @click="openCreate">添加第一位成员</AppButton>
-    </AppEmptyState>
+    <template v-if="tab === 'members'">
+      <AppErrorState v-if="loadError" title="成员加载失败" :description="loadError" @retry="load" />
+      <div v-else-if="loading" class="family__loading">正在加载成员…</div>
 
-    <ul v-else class="family__list">
-      <li v-for="member in sortedMembers" :key="member.id" class="family__member" :class="{ 'is-inactive': member.status !== 'active' }">
-        <AppAvatar :name="member.displayName" :size="44" />
-        <div class="family__info">
-          <div class="family__name-row">
-            <span class="family__name">{{ member.displayName }}</span>
-            <AppStatusTag v-if="member.relation" tone="brand">{{ member.relation }}</AppStatusTag>
-            <AppStatusTag :tone="member.role === 'admin' ? 'warning' : 'neutral'">{{ roleLabel(member.role) }}</AppStatusTag>
-            <AppStatusTag v-if="member.status !== 'active'" tone="danger">已停用</AppStatusTag>
-            <AppStatusTag v-else-if="member.mustChangePassword" tone="warning">待改密码</AppStatusTag>
+      <AppEmptyState
+        v-else-if="sortedMembers.length === 0"
+        icon="family"
+        title="还没有家庭成员"
+        description="管理员可以添加家庭成员账号。"
+      >
+        <AppButton v-if="auth.isAdmin" @click="openCreate">添加第一位成员</AppButton>
+      </AppEmptyState>
+
+      <ul v-else class="family__list">
+        <li v-for="member in sortedMembers" :key="member.id" class="family__member" :class="{ 'is-inactive': member.status !== 'active' }">
+          <AppAvatar :name="member.displayName" :size="44" />
+          <div class="family__info">
+            <div class="family__name-row">
+              <span class="family__name">{{ member.displayName }}</span>
+              <AppStatusTag v-if="member.relation" tone="brand">{{ member.relation }}</AppStatusTag>
+              <AppStatusTag :tone="member.role === 'admin' ? 'warning' : 'neutral'">{{ roleLabel(member.role) }}</AppStatusTag>
+              <AppStatusTag v-if="member.status !== 'active'" tone="danger">已停用</AppStatusTag>
+              <AppStatusTag v-else-if="member.mustChangePassword" tone="warning">待改密码</AppStatusTag>
+            </div>
+            <p class="family__meta">@{{ member.username }}<span v-if="member.id === auth.user?.id"> · 这是你</span></p>
           </div>
-          <p class="family__meta">@{{ member.username }}<span v-if="member.id === auth.user?.id"> · 这是你</span></p>
-        </div>
-        <div class="family__actions">
-          <AppIconButton icon="edit" label="编辑成员" size="sm" @click="openEdit(member)" />
-          <AppIconButton v-if="auth.isAdmin" icon="key" label="重置密码" size="sm" @click="openReset(member)" />
-          <AppIconButton
-            v-if="auth.isAdmin && member.id !== auth.user?.id"
-            :icon="member.status === 'active' ? 'x-circle' : 'check-circle'"
-            :label="member.status === 'active' ? '停用账号' : '恢复账号'"
-            size="sm"
-            @click="statusTarget = member"
-          />
-        </div>
-      </li>
-    </ul>
+          <div class="family__actions">
+            <AppIconButton icon="edit" label="编辑成员" size="sm" @click="openEdit(member)" />
+            <AppIconButton v-if="auth.isAdmin" icon="key" label="重置密码" size="sm" @click="openReset(member)" />
+            <AppIconButton
+              v-if="auth.isAdmin && member.id !== auth.user?.id"
+              :icon="member.status === 'active' ? 'x-circle' : 'check-circle'"
+              :label="member.status === 'active' ? '停用账号' : '恢复账号'"
+              size="sm"
+              @click="statusTarget = member"
+            />
+          </div>
+        </li>
+      </ul>
+    </template>
+
+    <ContactManager v-else-if="tab === 'contacts'" />
+    <BirthdayManager v-else :open-id="Number(route.query.open) || 0" />
 
     <AppDialog v-model="createOpen" title="添加家庭成员" size="md">
       <form class="at-stack" @submit.prevent="submitCreate">
@@ -416,6 +456,10 @@ onMounted(load);
 </template>
 
 <style scoped>
+.family__tabs {
+  margin-bottom: var(--at-space-4);
+}
+
 .family__loading {
   color: var(--at-text-secondary);
   font-size: var(--at-text-body-sm);

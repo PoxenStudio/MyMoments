@@ -17,6 +17,8 @@ export interface TaskQuery {
   priority?: string;
   q?: string;
   templateId?: number;
+  from?: string;
+  to?: string;
 }
 
 export interface SubtaskPayload {
@@ -87,6 +89,8 @@ export const useTasksStore = defineStore('tasks', () => {
         priority: query.priority,
         q: query.q,
         templateId: query.templateId,
+        from: query.from,
+        to: query.to,
         limit: 200,
       });
       tasks.value = res.items;

@@ -127,6 +127,7 @@ export interface CalendarEvent {
   createdAt: number;
   updatedAt: number;
   assignees: User[];
+  reminderOffsets?: number[];
 }
 
 export interface Birthday {
@@ -141,6 +142,7 @@ export interface Birthday {
   contactId: number | null;
   userId: number | null;
   reminderOffset: number | null;
+  createdBy?: number;
   daysUntil?: number;
   age?: number | null;
 }

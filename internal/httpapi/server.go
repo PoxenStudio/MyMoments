@@ -85,6 +85,23 @@ func (s *Server) routes(mux *http.ServeMux) {
 	mux.Handle("PATCH "+api+"/templates/{id}", s.requireAuth(http.HandlerFunc(s.handleTemplatePatch)))
 	mux.Handle("DELETE "+api+"/templates/{id}", s.requireAuth(http.HandlerFunc(s.handleTemplateDelete)))
 
+	mux.Handle("GET "+api+"/events", s.requireAuth(http.HandlerFunc(s.handleEventsList)))
+	mux.Handle("POST "+api+"/events", s.requireAuth(http.HandlerFunc(s.handleEventCreate)))
+	mux.Handle("GET "+api+"/events/{id}", s.requireAuth(http.HandlerFunc(s.handleEventGet)))
+	mux.Handle("PATCH "+api+"/events/{id}", s.requireAuth(http.HandlerFunc(s.handleEventPatch)))
+	mux.Handle("DELETE "+api+"/events/{id}", s.requireAuth(http.HandlerFunc(s.handleEventDelete)))
+
+	mux.Handle("GET "+api+"/contacts", s.requireAuth(http.HandlerFunc(s.handleContactsList)))
+	mux.Handle("POST "+api+"/contacts", s.requireAuth(http.HandlerFunc(s.handleContactCreate)))
+	mux.Handle("GET "+api+"/contacts/{id}", s.requireAuth(http.HandlerFunc(s.handleContactGet)))
+	mux.Handle("PATCH "+api+"/contacts/{id}", s.requireAuth(http.HandlerFunc(s.handleContactPatch)))
+	mux.Handle("DELETE "+api+"/contacts/{id}", s.requireAuth(http.HandlerFunc(s.handleContactDelete)))
+
+	mux.Handle("GET "+api+"/birthdays", s.requireAuth(http.HandlerFunc(s.handleBirthdaysList)))
+	mux.Handle("POST "+api+"/birthdays", s.requireAuth(http.HandlerFunc(s.handleBirthdayCreate)))
+	mux.Handle("PATCH "+api+"/birthdays/{id}", s.requireAuth(http.HandlerFunc(s.handleBirthdayPatch)))
+	mux.Handle("DELETE "+api+"/birthdays/{id}", s.requireAuth(http.HandlerFunc(s.handleBirthdayDelete)))
+
 	mux.Handle("GET "+api+"/reminders", s.requireAuth(http.HandlerFunc(s.handleRemindersList)))
 	mux.Handle("PATCH "+api+"/reminders/{id}", s.requireAuth(http.HandlerFunc(s.handleReminderPatch)))
 

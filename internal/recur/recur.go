@@ -180,6 +180,87 @@ func addYears(d time.Time, years int) time.Time {
 	return time.Date(target.Year(), target.Month(), day, 0, 0, 0, 0, time.UTC)
 }
 
+// Expand 返回规则在 [from, to] 内的发生日期（含首尾），anchor 为系列起始日期。
+func Expand(rule *Rule, anchor, from, to string) []string {
+	out := []string{}
+	if rule == nil {
+		return out
+	}
+	start, err := time.Parse(dateLayout, anchor)
+	if err != nil {
+		return out
+	}
+	begin, err1 := time.Parse(dateLayout, from)
+	end, err2 := time.Parse(dateLayout, to)
+	if err1 != nil || err2 != nil || end.Before(begin) {
+		return out
+	}
+	if begin.Before(start) {
+		begin = start
+	}
+	if rule.Until != "" {
+		if until, err := time.Parse(dateLayout, rule.Until); err == nil && until.Before(end) {
+			end = until
+		}
+	}
+	if end.Before(begin) {
+		return out
+	}
+	// 上限保护：窗口最多十年，避免异常规则拖慢请求。
+	if end.Sub(begin) > 3660*24*time.Hour {
+		end = begin.AddDate(10, 0, 0)
+	}
+	for d := begin; !d.After(end); d = d.AddDate(0, 0, 1) {
+		if matches(rule, start, d) {
+			out = append(out, d.Format(dateLayout))
+		}
+	}
+	return out
+}
+
+func matches(rule *Rule, anchor, d time.Time) bool {
+	interval := rule.Interval
+	if interval < 1 {
+		interval = 1
+	}
+	days := int(d.Sub(anchor).Hours() / 24)
+	if days < 0 {
+		return false
+	}
+	switch rule.Freq {
+	case "daily":
+		return days%interval == 0
+	case "weekly":
+		if len(rule.Weekdays) == 0 {
+			return days%(7*interval) == 0
+		}
+		if !weekdayAllowed(rule.Weekdays, d.Weekday()) {
+			return false
+		}
+		return (days/7)%interval == 0
+	case "monthly":
+		months := (d.Year()-anchor.Year())*12 + int(d.Month()-anchor.Month())
+		if months < 0 || months%interval != 0 {
+			return false
+		}
+		return d.Day() == clampDay(anchor.Day(), d.Year(), d.Month())
+	default:
+		years := d.Year() - anchor.Year()
+		if years < 0 || years%interval != 0 {
+			return false
+		}
+		return d.Month() == anchor.Month() && d.Day() == clampDay(anchor.Day(), d.Year(), d.Month())
+	}
+}
+
+func clampDay(day int, year int, month time.Month) int {
+	last := time.Date(year, month+1, 0, 0, 0, 0, 0, time.UTC).Day()
+	if day > last {
+		return last
+	}
+	return day
+}
+
 // TodayIn 返回指定时区的今天。
 func TodayIn(loc *time.Location, now time.Time) string {
 	return now.In(loc).Format(dateLayout)

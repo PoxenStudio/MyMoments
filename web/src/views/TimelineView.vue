@@ -149,7 +149,7 @@ function mediaURL(id: number): string {
       <div>
         <p class="at-caption-upper">回望</p>
         <h1 class="at-page__title">时光轴</h1>
-        <p class="at-page__subtitle">所有被认真生活过的日子，都在这里排成一条温柔的线。</p>
+        <p class="at-page__subtitle">按时间顺序查看家里的待办、日程、便签和留言。</p>
       </div>
     </header>
 
@@ -213,12 +213,12 @@ function mediaURL(id: number): string {
     </section>
 
     <AppErrorState v-if="store.error" kind="server" compact @retry="reload" />
-    <p v-else-if="store.loading && !store.items.length" class="at-faint loading">正在翻阅时光…</p>
+    <p v-else-if="store.loading && !store.items.length" class="at-faint loading">正在加载…</p>
     <AppEmptyState
       v-else-if="!store.items.length"
       icon="timeline"
       title="这段时间还没有记录"
-      description="换个日期或方向看看，或者先去日历、待办里留下一点生活的痕迹。"
+      description="换个日期或方向看看，或者先去日历、待办里添加内容。"
     />
 
     <div v-else class="stream">

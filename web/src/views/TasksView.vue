@@ -272,7 +272,7 @@ function memberNames(task: Task): string {
     <header class="tasks-page__head">
       <div>
         <p class="at-caption-upper">待办</p>
-        <h1 class="at-display tasks-page__title">把小事放在心上</h1>
+        <h1 class="at-display tasks-page__title">待办清单</h1>
         <p class="tasks-page__sub">
           今天 {{ tasks.counts.today }} 件
           <template v-if="tasks.counts.overdue"> · <span class="is-danger">{{ tasks.counts.overdue }} 件逾期</span></template>

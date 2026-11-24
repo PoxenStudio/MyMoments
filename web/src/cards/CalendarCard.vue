@@ -12,7 +12,7 @@ const items = computed(() => d.value?.items ?? []);
 
 <template>
   <div v-if="!items.length">
-    <AppEmptyState title="近七天没有安排" description="去行事历看看，或者给自己留一点空白" icon="calendar" />
+    <AppEmptyState title="近七天没有安排" description="去行事历添加安排" icon="calendar" />
   </div>
   <ul v-else class="agenda">
     <li v-for="event in items" :key="`${event.id}-${event.occurrenceDate ?? event.startLocal}`" class="agenda__row">

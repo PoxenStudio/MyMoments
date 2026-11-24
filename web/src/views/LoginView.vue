@@ -51,8 +51,8 @@ async function submit(): Promise<void> {
         <img src="/icons/icon-192.png" alt="" width="40" height="40" />
         <span class="at-display">家时光</span>
       </div>
-      <p class="auth__quote at-display">把日子过成<br />可以翻阅的样子。</p>
-      <p class="auth__note">待办、日程、留言与回忆，都收在一个安静的家庭面板里。</p>
+      <p class="auth__quote at-display">家里的事，<br />都放在这里。</p>
+      <p class="auth__note">待办、日程、留言和回忆都在这里。</p>
       <div class="auth__orb auth__orb--mint" />
       <div class="auth__orb auth__orb--peach" />
     </aside>

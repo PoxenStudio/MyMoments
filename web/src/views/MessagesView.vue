@@ -239,7 +239,7 @@ async function confirmDelete(): Promise<void> {
       <div>
         <p class="at-caption-upper">交流</p>
         <h1 class="at-page__title">留言板</h1>
-        <p class="at-page__subtitle">家里的碎碎念、好消息和温柔提醒，都留在这里。</p>
+        <p class="at-page__subtitle">家人的留言、好消息和提醒，都留在这里。</p>
       </div>
       <div class="at-page__actions">
         <AppButton @click="composing ? closeComposer() : openComposer()">
@@ -319,7 +319,7 @@ async function confirmDelete(): Promise<void> {
       v-else-if="!store.items.length"
       icon="messages"
       title="还没有留言"
-      description="写下第一句话，让家人知道你在想他们。"
+      description="写下第一句话，家人登录后就能看到。"
     >
       <AppButton @click="openComposer">写留言</AppButton>
     </AppEmptyState>

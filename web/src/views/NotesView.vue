@@ -220,7 +220,7 @@ async function confirmDelete(): Promise<void> {
       <div>
         <p class="at-caption-upper">记录</p>
         <h1 class="at-page__title">便签</h1>
-        <p class="at-page__subtitle">把想说的话、要办的事和舍不得忘的日子，轻轻贴在这里。</p>
+        <p class="at-page__subtitle">写给家人的话、要办的事和重要的日子，都可以记在这里。</p>
       </div>
       <div class="at-page__actions">
         <AppButton @click="openCreate">新建便签</AppButton>
@@ -260,7 +260,7 @@ async function confirmDelete(): Promise<void> {
       v-else-if="!store.items.length"
       icon="notes"
       title="还没有便签"
-      description="写一张便签，留给家人一句话、一份清单，或一个值得记住的日子。"
+      description="写一句话、列一份清单，或记下一个重要的日子。"
     >
       <AppButton @click="openCreate">新建便签</AppButton>
     </AppEmptyState>

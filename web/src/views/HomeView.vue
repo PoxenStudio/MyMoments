@@ -47,13 +47,13 @@ const overview = computed<OverviewData | null>(() => {
 });
 
 const summary = computed(() => {
-  if (dashboard.loading && !dashboard.cards.length) return '正在整理今天的首页…';
+  if (dashboard.loading && !dashboard.cards.length) return '正在加载首页…';
   const counts = overview.value?.counts;
-  if (!counts) return '希望今天也有一点轻松、一点热闹。';
-  if (counts.overdue > 0) return `有 ${counts.overdue} 件已经逾期，先从最小的一件开始。`;
-  if (counts.today > 0) return `今天有 ${counts.today} 件待办，慢慢来。`;
-  if (counts.open > 0) return `还有 ${counts.open} 件待办在后面等着。`;
-  return '今天没有待办，享受一点空闲。';
+  if (!counts) return '看看今天家里有什么事。';
+  if (counts.overdue > 0) return `有 ${counts.overdue} 件已经逾期。`;
+  if (counts.today > 0) return `今天有 ${counts.today} 件待办。`;
+  if (counts.open > 0) return `还有 ${counts.open} 件待办未完成。`;
+  return '今天没有待办。';
 });
 
 const visibleItems = computed(() => dashboard.layout.filter((item) => item.visible && cardRegistry[item.id]));

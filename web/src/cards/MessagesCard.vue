@@ -13,7 +13,7 @@ const items = computed(() => d.value?.items ?? []);
 
 <template>
   <div v-if="!items.length">
-    <AppEmptyState title="留言板还很安静" description="给家人留一句话吧" icon="messages" />
+    <AppEmptyState title="还没有留言" description="给家人留一句话吧" icon="messages" />
   </div>
   <ul v-else class="posts">
     <li v-for="post in items" :key="post.id" class="posts__row">

@@ -70,6 +70,7 @@ export interface Task {
   subtasks: Subtask[];
   mediaCount?: number;
   completion?: Completion | null;
+  reminderOffsets?: number[];
 }
 
 export interface Subtask {
@@ -267,6 +268,8 @@ export interface MediaItem {
   durationMs: number | null;
   createdAt: number;
 }
+
+export type TaskMedia = MediaItem;
 
 export interface DashboardCardState {
   id: string;

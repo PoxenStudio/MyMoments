@@ -24,10 +24,14 @@ func newTestServer(t *testing.T) (*httptest.Server, *http.Client) {
 		t.Fatalf("open store: %v", err)
 	}
 	cfg := config.Config{
-		DataDir:       dir,
-		DefaultTZ:     "Asia/Shanghai",
-		SessionSecret: []byte("test-secret-test-secret-test-secret"),
-		SessionTTL:    time.Hour,
+		DataDir:        dir,
+		DefaultTZ:      "Asia/Shanghai",
+		SessionSecret:  []byte("test-secret-test-secret-test-secret"),
+		SessionTTL:     time.Hour,
+		MaxImageBytes:  20 << 20,
+		MaxAudioBytes:  100 << 20,
+		MaxVideoBytes:  200 << 20,
+		HouseholdQuota: 1 << 30,
 	}
 	srv, err := New(cfg, st)
 	if err != nil {

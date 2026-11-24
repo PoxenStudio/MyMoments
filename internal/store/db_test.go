@@ -34,6 +34,10 @@ func TestOpen_IsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("first open: %v", err)
 	}
+	var first int
+	if err := st.DB.QueryRow(`SELECT COUNT(1) FROM schema_migrations`).Scan(&first); err != nil {
+		t.Fatalf("count migrations: %v", err)
+	}
 	st.Close()
 	st2, err := Open(context.Background(), dsn)
 	if err != nil {
@@ -44,7 +48,7 @@ func TestOpen_IsIdempotent(t *testing.T) {
 	if err := st2.DB.QueryRow(`SELECT COUNT(1) FROM schema_migrations`).Scan(&applied); err != nil {
 		t.Fatalf("count migrations: %v", err)
 	}
-	if applied != 1 {
-		t.Fatalf("expected 1 migration, got %d", applied)
+	if applied != first {
+		t.Fatalf("expected %d migrations after reopen, got %d", first, applied)
 	}
 }

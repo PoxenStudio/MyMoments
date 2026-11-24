@@ -69,6 +69,33 @@ func (s *Server) routes(mux *http.ServeMux) {
 	mux.Handle("GET "+api+"/household", s.requireAuth(http.HandlerFunc(s.handleHousehold)))
 	mux.Handle("PATCH "+api+"/household", s.requireAdmin(http.HandlerFunc(s.handleHouseholdPatch)))
 
+	mux.Handle("GET "+api+"/tasks", s.requireAuth(http.HandlerFunc(s.handleTasksList)))
+	mux.Handle("POST "+api+"/tasks", s.requireAuth(http.HandlerFunc(s.handleTaskCreate)))
+	mux.Handle("GET "+api+"/tasks/{id}", s.requireAuth(http.HandlerFunc(s.handleTaskGet)))
+	mux.Handle("PATCH "+api+"/tasks/{id}", s.requireAuth(http.HandlerFunc(s.handleTaskPatch)))
+	mux.Handle("DELETE "+api+"/tasks/{id}", s.requireAuth(http.HandlerFunc(s.handleTaskDelete)))
+	mux.Handle("POST "+api+"/tasks/{id}/completion", s.requireAuth(http.HandlerFunc(s.handleTaskComplete)))
+	mux.Handle("DELETE "+api+"/tasks/{id}/completion", s.requireAuth(http.HandlerFunc(s.handleTaskUndo)))
+	mux.Handle("PATCH "+api+"/tasks/{id}/subtasks/{subId}", s.requireAuth(http.HandlerFunc(s.handleSubtaskPatch)))
+	mux.Handle("GET "+api+"/tasks/{id}/media", s.requireAuth(http.HandlerFunc(s.handleTaskMediaList)))
+	mux.Handle("POST "+api+"/tasks/{id}/media", s.requireAuth(http.HandlerFunc(s.handleMediaUpload)))
+
+	mux.Handle("GET "+api+"/templates", s.requireAuth(http.HandlerFunc(s.handleTemplatesList)))
+	mux.Handle("POST "+api+"/templates", s.requireAuth(http.HandlerFunc(s.handleTemplateCreate)))
+	mux.Handle("PATCH "+api+"/templates/{id}", s.requireAuth(http.HandlerFunc(s.handleTemplatePatch)))
+	mux.Handle("DELETE "+api+"/templates/{id}", s.requireAuth(http.HandlerFunc(s.handleTemplateDelete)))
+
+	mux.Handle("GET "+api+"/reminders", s.requireAuth(http.HandlerFunc(s.handleRemindersList)))
+	mux.Handle("PATCH "+api+"/reminders/{id}", s.requireAuth(http.HandlerFunc(s.handleReminderPatch)))
+
+	mux.Handle("GET "+api+"/media/{id}", s.requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		s.handleMediaGet(w, r, false)
+	})))
+	mux.Handle("GET "+api+"/media/{id}/thumbnail", s.requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		s.handleMediaGet(w, r, true)
+	})))
+	mux.Handle("DELETE "+api+"/media/{id}", s.requireAuth(http.HandlerFunc(s.handleMediaDelete)))
+
 	mux.HandleFunc("/", s.handleStatic)
 }
 

@@ -5,15 +5,13 @@ import { icons, type IconName } from './icons';
 const props = withDefaults(defineProps<{
   name: IconName;
   size?: number;
-  strokeWidth?: number;
   label?: string;
 }>(), {
   size: 20,
-  strokeWidth: 1.6,
   label: undefined,
 });
 
-const def = computed(() => icons[props.name] ?? icons.info);
+const path = computed(() => icons[props.name] ?? icons.info);
 </script>
 
 <template>
@@ -21,18 +19,14 @@ const def = computed(() => icons[props.name] ?? icons.info);
     :width="size"
     :height="size"
     viewBox="0 0 24 24"
-    fill="none"
-    :stroke-width="strokeWidth"
-    stroke="currentColor"
-    stroke-linecap="round"
-    stroke-linejoin="round"
+    fill="currentColor"
     class="at-icon"
     :role="label ? 'img' : undefined"
     :aria-label="label"
     :aria-hidden="label ? undefined : 'true'"
     focusable="false"
   >
-    <path v-for="(d, i) in def.paths" :key="i" :d="d" />
+    <path :d="path" />
   </svg>
 </template>
 

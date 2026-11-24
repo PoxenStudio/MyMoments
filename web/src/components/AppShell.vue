@@ -5,7 +5,6 @@ import { useAuthStore } from '@/stores/auth';
 import { useFamilyStore, useNotificationStore } from '@/stores/family';
 import { useToastStore } from '@/stores/toast';
 import AppAvatar from './base/AppAvatar.vue';
-import AppButton from './base/AppButton.vue';
 import AppDialog from './base/AppDialog.vue';
 import AppIcon from './base/AppIcon.vue';
 import AppIconButton from './base/AppIconButton.vue';
@@ -30,18 +29,8 @@ const navItems: NavItem[] = [
   { name: 'notes', label: '便签', icon: 'notes' },
 ];
 
-const moreItems: NavItem[] = [
-  { name: 'family', label: '家庭成员', icon: 'family' },
-  { name: 'messages', label: '留言板', icon: 'messages' },
-  { name: 'notes', label: '便签', icon: 'notes' },
+const utilityItems: NavItem[] = [
   { name: 'settings', label: '设置', icon: 'settings' },
-];
-
-const bottomItems: NavItem[] = [
-  { name: 'home', label: '首页', icon: 'home' },
-  { name: 'calendar', label: '行事历', icon: 'calendar' },
-  { name: 'tasks', label: '待办', icon: 'tasks' },
-  { name: 'timeline', label: '时光轴', icon: 'timeline' },
 ];
 
 const route = useRoute();
@@ -53,15 +42,28 @@ const toast = useToastStore();
 
 const searchOpen = ref(false);
 const notifOpen = ref(false);
-const moreOpen = ref(false);
 const createOpen = ref(false);
 const menuOpen = ref(false);
+const drawerOpen = ref(false);
 const online = ref(typeof navigator === 'undefined' ? true : navigator.onLine);
 const avatarWrap = ref<HTMLElement | null>(null);
+const menuButton = ref<HTMLButtonElement | null>(null);
+
+const STORAGE_KEY = 'mymoments:sidebar-collapsed';
+const manualCollapsed = ref<boolean | null>(readPreference());
+const isMobile = ref(false);
+const isWide = ref(true);
 
 const currentName = computed(() => route.name?.toString() ?? '');
 const title = computed(() => (route.meta.title ? String(route.meta.title) : '家时光'));
 const initials = computed(() => auth.user?.displayName ?? '家');
+const roleLabel = computed(() => (auth.user?.role === 'admin' ? '管理员' : '家庭成员'));
+
+const collapsed = computed(() => {
+  if (isMobile.value) return false;
+  if (manualCollapsed.value !== null) return manualCollapsed.value;
+  return !isWide.value;
+});
 
 const createActions: { label: string; icon: IconName; to: { name: string; query?: Record<string, string> } }[] = [
   { label: '新建待办', icon: 'tasks', to: { name: 'tasks', query: { new: '1' } } },
@@ -71,10 +73,52 @@ const createActions: { label: string; icon: IconName; to: { name: string; query?
 ];
 
 let pollTimer: number | undefined;
+let mobileQuery: MediaQueryList | undefined;
+let wideQuery: MediaQueryList | undefined;
+
+function readPreference(): boolean | null {
+  try {
+    const value = localStorage.getItem(STORAGE_KEY);
+    if (value === '1') return true;
+    if (value === '0') return false;
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+function writePreference(value: boolean): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, value ? '1' : '0');
+  } catch {
+    /* ignore */
+  }
+}
 
 async function bootstrapData(): Promise<void> {
   if (!auth.user) return;
   await Promise.allSettled([family.load(), notifications.load()]);
+}
+
+function syncViewport(): void {
+  isMobile.value = mobileQuery?.matches ?? false;
+  isWide.value = wideQuery?.matches ?? true;
+  if (!isMobile.value) closeDrawer(false);
+}
+
+function toggleSidebar(): void {
+  if (isMobile.value) {
+    drawerOpen.value = !drawerOpen.value;
+    return;
+  }
+  manualCollapsed.value = !collapsed.value;
+  writePreference(manualCollapsed.value);
+}
+
+function closeDrawer(restoreFocus = true): void {
+  if (!drawerOpen.value) return;
+  drawerOpen.value = false;
+  if (restoreFocus) menuButton.value?.focus();
 }
 
 function onOnline(): void {
@@ -86,11 +130,23 @@ function onOffline(): void {
 function onDocumentClick(event: MouseEvent): void {
   if (avatarWrap.value && !avatarWrap.value.contains(event.target as Node)) menuOpen.value = false;
 }
+function onKeydown(event: KeyboardEvent): void {
+  if (event.key === 'Escape') {
+    menuOpen.value = false;
+    closeDrawer();
+  }
+}
 function onVisibility(): void {
   if (document.visibilityState === 'visible') void notifications.load().catch(() => undefined);
 }
 
 onMounted(() => {
+  mobileQuery = window.matchMedia('(max-width: 1023px)');
+  wideQuery = window.matchMedia('(min-width: 1280px)');
+  syncViewport();
+  mobileQuery.addEventListener('change', syncViewport);
+  wideQuery.addEventListener('change', syncViewport);
+
   void bootstrapData();
   pollTimer = window.setInterval(() => {
     if (document.visibilityState === 'visible') void notifications.load().catch(() => undefined);
@@ -98,25 +154,43 @@ onMounted(() => {
   window.addEventListener('online', onOnline);
   window.addEventListener('offline', onOffline);
   document.addEventListener('click', onDocumentClick);
+  document.addEventListener('keydown', onKeydown);
   document.addEventListener('visibilitychange', onVisibility);
 });
 
 onBeforeUnmount(() => {
   if (pollTimer) window.clearInterval(pollTimer);
+  mobileQuery?.removeEventListener('change', syncViewport);
+  wideQuery?.removeEventListener('change', syncViewport);
   window.removeEventListener('online', onOnline);
   window.removeEventListener('offline', onOffline);
   document.removeEventListener('click', onDocumentClick);
+  document.removeEventListener('keydown', onKeydown);
   document.removeEventListener('visibilitychange', onVisibility);
+  document.body.style.overflow = '';
 });
 
 watch(() => auth.user?.id, () => {
   if (auth.user) void bootstrapData();
 });
 
+watch(() => route.fullPath, () => {
+  drawerOpen.value = false;
+  menuOpen.value = false;
+});
+
+watch(drawerOpen, (open) => {
+  document.body.style.overflow = open && isMobile.value ? 'hidden' : '';
+});
+
 function go(item: { name: string; query?: Record<string, string> }): void {
   createOpen.value = false;
-  moreOpen.value = false;
+  closeDrawer(false);
   void router.push(item);
+}
+
+function handleNavClick(): void {
+  closeDrawer(false);
 }
 
 async function logout(): Promise<void> {
@@ -130,94 +204,142 @@ async function logout(): Promise<void> {
 </script>
 
 <template>
-  <div class="shell">
+  <div class="shell" :class="{ 'is-collapsed': collapsed, 'is-drawer-open': drawerOpen }">
     <a class="shell__skip" href="#main">跳到主要内容</a>
-    <header class="topbar">
-      <div class="topbar__inner">
-        <RouterLink to="/" class="brand" aria-label="家时光首页">
+
+    <aside id="app-sidebar" class="sidebar" aria-label="主导航">
+      <div class="sidebar__head">
+        <RouterLink to="/" class="brand" aria-label="家时光首页" :title="collapsed ? '家时光' : undefined">
           <img src="/icons/icon-192.png" alt="" width="30" height="30" class="brand__mark" />
           <span class="brand__name at-display">家时光</span>
         </RouterLink>
+        <button type="button" class="sidebar__close" aria-label="关闭导航" @click="closeDrawer()">
+          <AppIcon name="close" :size="20" />
+        </button>
+      </div>
 
-        <nav class="topnav at-hide-mobile" aria-label="主导航">
-          <RouterLink
-            v-for="item in navItems"
-            :key="item.name"
-            :to="{ name: item.name }"
-            class="topnav__link"
-            :class="{ 'is-active': currentName === item.name }"
-          >
-            {{ item.label }}
-          </RouterLink>
-        </nav>
+      <nav class="sidebar__nav">
+        <RouterLink
+          v-for="item in navItems"
+          :key="item.name"
+          :to="{ name: item.name }"
+          class="sidebar__link"
+          :class="{ 'is-active': currentName === item.name }"
+          :title="collapsed ? item.label : undefined"
+          @click="handleNavClick"
+        >
+          <AppIcon :name="item.icon" :size="20" />
+          <span class="sidebar__label">{{ item.label }}</span>
+        </RouterLink>
+      </nav>
 
-        <div class="topbar__actions">
-          <AppIconButton icon="search" label="搜索" @click="searchOpen = true" />
-          <div class="bell">
-            <AppIconButton icon="bell" label="消息通知" @click="notifOpen = true" />
-            <span v-if="notifications.unread" class="bell__badge">{{ notifications.unread > 99 ? '99+' : notifications.unread }}</span>
-          </div>
-          <div ref="avatarWrap" class="avatar-menu">
-            <button
-              type="button"
-              class="avatar-menu__trigger"
-              :aria-label="`账号菜单，${auth.user?.displayName ?? ''}`"
-              :aria-expanded="menuOpen"
-              @click.stop="menuOpen = !menuOpen"
-            >
-              <AppAvatar :name="initials" :size="32" />
-            </button>
-            <Transition name="menu">
-              <div v-if="menuOpen" class="avatar-menu__panel" role="menu">
-                <div class="avatar-menu__head">
-                  <span class="avatar-menu__name">{{ auth.user?.displayName }}</span>
-                  <span class="avatar-menu__role">{{ auth.user?.role === 'admin' ? '管理员' : '家庭成员' }}</span>
-                </div>
-                <RouterLink to="/settings" class="avatar-menu__item" role="menuitem" @click="menuOpen = false">
-                  <AppIcon name="settings" :size="16" />设置
-                </RouterLink>
-                <RouterLink to="/change-password" class="avatar-menu__item" role="menuitem" @click="menuOpen = false">
-                  <AppIcon name="lock" :size="16" />修改密码
-                </RouterLink>
-                <button type="button" class="avatar-menu__item avatar-menu__item--danger" role="menuitem" @click="logout">
-                  <AppIcon name="logout" :size="16" />退出登录
-                </button>
-              </div>
-            </Transition>
-          </div>
+      <div class="sidebar__foot">
+        <RouterLink
+          v-for="item in utilityItems"
+          :key="item.name"
+          :to="{ name: item.name }"
+          class="sidebar__link"
+          :class="{ 'is-active': currentName === item.name }"
+          :title="collapsed ? item.label : undefined"
+          @click="handleNavClick"
+        >
+          <AppIcon :name="item.icon" :size="20" />
+          <span class="sidebar__label">{{ item.label }}</span>
+        </RouterLink>
+
+        <button
+          type="button"
+          class="sidebar__link sidebar__minimize"
+          :title="collapsed ? '展开侧边栏' : '收起侧边栏'"
+          :aria-label="collapsed ? '展开侧边栏' : '收起侧边栏'"
+          @click="toggleSidebar"
+        >
+          <AppIcon :name="collapsed ? 'sidebar-expand' : 'sidebar-collapse'" :size="20" />
+          <span class="sidebar__label">{{ collapsed ? '展开' : '收起' }}</span>
+        </button>
+
+        <div class="sidebar__user">
+          <AppAvatar :name="initials" :size="32" />
+          <span class="sidebar__user-meta">
+            <span class="sidebar__user-name">{{ auth.user?.displayName }}</span>
+            <span class="sidebar__user-role">{{ roleLabel }}</span>
+          </span>
         </div>
       </div>
-    </header>
+    </aside>
 
-    <div v-if="!online" class="offline" role="status">
-      <AppIcon name="wifi-off" :size="16" />
-      <span>当前处于离线状态，部分操作可能无法保存</span>
-    </div>
+    <Transition name="scrim">
+      <div v-if="drawerOpen" class="shell__scrim" @click="closeDrawer()" />
+    </Transition>
 
-    <main id="main" class="shell__main" :aria-label="title">
-      <slot />
-    </main>
+    <div class="shell__content">
+      <header class="topbar">
+        <div class="topbar__inner">
+          <button
+            ref="menuButton"
+            type="button"
+            class="topbar__menu"
+            aria-label="打开导航"
+            aria-controls="app-sidebar"
+            :aria-expanded="drawerOpen"
+            @click="drawerOpen = true"
+          >
+            <AppIcon name="menu" :size="22" />
+          </button>
 
-    <button type="button" class="fab at-hide-mobile" aria-label="快速新建" @click="createOpen = true">
-      <AppIcon name="plus" :size="22" />
-    </button>
+          <p class="topbar__title at-display">{{ title }}</p>
 
-    <nav class="bottomnav" aria-label="移动端导航">
-      <RouterLink
-        v-for="item in bottomItems"
-        :key="item.name"
-        :to="{ name: item.name }"
-        class="bottomnav__item"
-        :class="{ 'is-active': currentName === item.name }"
-      >
-        <AppIcon :name="item.icon" :size="21" />
-        <span>{{ item.label }}</span>
-      </RouterLink>
-      <button type="button" class="bottomnav__item" :class="{ 'is-active': moreOpen }" @click="moreOpen = true">
-        <AppIcon name="menu" :size="21" />
-        <span>更多</span>
+          <div class="topbar__actions">
+            <AppIconButton icon="search" label="搜索" @click="searchOpen = true" />
+            <div class="bell">
+              <AppIconButton icon="bell" label="消息通知" @click="notifOpen = true" />
+              <span v-if="notifications.unread" class="bell__badge">{{ notifications.unread > 99 ? '99+' : notifications.unread }}</span>
+            </div>
+            <div ref="avatarWrap" class="avatar-menu">
+              <button
+                type="button"
+                class="avatar-menu__trigger"
+                :aria-label="`账号菜单，${auth.user?.displayName ?? ''}`"
+                :aria-expanded="menuOpen"
+                @click.stop="menuOpen = !menuOpen"
+              >
+                <AppAvatar :name="initials" :size="32" />
+              </button>
+              <Transition name="menu">
+                <div v-if="menuOpen" class="avatar-menu__panel" role="menu">
+                  <div class="avatar-menu__head">
+                    <span class="avatar-menu__name">{{ auth.user?.displayName }}</span>
+                    <span class="avatar-menu__role">{{ roleLabel }}</span>
+                  </div>
+                  <RouterLink to="/settings" class="avatar-menu__item" role="menuitem" @click="menuOpen = false">
+                    <AppIcon name="settings" :size="16" />设置
+                  </RouterLink>
+                  <RouterLink to="/change-password" class="avatar-menu__item" role="menuitem" @click="menuOpen = false">
+                    <AppIcon name="lock" :size="16" />修改密码
+                  </RouterLink>
+                  <button type="button" class="avatar-menu__item avatar-menu__item--danger" role="menuitem" @click="logout">
+                    <AppIcon name="logout" :size="16" />退出登录
+                  </button>
+                </div>
+              </Transition>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div v-if="!online" class="offline" role="status">
+        <AppIcon name="wifi-off" :size="16" />
+        <span>当前处于离线状态，部分操作可能无法保存</span>
+      </div>
+
+      <main id="main" class="shell__main" :aria-label="title">
+        <slot />
+      </main>
+
+      <button type="button" class="fab" aria-label="快速新建" @click="createOpen = true">
+        <AppIcon name="plus" :size="22" />
       </button>
-    </nav>
+    </div>
 
     <AppDialog v-model="createOpen" title="快速新建" size="sm">
       <div class="quick">
@@ -229,28 +351,6 @@ async function logout(): Promise<void> {
       </div>
     </AppDialog>
 
-    <AppDialog v-model="moreOpen" title="更多" size="sm">
-      <div class="more">
-        <section>
-          <p class="at-caption-upper more__label">前往</p>
-          <div class="more__grid">
-            <RouterLink v-for="item in moreItems" :key="item.name" :to="{ name: item.name }" class="more__item" @click="moreOpen = false">
-              <AppIcon :name="item.icon" :size="20" />
-              <span>{{ item.label }}</span>
-            </RouterLink>
-          </div>
-        </section>
-        <section>
-          <p class="at-caption-upper more__label">快速新建</p>
-          <div class="more__actions">
-            <AppButton v-for="action in createActions" :key="action.label" variant="outline" size="sm" @click="go(action.to)">
-              {{ action.label }}
-            </AppButton>
-          </div>
-        </section>
-      </div>
-    </AppDialog>
-
     <SearchDialog v-model="searchOpen" />
     <NotificationPanel v-model="notifOpen" />
   </div>
@@ -258,9 +358,13 @@ async function logout(): Promise<void> {
 
 <style scoped>
 .shell {
+  --sidebar-w: var(--at-sidebar-width);
   min-height: 100vh;
   display: flex;
-  flex-direction: column;
+}
+
+.shell.is-collapsed {
+  --sidebar-w: var(--at-sidebar-width-collapsed);
 }
 
 .shell__skip {
@@ -279,6 +383,194 @@ async function logout(): Promise<void> {
   top: var(--at-space-2);
 }
 
+.sidebar {
+  position: sticky;
+  top: 0;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  width: var(--sidebar-w);
+  height: 100vh;
+  padding: var(--at-space-3);
+  background: var(--at-bg-surface);
+  border-right: 1px solid var(--at-color-hairline);
+  transition: width var(--at-duration-base) var(--at-ease), transform var(--at-duration-base) var(--at-ease);
+  z-index: var(--at-z-nav);
+}
+
+.sidebar__head {
+  display: flex;
+  align-items: center;
+  gap: var(--at-space-2);
+  padding: var(--at-space-2) var(--at-space-2) var(--at-space-4);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 2px;
+  border-radius: var(--at-radius-md);
+}
+
+.brand__mark {
+  border-radius: 8px;
+  flex: none;
+}
+
+.brand__name {
+  font-size: 22px;
+  letter-spacing: 0.6px;
+  color: var(--at-color-ink);
+  white-space: nowrap;
+}
+
+.sidebar__close {
+  display: none;
+  margin-left: auto;
+  width: var(--at-touch-min);
+  height: var(--at-touch-min);
+  place-items: center;
+  border-radius: 50%;
+  color: var(--at-color-muted);
+}
+
+.sidebar__close:hover {
+  background: var(--at-bg-canvas-soft);
+  color: var(--at-color-ink);
+}
+
+.sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidebar__foot {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: auto;
+  padding-top: var(--at-space-3);
+  border-top: 1px solid var(--at-color-hairline-soft);
+}
+
+.sidebar__link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--at-space-3);
+  width: 100%;
+  min-height: var(--at-touch-min);
+  padding: 0 var(--at-space-3);
+  border-radius: var(--at-radius-md);
+  color: var(--at-color-muted);
+  font-size: var(--at-text-caption);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background var(--at-duration-fast) var(--at-ease), color var(--at-duration-fast) var(--at-ease);
+}
+
+.sidebar__link:hover {
+  background: var(--at-bg-canvas-soft);
+  color: var(--at-color-ink);
+}
+
+.sidebar__link.is-active {
+  background: var(--at-bg-surface-strong);
+  color: var(--at-color-ink);
+}
+
+.sidebar__link.is-active::before {
+  content: '';
+  position: absolute;
+  left: calc(var(--at-space-3) * -1);
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 0 var(--at-radius-pill) var(--at-radius-pill) 0;
+  background: var(--at-color-ink);
+}
+
+.sidebar__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar__minimize {
+  color: var(--at-color-muted-soft);
+}
+
+.sidebar__user {
+  display: flex;
+  align-items: center;
+  gap: var(--at-space-3);
+  padding: var(--at-space-2) var(--at-space-2);
+  margin-top: var(--at-space-2);
+}
+
+.sidebar__user-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.sidebar__user-name {
+  font-size: var(--at-text-caption);
+  font-weight: 500;
+  color: var(--at-color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar__user-role {
+  font-size: var(--at-text-micro);
+  color: var(--at-color-muted);
+}
+
+.shell.is-collapsed .sidebar {
+  padding-left: var(--at-space-2);
+  padding-right: var(--at-space-2);
+}
+
+.shell.is-collapsed .sidebar__head {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.shell.is-collapsed .brand__name,
+.shell.is-collapsed .sidebar__label,
+.shell.is-collapsed .sidebar__user-meta {
+  display: none;
+}
+
+.shell.is-collapsed .sidebar__link {
+  justify-content: center;
+  padding: 0;
+}
+
+.shell.is-collapsed .sidebar__link.is-active::before {
+  left: calc(var(--at-space-2) * -1);
+}
+
+.shell.is-collapsed .sidebar__user {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.shell__content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .topbar {
   position: sticky;
   top: 0;
@@ -289,56 +581,31 @@ async function logout(): Promise<void> {
 }
 
 .topbar__inner {
-  max-width: var(--at-content-max);
   height: var(--at-topbar-height);
-  margin: 0 auto;
   padding: 0 var(--at-space-6);
   display: flex;
   align-items: center;
-  gap: var(--at-space-6);
+  gap: var(--at-space-3);
 }
 
-.brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  flex: none;
-}
-
-.brand__mark {
-  border-radius: 8px;
-}
-
-.brand__name {
-  font-size: 22px;
-  letter-spacing: 0.6px;
-  color: var(--at-color-ink);
-}
-
-.topnav {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  flex: 1;
-}
-
-.topnav__link {
-  padding: 8px 12px;
+.topbar__menu {
+  display: none;
+  place-items: center;
+  width: var(--at-touch-min);
+  height: var(--at-touch-min);
+  margin-left: calc(var(--at-space-2) * -1);
   border-radius: var(--at-radius-pill);
-  font-size: var(--at-text-caption);
-  color: var(--at-color-muted);
-  transition: color var(--at-duration-fast) var(--at-ease), background var(--at-duration-fast) var(--at-ease);
+  color: var(--at-color-body-strong);
 }
 
-.topnav__link:hover {
-  color: var(--at-color-ink);
-  background: var(--at-bg-canvas-soft);
-}
-
-.topnav__link.is-active {
-  color: var(--at-color-ink);
+.topbar__menu:hover {
   background: var(--at-bg-surface-strong);
-  font-weight: 500;
+  color: var(--at-color-ink);
+}
+
+.topbar__title {
+  font-size: var(--at-text-title-sm);
+  color: var(--at-color-ink);
 }
 
 .topbar__actions {
@@ -464,7 +731,7 @@ async function logout(): Promise<void> {
 
 .fab {
   position: fixed;
-  right: max(24px, calc((100vw - var(--at-content-max)) / 2 + 24px));
+  right: max(24px, calc((100vw - var(--sidebar-w) - var(--at-content-max)) / 2 + 24px));
   bottom: 32px;
   z-index: var(--at-z-sticky);
   width: 52px;
@@ -483,7 +750,7 @@ async function logout(): Promise<void> {
   transform: translateY(-1px);
 }
 
-.bottomnav {
+.shell__scrim {
   display: none;
 }
 
@@ -520,50 +787,66 @@ async function logout(): Promise<void> {
   color: var(--at-color-muted-soft);
 }
 
-.more {
-  display: flex;
-  flex-direction: column;
-  gap: var(--at-space-5);
-}
-
-.more__label {
-  margin-bottom: var(--at-space-2);
-}
-
-.more__grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--at-space-2);
-}
-
-.more__item {
-  display: flex;
-  align-items: center;
-  gap: var(--at-space-2);
-  padding: var(--at-space-3);
-  border: 1px solid var(--at-color-hairline);
-  border-radius: var(--at-radius-md);
-  font-size: var(--at-text-caption);
-}
-
-.more__item:hover {
-  background: var(--at-bg-canvas-soft);
-}
-
-.more__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--at-space-2);
-}
-
 @media (max-width: 1023px) {
-  .topbar__inner {
-    padding: 0 var(--at-space-4);
-    gap: var(--at-space-3);
+  .shell {
+    --sidebar-w: var(--at-sidebar-mobile-width);
+    display: block;
   }
 
-  .brand__name {
-    font-size: 20px;
+  .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    height: 100dvh;
+    width: var(--at-sidebar-mobile-width);
+    transform: translateX(-100%);
+    box-shadow: var(--at-shadow-dialog);
+    z-index: calc(var(--at-z-overlay) + 1);
+  }
+
+  .shell.is-drawer-open .sidebar {
+    transform: none;
+  }
+
+  .shell__scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: var(--at-z-overlay);
+    background: var(--at-color-scrim);
+    backdrop-filter: blur(2px);
+  }
+
+  .scrim-enter-active,
+  .scrim-leave-active {
+    transition: opacity var(--at-duration-base) var(--at-ease);
+  }
+
+  .scrim-enter-from,
+  .scrim-leave-to {
+    opacity: 0;
+  }
+
+  .sidebar__close {
+    display: grid;
+  }
+
+  .topbar__menu {
+    display: grid;
+  }
+
+  .topbar__inner {
+    padding: 0 var(--at-space-4);
+  }
+
+  .topbar__title {
+    font-size: var(--at-text-body-sm);
+  }
+
+  .fab {
+    right: 20px;
+    bottom: calc(24px + env(safe-area-inset-bottom));
   }
 }
 
@@ -572,43 +855,8 @@ async function logout(): Promise<void> {
     height: 56px;
   }
 
-  .shell__main {
-    padding-bottom: 0;
-  }
-
-  .fab {
-    display: none;
-  }
-
-  .bottomnav {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: var(--at-z-nav);
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
-    background: rgba(255, 255, 255, 0.96);
-    border-top: 1px solid var(--at-color-hairline);
-    backdrop-filter: blur(10px);
-  }
-
-  .bottomnav__item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    min-height: 48px;
-    border-radius: var(--at-radius-md);
-    font-size: 11px;
-    color: var(--at-color-muted);
-  }
-
-  .bottomnav__item.is-active {
-    color: var(--at-color-ink);
-    font-weight: 600;
+  .topbar__title {
+    font-size: var(--at-text-caption);
   }
 }
 </style>

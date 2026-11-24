@@ -97,6 +97,9 @@
   /* 布局 */
   --at-topbar-height: 64px;
   --at-content-max: 1200px;
+  --at-sidebar-width: 248px;
+  --at-sidebar-width-collapsed: 76px;
+  --at-sidebar-mobile-width: 280px;
   --at-control-height: 40px;
   --at-touch-min: 44px;
 

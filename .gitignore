@@ -16,3 +16,9 @@ coverage/
 !/data/config/**
 
 docs/spec
+
+# 前端构建产物（保留占位 index，保证 go:embed 可编译）
+internal/webui/static/*
+!internal/webui/static/index.html
+!internal/webui/static/.gitkeep
+

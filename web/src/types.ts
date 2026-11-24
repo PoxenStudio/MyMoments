@@ -1,0 +1,320 @@
+export type Role = 'admin' | 'member';
+export type Visibility = 'household' | 'selected' | 'private';
+export type TaskStatus = 'todo' | 'in_progress' | 'completed';
+export type Priority = 'low' | 'normal' | 'high' | 'urgent';
+
+export interface User {
+  id: number;
+  username: string;
+  displayName: string;
+  avatarKey: string | null;
+  role: Role;
+  status: 'active' | 'inactive';
+  mustChangePassword: boolean;
+  relation: string | null;
+  sortOrder: number;
+  createdAt?: number;
+}
+
+export interface Household {
+  name: string;
+  timezone: string;
+  weekStart: number;
+  defaultWeatherCity: string | null;
+  defaultWeatherLat: number | null;
+  defaultWeatherLon: number | null;
+  defaultReminderOffset: number;
+  defaultDashboard: string | null;
+}
+
+export interface Bootstrap {
+  needsSetup: boolean;
+  household?: Household;
+  user?: User | null;
+}
+
+export interface Task {
+  id: number;
+  title: string;
+  description: string | null;
+  status: TaskStatus;
+  priority: Priority;
+  startDate: string | null;
+  dueDate: string | null;
+  dueTime: string | null;
+  templateId: number | null;
+  recurrenceRule: string | null;
+  seriesId: string | null;
+  occurrenceDate: string | null;
+  color: string | null;
+  icon: string | null;
+  visibility: Visibility;
+  completedAt: number | null;
+  archivedAt: number | null;
+  createdBy: number;
+  createdAt: number;
+  updatedAt: number;
+  assignees: User[];
+  subtasks: Subtask[];
+  mediaCount?: number;
+  completion?: Completion | null;
+}
+
+export interface Subtask {
+  id: number;
+  title: string;
+  done: boolean;
+  position: number;
+}
+
+export interface Completion {
+  id: number;
+  taskId: number;
+  occurrenceDate: string;
+  doneByUserId: number | null;
+  actualUserId: number | null;
+  completedAt: number;
+  doneByName?: string;
+  actualName?: string;
+}
+
+export interface TaskTemplate {
+  id: number;
+  name: string;
+  title: string;
+  description: string | null;
+  icon: string | null;
+  color: string | null;
+  priority: Priority | null;
+  defaultAssigneeIds: number[];
+  defaultDueTime: string | null;
+  recurrenceRule: string | null;
+  reminderOffset: number | null;
+  subtaskTemplate: string[];
+  enabled: boolean;
+  sortOrder: number;
+}
+
+export interface CalendarEvent {
+  id: number;
+  title: string;
+  description: string | null;
+  startLocal: string;
+  endLocal: string | null;
+  allDay: boolean;
+  location: string | null;
+  color: string | null;
+  icon: string | null;
+  recurrenceRule: string | null;
+  seriesId: string | null;
+  occurrenceDate?: string;
+  visibility: Visibility;
+  source: 'manual' | 'birthday';
+  createdBy: number;
+  createdAt: number;
+  updatedAt: number;
+  assignees: User[];
+}
+
+export interface Birthday {
+  id: number;
+  name: string;
+  month: number;
+  day: number;
+  yearUnknown: boolean;
+  birthYear: number | null;
+  note: string | null;
+  avatarKey: string | null;
+  contactId: number | null;
+  userId: number | null;
+  reminderOffset: number | null;
+  daysUntil?: number;
+  age?: number | null;
+}
+
+export interface ContactItem {
+  id?: number;
+  kind: 'phone' | 'email' | 'address';
+  label: string | null;
+  value: string;
+}
+
+export interface Contact {
+  id: number;
+  name: string;
+  organization: string | null;
+  title: string | null;
+  note: string | null;
+  birthdayOn: string | null;
+  category: string | null;
+  avatarKey: string | null;
+  ownerScope: 'household' | 'private';
+  createdBy: number;
+  items: ContactItem[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface Note {
+  id: number;
+  title: string | null;
+  body: string | null;
+  color: string | null;
+  pinned: boolean;
+  category: string | null;
+  authorId: number;
+  authorName?: string;
+  memoryDate: string | null;
+  visibility: Visibility;
+  createdAt: number;
+  updatedAt: number;
+  items: NoteItem[];
+}
+
+export interface NoteItem {
+  id: number;
+  noteId?: number;
+  text: string;
+  checked: boolean;
+  position: number;
+}
+
+export interface MessageReply {
+  id: number;
+  postId: number;
+  authorId: number;
+  authorName?: string;
+  body: string;
+  createdAt: number;
+}
+
+export interface MessagePost {
+  id: number;
+  body: string;
+  authorId: number;
+  authorName?: string;
+  occurrenceDate: string | null;
+  pinned: boolean;
+  visibility: Visibility;
+  editedAt: number | null;
+  createdAt: number;
+  updatedAt: number;
+  replies: MessageReply[];
+  replyCount?: number;
+}
+
+export interface Reminder {
+  id: number;
+  userId: number;
+  sourceType: 'task' | 'event' | 'birthday';
+  sourceId: number;
+  occurrenceDate: string | null;
+  title: string | null;
+  remindAt: number;
+  status: 'pending' | 'delivered' | 'dismissed';
+  deliveredAt: number | null;
+}
+
+export interface NotificationItem {
+  id: number;
+  userId: number;
+  sourceType: string;
+  sourceId: number;
+  summary: string | null;
+  actorId: number | null;
+  actorName?: string;
+  occurrenceDate: string | null;
+  createdAt: number;
+  readAt: number | null;
+  invalidatedAt: number | null;
+}
+
+export interface TimelineEntry {
+  sourceType: 'task' | 'task_completion' | 'event' | 'birthday' | 'message' | 'note';
+  sourceId: number;
+  occurrenceKey: string;
+  occurredOn: string;
+  occurredAt: number | null;
+  title: string;
+  summary: string | null;
+  memberIds: number[];
+  members: User[];
+  status: string | null;
+  mediaPreview: MediaItem[];
+  detailTarget: { view: string; open: number; date: string };
+}
+
+export interface MediaItem {
+  id: number;
+  taskId: number;
+  occurrenceDate: string | null;
+  mediaType: 'image' | 'audio' | 'video';
+  mimeType: string;
+  sizeBytes: number;
+  originalName: string | null;
+  durationMs: number | null;
+  createdAt: number;
+}
+
+export interface DashboardCardState {
+  id: string;
+  title: string;
+  visible: boolean;
+  size: 'standard' | 'wide';
+  background: string;
+  error: string | null;
+  data: unknown;
+}
+
+export interface DashboardLayoutItem {
+  id: string;
+  visible: boolean;
+  size: 'standard' | 'wide';
+  background: string;
+}
+
+export interface DashboardPayload {
+  layout: DashboardLayoutItem[];
+  cards: DashboardCardState[];
+  today: string;
+}
+
+export interface WeatherForecastDay {
+  date: string;
+  max: number;
+  min: number;
+  code: number;
+  description: string;
+}
+
+export interface WeatherData {
+  city: string;
+  temperature: number;
+  apparent: number | null;
+  description: string;
+  code: number;
+  high: number | null;
+  low: number | null;
+  updatedAt: number;
+  stale: boolean;
+  forecast: WeatherForecastDay[];
+}
+
+export interface ApiToken {
+  id: number;
+  name: string;
+  prefix: string;
+  scopes: Record<string, string[]>;
+  expiresAt: number | null;
+  lastUsedAt: number | null;
+  createdAt: number;
+  revokedAt: number | null;
+}
+
+export interface SearchResult {
+  type: 'task' | 'event' | 'contact' | 'message' | 'note';
+  id: number;
+  title: string;
+  summary: string | null;
+  date: string | null;
+}

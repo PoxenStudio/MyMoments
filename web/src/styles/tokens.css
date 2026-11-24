@@ -1,0 +1,120 @@
+:root {
+  /* 品牌色 · 来自 DESIGN.md，禁止新增高饱和主色 */
+  --at-color-primary: #292524;
+  --at-color-primary-active: #0c0a09;
+  --at-color-ink: #0c0a09;
+  --at-color-body: #4e4e4e;
+  --at-color-body-strong: #292524;
+  --at-color-muted: #777169;
+  --at-color-muted-soft: #a8a29e;
+  --at-color-hairline: #e7e5e4;
+  --at-color-hairline-soft: #f0efed;
+  --at-color-hairline-strong: #d6d3d1;
+  --at-bg-page: #f5f5f5;
+  --at-bg-canvas-soft: #fafafa;
+  --at-bg-surface: #ffffff;
+  --at-bg-surface-strong: #f0efed;
+  --at-bg-dark: #0c0a09;
+  --at-bg-dark-elevated: #1c1917;
+  --at-text-primary: #0c0a09;
+  --at-text-secondary: #4e4e4e;
+  --at-text-on-primary: #ffffff;
+  --at-text-on-dark: #ffffff;
+  --at-text-on-dark-soft: #a8a29e;
+  --at-border: #e7e5e4;
+  --at-color-success: #16a34a;
+  --at-color-danger: #dc2626;
+  --at-color-danger-soft: #fef2f2;
+  --at-color-success-soft: #f0fdf4;
+  --at-color-scrim: rgba(12, 10, 9, 0.42);
+
+  /* 产品标识蓝，仅用于品牌标记与链接强调，不作 CTA */
+  --at-color-brand: #005470;
+  --at-color-brand-soft: #eaf3f7;
+
+  /* 低饱和卡片主题（用户可选背景） */
+  --at-card-default: #ffffff;
+  --at-card-soft: #fafafa;
+  --at-card-sand: #f7f4ef;
+  --at-card-mint: #eef7f3;
+  --at-card-peach: #fbf2ec;
+  --at-card-lavender: #f4f0f9;
+  --at-card-sky: #edf3fa;
+  --at-card-rose: #faf0f2;
+
+  /* 渐变氛围球 */
+  --at-gradient-mint: #a7e5d3;
+  --at-gradient-peach: #f4c5a8;
+  --at-gradient-lavender: #c8b8e0;
+  --at-gradient-sky: #a8c8e8;
+  --at-gradient-rose: #e8b8c4;
+
+  /* 圆角 */
+  --at-radius-xs: 4px;
+  --at-radius-sm: 6px;
+  --at-radius-md: 8px;
+  --at-radius-lg: 12px;
+  --at-radius-xl: 16px;
+  --at-radius-xxl: 24px;
+  --at-radius-pill: 9999px;
+
+  /* 间距 4px 基准 */
+  --at-space-1: 4px;
+  --at-space-2: 8px;
+  --at-space-3: 12px;
+  --at-space-4: 16px;
+  --at-space-5: 20px;
+  --at-space-6: 24px;
+  --at-space-8: 32px;
+  --at-space-12: 48px;
+  --at-space-section: 96px;
+
+  /* 阴影 */
+  --at-shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --at-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.04);
+  --at-shadow-dialog: 0 12px 32px rgba(0, 0, 0, 0.12);
+
+  /* 字体 */
+  --at-font-display: 'EB Garamond', 'Songti SC', 'STSong', 'Noto Serif SC', 'Times New Roman', serif;
+  --at-font-family: 'Inter', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --at-font-mono: 'SFMono-Regular', 'JetBrains Mono', Consolas, monospace;
+
+  /* 字号 */
+  --at-text-display-xl: 48px;
+  --at-text-display-lg: 36px;
+  --at-text-display-md: 32px;
+  --at-text-display-sm: 24px;
+  --at-text-title-md: 20px;
+  --at-text-title-sm: 18px;
+  --at-text-body: 16px;
+  --at-text-body-sm: 15px;
+  --at-text-caption: 14px;
+  --at-text-micro: 12px;
+
+  /* 布局 */
+  --at-topbar-height: 64px;
+  --at-content-max: 1200px;
+  --at-control-height: 40px;
+  --at-touch-min: 44px;
+
+  /* 动效 */
+  --at-ease: cubic-bezier(0.2, 0, 0, 1);
+  --at-duration-fast: 120ms;
+  --at-duration-base: 200ms;
+
+  /* 层级 */
+  --at-z-sticky: 20;
+  --at-z-nav: 40;
+  --at-z-overlay: 60;
+  --at-z-dialog: 70;
+  --at-z-toast: 80;
+}
+
+@media (max-width: 639px) {
+  :root {
+    --at-text-display-xl: 32px;
+    --at-text-display-lg: 28px;
+    --at-text-display-md: 26px;
+    --at-text-display-sm: 22px;
+  }
+}

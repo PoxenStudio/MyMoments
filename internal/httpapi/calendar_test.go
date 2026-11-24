@@ -73,10 +73,10 @@ func TestEventRecurrenceExceptions(t *testing.T) {
 	until := addDays(today, 28)
 
 	status, body := call(t, admin, http.MethodPost, base+"/events", map[string]any{
-		"title":           "每周读书会",
-		"startLocal":      today + " 19:00",
-		"endLocal":        today + " 20:30",
-		"recurrenceRule":  `{"freq":"weekly","interval":1,"anchor":"due"}`,
+		"title":          "每周读书会",
+		"startLocal":     today + " 19:00",
+		"endLocal":       today + " 20:30",
+		"recurrenceRule": `{"freq":"weekly","interval":1,"anchor":"due"}`,
 		"reminderOffsets": []int{30},
 	})
 	if status != http.StatusCreated {

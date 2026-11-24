@@ -44,7 +44,6 @@ func callBearer(t *testing.T, client *http.Client, method, url, token string, bo
 
 func TestAPITokenScopes(t *testing.T) {
 	base, admin, _ := setupHousehold(t)
-	tokenClient := &http.Client{}
 	status, body := call(t, admin, http.MethodPost, base+"/tasks", map[string]any{"title": "交水电费"})
 	if status != http.StatusCreated {
 		t.Fatalf("create task: %d %v", status, body)
@@ -69,23 +68,23 @@ func TestAPITokenScopes(t *testing.T) {
 		t.Fatalf("unexpected scopes: %v", scopes)
 	}
 
-	status, body = callBearer(t, tokenClient, http.MethodGet, base+"/tasks", raw, nil)
+	status, body = callBearer(t, admin, http.MethodGet, base+"/tasks", raw, nil)
 	if status != http.StatusOK {
 		t.Fatalf("token read tasks: %d %v", status, body)
 	}
-	status, _ = callBearer(t, tokenClient, http.MethodPost, base+"/tasks", raw, map[string]any{"title": "无权创建"})
+	status, _ = callBearer(t, admin, http.MethodPost, base+"/tasks", raw, map[string]any{"title": "无权创建"})
 	if status != http.StatusForbidden {
 		t.Fatalf("token write tasks should be forbidden, got %d", status)
 	}
-	status, _ = callBearer(t, tokenClient, http.MethodGet, base+"/household", raw, nil)
+	status, _ = callBearer(t, admin, http.MethodGet, base+"/household", raw, nil)
 	if status != http.StatusOK {
 		t.Fatalf("token read family: %d", status)
 	}
-	status, _ = callBearer(t, tokenClient, http.MethodPatch, base+"/household", raw, map[string]any{"name": "改名"})
+	status, _ = callBearer(t, admin, http.MethodPatch, base+"/household", raw, map[string]any{"name": "改名"})
 	if status != http.StatusForbidden {
 		t.Fatalf("token write family should be forbidden, got %d", status)
 	}
-	status, _ = callBearer(t, tokenClient, http.MethodGet, base+"/tokens", raw, nil)
+	status, _ = callBearer(t, admin, http.MethodGet, base+"/tokens", raw, nil)
 	if status != http.StatusForbidden {
 		t.Fatalf("token should not manage tokens, got %d", status)
 	}
@@ -99,7 +98,7 @@ func TestAPITokenScopes(t *testing.T) {
 		t.Fatalf("create delete token: %d %v", status, body)
 	}
 	deleteRaw := body["token"].(string)
-	status, _ = callBearer(t, tokenClient, http.MethodDelete, base+"/tasks/"+formatID(int64(taskID)), deleteRaw, nil)
+	status, _ = callBearer(t, admin, http.MethodDelete, base+"/tasks/"+formatID(int64(taskID)), deleteRaw, nil)
 	if status != http.StatusNoContent {
 		t.Fatalf("token delete task: %d", status)
 	}
@@ -123,7 +122,7 @@ func TestAPITokenScopes(t *testing.T) {
 	if status != http.StatusNoContent {
 		t.Fatalf("revoke token: %d", status)
 	}
-	status, _ = callBearer(t, tokenClient, http.MethodGet, base+"/tasks", raw, nil)
+	status, _ = callBearer(t, admin, http.MethodGet, base+"/tasks", raw, nil)
 	if status != http.StatusUnauthorized {
 		t.Fatalf("revoked token should be rejected, got %d", status)
 	}

@@ -251,47 +251,47 @@ onMounted(() => {
       </div>
     </header>
 
-    <AppTabs v-model="tab" :tabs="tabs" aria-label="家庭内容" class="family__tabs" />
+    <AppTabs v-model="tab" :tabs="tabs" ariaLabel="家庭内容" class="family__tabs" />
 
     <template v-if="tab === 'members'">
-      <AppErrorState v-if="loadError" title="成员加载失败" :description="loadError" @retry="load" />
-      <div v-else-if="loading" class="family__loading">正在加载成员…</div>
+    <AppErrorState v-if="loadError" title="成员加载失败" :description="loadError" @retry="load" />
+    <div v-else-if="loading" class="family__loading">正在加载成员…</div>
 
-      <AppEmptyState
-        v-else-if="sortedMembers.length === 0"
-        icon="family"
-        title="还没有家庭成员"
-        description="管理员可以添加家庭成员账号。"
-      >
-        <AppButton v-if="auth.isAdmin" @click="openCreate">添加第一位成员</AppButton>
-      </AppEmptyState>
+    <AppEmptyState
+      v-else-if="sortedMembers.length === 0"
+      icon="family"
+      title="还没有家庭成员"
+      description="管理员可以添加家庭成员账号。"
+    >
+      <AppButton v-if="auth.isAdmin" @click="openCreate">添加第一位成员</AppButton>
+    </AppEmptyState>
 
-      <ul v-else class="family__list">
-        <li v-for="member in sortedMembers" :key="member.id" class="family__member" :class="{ 'is-inactive': member.status !== 'active' }">
-          <AppAvatar :name="member.displayName" :size="44" />
-          <div class="family__info">
-            <div class="family__name-row">
-              <span class="family__name">{{ member.displayName }}</span>
-              <AppStatusTag v-if="member.relation" tone="brand">{{ member.relation }}</AppStatusTag>
-              <AppStatusTag :tone="member.role === 'admin' ? 'warning' : 'neutral'">{{ roleLabel(member.role) }}</AppStatusTag>
-              <AppStatusTag v-if="member.status !== 'active'" tone="danger">已停用</AppStatusTag>
-              <AppStatusTag v-else-if="member.mustChangePassword" tone="warning">待改密码</AppStatusTag>
-            </div>
-            <p class="family__meta">@{{ member.username }}<span v-if="member.id === auth.user?.id"> · 这是你</span></p>
+    <ul v-else class="family__list">
+      <li v-for="member in sortedMembers" :key="member.id" class="family__member" :class="{ 'is-inactive': member.status !== 'active' }">
+        <AppAvatar :name="member.displayName" :size="44" />
+        <div class="family__info">
+          <div class="family__name-row">
+            <span class="family__name">{{ member.displayName }}</span>
+            <AppStatusTag v-if="member.relation" tone="brand">{{ member.relation }}</AppStatusTag>
+            <AppStatusTag :tone="member.role === 'admin' ? 'warning' : 'neutral'">{{ roleLabel(member.role) }}</AppStatusTag>
+            <AppStatusTag v-if="member.status !== 'active'" tone="danger">已停用</AppStatusTag>
+            <AppStatusTag v-else-if="member.mustChangePassword" tone="warning">待改密码</AppStatusTag>
           </div>
-          <div class="family__actions">
-            <AppIconButton icon="edit" label="编辑成员" size="sm" @click="openEdit(member)" />
-            <AppIconButton v-if="auth.isAdmin" icon="key" label="重置密码" size="sm" @click="openReset(member)" />
-            <AppIconButton
-              v-if="auth.isAdmin && member.id !== auth.user?.id"
-              :icon="member.status === 'active' ? 'x-circle' : 'check-circle'"
-              :label="member.status === 'active' ? '停用账号' : '恢复账号'"
-              size="sm"
-              @click="statusTarget = member"
-            />
-          </div>
-        </li>
-      </ul>
+          <p class="family__meta">@{{ member.username }}<span v-if="member.id === auth.user?.id"> · 这是你</span></p>
+        </div>
+        <div class="family__actions">
+          <AppIconButton icon="edit" label="编辑成员" size="sm" @click="openEdit(member)" />
+          <AppIconButton v-if="auth.isAdmin" icon="key" label="重置密码" size="sm" @click="openReset(member)" />
+          <AppIconButton
+            v-if="auth.isAdmin && member.id !== auth.user?.id"
+            :icon="member.status === 'active' ? 'x-circle' : 'check-circle'"
+            :label="member.status === 'active' ? '停用账号' : '恢复账号'"
+            size="sm"
+            @click="statusTarget = member"
+          />
+        </div>
+      </li>
+    </ul>
     </template>
 
     <ContactManager v-else-if="tab === 'contacts'" />

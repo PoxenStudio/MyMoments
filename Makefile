@@ -37,4 +37,4 @@ docker:
 	docker build -t mymoments:latest .
 
 clean:
-	rm -rf build web/dist internal/webui/static/assets
+	rm -rf build web/dist internal/webui/static

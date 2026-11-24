@@ -22,12 +22,36 @@ export const useFamilyStore = defineStore('family', () => {
     return members.value.find((m) => m.id === id)?.displayName ?? `成员 ${id}`;
   }
 
+  async function createMember(payload: {
+    username: string;
+    displayName: string;
+    role: string;
+    relation: string;
+    password: string;
+  }): Promise<{ user: User; temporaryPassword: string }> {
+    const res = await api.post<{ user: User; temporaryPassword: string }>('/family/members', payload);
+    members.value = [...members.value, res.user];
+    return res;
+  }
+
+  async function updateMember(id: number, payload: Partial<Pick<User, 'displayName' | 'relation' | 'role' | 'status'>>): Promise<User> {
+    const res = await api.patch<{ user: User }>(`/family/members/${id}`, payload);
+    members.value = members.value.map((m) => (m.id === id ? res.user : m));
+    return res.user;
+  }
+
+  async function resetMemberPassword(id: number, password = ''): Promise<string> {
+    const res = await api.post<{ temporaryPassword: string }>(`/family/members/${id}/reset-password`, { password });
+    members.value = members.value.map((m) => (m.id === id ? { ...m, mustChangePassword: true } : m));
+    return res.temporaryPassword;
+  }
+
   function reset(): void {
     members.value = [];
     loaded.value = false;
   }
 
-  return { members, activeMembers, loaded, load, memberName, reset };
+  return { members, activeMembers, loaded, load, memberName, createMember, updateMember, resetMemberPassword, reset };
 });
 
 export const useNotificationStore = defineStore('notification', () => {

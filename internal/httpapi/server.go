@@ -19,9 +19,10 @@ import (
 
 // Server 持有 API 依赖并注册路由。
 type Server struct {
-	cfg   config.Config
-	store *store.Store
-	web   fs.FS
+	cfg     config.Config
+	store   *store.Store
+	web     fs.FS
+	limiter *loginLimiter
 }
 
 // New 构造 HTTP 服务。
@@ -30,14 +31,14 @@ func New(cfg config.Config, st *store.Store) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Server{cfg: cfg, store: st, web: web}, nil
+	return &Server{cfg: cfg, store: st, web: web, limiter: newLoginLimiter(8, 5*time.Minute)}, nil
 }
 
 // Handler 返回完整中间件链。
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	s.routes(mux)
-	return s.middleware(mux)
+	return s.middleware(s.resolveUser(mux))
 }
 
 func (s *Server) routes(mux *http.ServeMux) {
@@ -46,6 +47,28 @@ func (s *Server) routes(mux *http.ServeMux) {
 	})
 	mux.HandleFunc("GET /readyz", s.handleReady)
 	mux.HandleFunc("GET /openapi.yaml", s.handleOpenAPI)
+
+	api := "/api/v1"
+	mux.HandleFunc("GET "+api+"/bootstrap", s.handleBootstrap)
+	mux.HandleFunc("POST "+api+"/setup", s.handleSetup)
+	mux.HandleFunc("POST "+api+"/auth/login", s.handleLogin)
+	mux.HandleFunc("GET "+api+"/auth/session", s.handleSession)
+	mux.HandleFunc("POST "+api+"/auth/logout", s.handleLogout)
+
+	mux.Handle("POST "+api+"/auth/password", s.requireAuth(http.HandlerFunc(s.handlePasswordChange)))
+	mux.Handle("GET "+api+"/me", s.requireAuth(http.HandlerFunc(s.handleMe)))
+	mux.Handle("PATCH "+api+"/me", s.requireAuth(http.HandlerFunc(s.handleMePatch)))
+	mux.Handle("GET "+api+"/me/preferences", s.requireAuth(http.HandlerFunc(s.handlePreferences)))
+	mux.Handle("PATCH "+api+"/me/preferences", s.requireAuth(http.HandlerFunc(s.handlePreferencesPatch)))
+
+	mux.Handle("GET "+api+"/family/members", s.requireAuth(http.HandlerFunc(s.handleMembers)))
+	mux.Handle("POST "+api+"/family/members", s.requireAdmin(http.HandlerFunc(s.handleMemberCreate)))
+	mux.Handle("PATCH "+api+"/family/members/{id}", s.requireAuth(http.HandlerFunc(s.handleMemberPatch)))
+	mux.Handle("POST "+api+"/family/members/{id}/reset-password", s.requireAdmin(http.HandlerFunc(s.handleMemberResetPassword)))
+
+	mux.Handle("GET "+api+"/household", s.requireAuth(http.HandlerFunc(s.handleHousehold)))
+	mux.Handle("PATCH "+api+"/household", s.requireAdmin(http.HandlerFunc(s.handleHouseholdPatch)))
+
 	mux.HandleFunc("/", s.handleStatic)
 }
 

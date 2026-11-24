@@ -1,76 +1,305 @@
 <script setup lang="ts">
+import { onMounted, reactive, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { ApiError } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { useToastStore } from '@/stores/toast';
-import { useRouter } from 'vue-router';
+import AppAvatar from '@/components/base/AppAvatar.vue';
 import AppButton from '@/components/base/AppButton.vue';
+import AppField from '@/components/base/AppField.vue';
+import AppIcon from '@/components/base/AppIcon.vue';
+import AppInput from '@/components/base/AppInput.vue';
+import AppPanel from '@/components/base/AppPanel.vue';
+import AppSelect from '@/components/base/AppSelect.vue';
+import AppStatusTag from '@/components/base/AppStatusTag.vue';
 
 const auth = useAuthStore();
 const toast = useToastStore();
 const router = useRouter();
+
+const profile = reactive({ displayName: '', relation: '' });
+const profileSaving = ref(false);
+const profileError = ref('');
+
+const household = reactive({ name: '', timezone: 'Asia/Shanghai', weekStart: '1', defaultReminderOffset: '0' });
+const householdSaving = ref(false);
+const householdError = ref('');
+
+const prefs = reactive({ dateFormat: '24h' });
+const prefsSaving = ref(false);
+
+const timezoneOptions = [
+  { value: 'Asia/Shanghai', label: '中国标准时间（Asia/Shanghai）' },
+  { value: 'Asia/Hong_Kong', label: '香港（Asia/Hong_Kong）' },
+  { value: 'Asia/Taipei', label: '台北（Asia/Taipei）' },
+  { value: 'Asia/Tokyo', label: '东京（Asia/Tokyo）' },
+  { value: 'Asia/Singapore', label: '新加坡（Asia/Singapore）' },
+  { value: 'America/Los_Angeles', label: '洛杉矶（America/Los_Angeles）' },
+  { value: 'America/New_York', label: '纽约（America/New_York）' },
+  { value: 'Europe/London', label: '伦敦（Europe/London）' },
+  { value: 'UTC', label: '协调世界时（UTC）' },
+];
+
+const weekStartOptions = [
+  { value: '1', label: '周一' },
+  { value: '0', label: '周日' },
+];
+
+const dateFormatOptions = [
+  { value: '24h', label: '24 小时制（18:30）' },
+  { value: '12h', label: '12 小时制（下午 6:30）' },
+];
+
+async function saveProfile(): Promise<void> {
+  profileError.value = '';
+  if (!profile.displayName.trim()) {
+    profileError.value = '请填写称呼';
+    return;
+  }
+  profileSaving.value = true;
+  try {
+    await auth.updateProfile({
+      displayName: profile.displayName.trim(),
+      relation: profile.relation.trim(),
+    });
+    toast.success('个人资料已保存');
+  } catch (err) {
+    profileError.value = err instanceof ApiError ? err.message : '保存失败';
+  } finally {
+    profileSaving.value = false;
+  }
+}
+
+async function saveHousehold(): Promise<void> {
+  householdError.value = '';
+  if (!household.name.trim()) {
+    householdError.value = '请填写家庭名称';
+    return;
+  }
+  householdSaving.value = true;
+  try {
+    await auth.updateHousehold({
+      name: household.name.trim(),
+      timezone: household.timezone,
+      weekStart: Number(household.weekStart),
+      defaultReminderOffset: Number(household.defaultReminderOffset) || 0,
+    });
+    toast.success('家庭设置已保存');
+  } catch (err) {
+    householdError.value = err instanceof ApiError ? err.message : '保存失败';
+  } finally {
+    householdSaving.value = false;
+  }
+}
+
+async function savePrefs(): Promise<void> {
+  prefsSaving.value = true;
+  try {
+    await auth.savePreferences({ dateFormat: prefs.dateFormat as '24h' | '12h' });
+    toast.success('偏好已保存');
+  } catch (err) {
+    toast.error(err instanceof ApiError ? err.message : '保存失败');
+  } finally {
+    prefsSaving.value = false;
+  }
+}
 
 async function logout(): Promise<void> {
   await auth.logout();
   toast.push('已退出登录');
   await router.replace({ name: 'login' });
 }
+
+function syncFromState(): void {
+  profile.displayName = auth.user?.displayName ?? '';
+  profile.relation = auth.user?.relation ?? '';
+  household.name = auth.household?.name ?? '';
+  household.timezone = auth.household?.timezone ?? 'Asia/Shanghai';
+  household.weekStart = String(auth.household?.weekStart ?? 1);
+  household.defaultReminderOffset = String(auth.household?.defaultReminderOffset ?? 0);
+}
+
+onMounted(async () => {
+  syncFromState();
+  try {
+    const loaded = await auth.loadPreferences();
+    prefs.dateFormat = loaded.dateFormat;
+  } catch {
+    prefs.dateFormat = '24h';
+  }
+});
 </script>
 
 <template>
-  <div class="at-page">
+  <div class="at-page settings">
     <header class="at-page__header">
       <div>
         <p class="at-caption-upper">设置</p>
         <h1 class="at-page__title">账号与家庭</h1>
-        <p class="at-page__subtitle">成员、家庭信息与偏好设置将在这里管理。</p>
+        <p class="at-page__subtitle">管理你的个人资料、家庭信息与显示偏好。</p>
       </div>
     </header>
-    <section class="settings__card">
-      <div class="settings__row">
-        <span class="at-caption-upper">当前账号</span>
-        <span>{{ auth.user?.displayName }} · {{ auth.user?.role === 'admin' ? '管理员' : '成员' }}</span>
-      </div>
-      <div class="settings__row">
-        <span class="at-caption-upper">家庭</span>
-        <span>{{ auth.household?.name ?? '我的家' }}</span>
-      </div>
-      <div class="settings__row">
-        <span class="at-caption-upper">时区</span>
-        <span>{{ auth.household?.timezone ?? 'Asia/Shanghai' }}</span>
-      </div>
-    </section>
-    <div class="settings__actions">
-      <AppButton variant="outline" @click="router.push('/change-password')">修改密码</AppButton>
-      <AppButton variant="ghost" @click="logout">退出登录</AppButton>
+
+    <div class="settings__grid">
+      <AppPanel title="个人资料" subtitle="其他成员在成员列表与内容中看到的信息。">
+        <form class="at-stack" @submit.prevent="saveProfile">
+          <div class="settings__identity">
+            <AppAvatar :name="profile.displayName || auth.user?.displayName || '?'" :size="52" />
+            <div>
+              <p class="settings__name">{{ auth.user?.displayName }}</p>
+              <p class="settings__handle">@{{ auth.user?.username }}</p>
+            </div>
+            <AppStatusTag :tone="auth.isAdmin ? 'warning' : 'neutral'">{{ auth.isAdmin ? '管理员' : '成员' }}</AppStatusTag>
+          </div>
+          <div class="settings__row-2">
+            <AppField label="称呼" for-id="profile-name">
+              <AppInput id="profile-name" v-model="profile.displayName" placeholder="例如：小明" />
+            </AppField>
+            <AppField label="家庭关系" for-id="profile-relation" hint="选填，如爸爸、女儿">
+              <AppInput id="profile-relation" v-model="profile.relation" placeholder="例如：爸爸" />
+            </AppField>
+          </div>
+          <p v-if="profileError" class="settings__error" role="alert"><AppIcon name="alert" :size="16" />{{ profileError }}</p>
+          <div class="settings__actions">
+            <AppButton type="submit" :loading="profileSaving">保存资料</AppButton>
+          </div>
+        </form>
+      </AppPanel>
+
+      <AppPanel v-if="auth.isAdmin" title="家庭设置" subtitle="对全家生效，仅管理员可修改。">
+        <form class="at-stack" @submit.prevent="saveHousehold">
+          <AppField label="家庭名称" for-id="hh-name">
+            <AppInput id="hh-name" v-model="household.name" placeholder="我的家" />
+          </AppField>
+          <div class="settings__row-2">
+            <AppField label="家庭时区" for-id="hh-tz" hint="日期与提醒按此时区计算">
+              <AppSelect id="hh-tz" v-model="household.timezone" :options="timezoneOptions" />
+            </AppField>
+            <AppField label="每周起始日" for-id="hh-week">
+              <AppSelect id="hh-week" v-model="household.weekStart" :options="weekStartOptions" />
+            </AppField>
+          </div>
+          <AppField label="默认提醒提前量" for-id="hh-reminder" hint="单位：分钟，0 表示不提前">
+            <AppInput id="hh-reminder" v-model="household.defaultReminderOffset" type="number" min="0" max="10080" />
+          </AppField>
+          <p v-if="householdError" class="settings__error" role="alert"><AppIcon name="alert" :size="16" />{{ householdError }}</p>
+          <div class="settings__actions">
+            <AppButton type="submit" :loading="householdSaving">保存家庭设置</AppButton>
+          </div>
+        </form>
+      </AppPanel>
+
+      <AppPanel title="显示偏好" subtitle="仅影响你自己的界面。">
+        <form class="at-stack" @submit.prevent="savePrefs">
+          <AppField label="时间格式" for-id="pref-date">
+            <AppSelect id="pref-date" v-model="prefs.dateFormat" :options="dateFormatOptions" />
+          </AppField>
+          <div class="settings__actions">
+            <AppButton type="submit" :loading="prefsSaving">保存偏好</AppButton>
+          </div>
+        </form>
+      </AppPanel>
+
+      <AppPanel title="账号安全" subtitle="密码与登录状态。">
+        <div class="at-stack">
+          <div class="settings__account-row">
+            <div>
+              <p class="settings__account-label">登录密码</p>
+              <p class="settings__account-hint">建议定期更换，至少 10 个字符。</p>
+            </div>
+            <AppButton variant="outline" @click="router.push('/change-password')">修改密码</AppButton>
+          </div>
+          <div class="settings__account-row">
+            <div>
+              <p class="settings__account-label">退出登录</p>
+              <p class="settings__account-hint">在此设备上结束当前会话。</p>
+            </div>
+            <AppButton variant="ghost" @click="logout">退出登录</AppButton>
+          </div>
+        </div>
+      </AppPanel>
     </div>
   </div>
 </template>
 
 <style scoped>
-.settings__card {
-  background: var(--at-bg-surface);
-  border: 1px solid var(--at-color-hairline);
-  border-radius: var(--at-radius-xl);
-  padding: var(--at-space-2) var(--at-space-5);
-  max-width: 620px;
+.settings__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--at-space-4);
+  align-items: start;
 }
 
-.settings__row {
+.settings__identity {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--at-space-4);
-  padding: var(--at-space-4) 0;
+  gap: var(--at-space-3);
+  padding-bottom: var(--at-space-3);
   border-bottom: 1px solid var(--at-color-hairline);
-  font-size: var(--at-text-body-sm);
 }
 
-.settings__row:last-child {
-  border-bottom: 0;
+.settings__identity > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings__name {
+  font-weight: 500;
+  font-size: var(--at-text-body);
+}
+
+.settings__handle {
+  color: var(--at-color-muted);
+  font-size: var(--at-text-caption);
+}
+
+.settings__row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--at-space-3);
 }
 
 .settings__actions {
   display: flex;
-  gap: var(--at-space-2);
-  margin-top: var(--at-space-5);
+  justify-content: flex-end;
+  margin-top: var(--at-space-1);
+}
+
+.settings__error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--at-color-danger);
+  font-size: 13px;
+}
+
+.settings__account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--at-space-4);
+  padding: var(--at-space-2) 0;
+  border-bottom: 1px solid var(--at-color-hairline);
+}
+
+.settings__account-row:last-child {
+  border-bottom: 0;
+}
+
+.settings__account-label {
+  font-size: var(--at-text-body-sm);
+  font-weight: 500;
+}
+
+.settings__account-hint {
+  margin-top: 2px;
+  color: var(--at-color-muted);
+  font-size: var(--at-text-caption);
+}
+
+@media (max-width: 639px) {
+  .settings__row-2 {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

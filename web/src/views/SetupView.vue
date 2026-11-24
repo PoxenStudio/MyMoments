@@ -38,6 +38,7 @@ async function submit(): Promise<void> {
   loading.value = true;
   try {
     const user = await auth.setup({
+      householdName: householdName.value.trim() || '我的家',
       username: username.value.trim(),
       displayName: displayName.value.trim(),
       password: password.value,

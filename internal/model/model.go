@@ -58,6 +58,8 @@ type Session struct {
 	ExpiresAt  int64
 	CreatedAt  int64
 	LastSeenAt int64
+	UserAgent  string
+	IP         string
 }
 
 // APIToken 是长期访问令牌，Hash 为令牌哈希。

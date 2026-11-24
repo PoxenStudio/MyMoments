@@ -13,6 +13,7 @@ type ctxKey string
 
 const (
 	ctxUser      ctxKey = "user"
+	ctxSessionID ctxKey = "session_id"
 	ctxTokenID   ctxKey = "token_id"
 	ctxViaToken  ctxKey = "via_token"
 	ctxRequestID ctxKey = "request_id"

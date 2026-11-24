@@ -27,6 +27,18 @@ export interface Household {
   defaultDashboard: string | null;
 }
 
+export interface Preferences {
+  locale: string;
+  dateFormat: '24h' | '12h';
+  dashboard: string | null;
+  weatherCity: string | null;
+  weatherLat: number | null;
+  weatherLon: number | null;
+  weatherAuto: boolean;
+  notificationPrefs: string | null;
+  updatedAt: number;
+}
+
 export interface Bootstrap {
   needsSetup: boolean;
   household?: Household;

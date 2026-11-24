@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { api } from '@/api/client';
-import type { Household, User } from '@/types';
+import type { Household, Preferences, User } from '@/types';
 
 interface BootstrapResponse {
   needsSetup: boolean;
@@ -50,9 +50,10 @@ export const useAuthStore = defineStore('auth', () => {
     return res.user;
   }
 
-  async function setup(payload: { username: string; displayName: string; password: string }): Promise<User> {
-    const res = await api.post<{ user: User }>('/setup', payload);
+  async function setup(payload: { householdName: string; username: string; displayName: string; password: string }): Promise<User> {
+    const res = await api.post<{ user: User; household?: Household }>('/setup', payload);
     user.value = res.user;
+    if (res.household) household.value = res.household;
     needsSetup.value = false;
     loaded.value = true;
     return res.user;
@@ -75,6 +76,20 @@ export const useAuthStore = defineStore('auth', () => {
     const res = await api.patch<{ user: User }>('/me', payload);
     user.value = res.user;
     return res.user;
+  }
+
+  async function loadPreferences(): Promise<Preferences> {
+    return api.get<Preferences>('/me/preferences');
+  }
+
+  async function savePreferences(payload: Partial<Preferences>): Promise<Preferences> {
+    return api.patch<Preferences>('/me/preferences', payload);
+  }
+
+  async function updateHousehold(payload: Partial<Household>): Promise<Household> {
+    const res = await api.patch<{ household: Household }>('/family/household', payload);
+    household.value = res.household;
+    return res.household;
   }
 
   function clear(): void {
@@ -101,6 +116,9 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     changePassword,
     updateProfile,
+    loadPreferences,
+    savePreferences,
+    updateHousehold,
     clear,
   };
 });

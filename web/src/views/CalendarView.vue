@@ -358,7 +358,7 @@ function pillLabel(entry: DayEntry): string {
   <div class="calendar-page">
     <header class="calendar-page__head">
       <div>
-        <p class="at-caption-upper">Calendar</p>
+        <p class="at-caption-upper">行事历</p>
         <h1 class="at-display calendar-page__title">家的日程</h1>
         <p class="calendar-page__sub">{{ title }}</p>
       </div>
@@ -507,7 +507,7 @@ function pillLabel(entry: DayEntry): string {
     <section v-if="view === 'month'" class="day-panel">
       <div class="day-panel__head">
         <div>
-          <p class="at-caption-upper">Selected</p>
+          <p class="at-caption-upper">当日安排</p>
           <h2 class="day-panel__title">{{ dayLabel(selectedDate) }}</h2>
         </div>
         <div class="day-panel__actions">
@@ -700,7 +700,7 @@ function pillLabel(entry: DayEntry): string {
 }
 
 .cell {
-  min-height: 112px;
+  min-height: clamp(88px, 9.5vh, 112px);
   padding: var(--at-space-2);
   border-right: 1px solid var(--at-color-hairline-soft);
   border-bottom: 1px solid var(--at-color-hairline-soft);

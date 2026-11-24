@@ -271,7 +271,7 @@ function memberNames(task: Task): string {
   <div class="tasks-page">
     <header class="tasks-page__head">
       <div>
-        <p class="at-caption-upper">Tasks</p>
+        <p class="at-caption-upper">待办</p>
         <h1 class="at-display tasks-page__title">把小事放在心上</h1>
         <p class="tasks-page__sub">
           今天 {{ tasks.counts.today }} 件

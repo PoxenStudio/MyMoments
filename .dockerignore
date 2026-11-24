@@ -1,0 +1,13 @@
+.git
+.github
+.gitignore
+docs
+.screenshots
+web/node_modules
+web/dist
+internal/webui/static
+*.db
+*.db-shm
+*.db-wal
+data
+.env

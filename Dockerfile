@@ -15,7 +15,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/server 
 
 FROM alpine:3.20
 RUN addgroup -S app && adduser -S -G app app \
-    && apk add --no-cache ca-certificates tzdata wget
+    && apk add --no-cache ca-certificates tzdata wget \
+    && mkdir -p /data && chown app:app /data
 COPY --from=build /out/server /usr/local/bin/mymoments
 USER app
 ENV MYMOMENTS_DATA_DIR=/data MYMOMENTS_ADDR=:8080

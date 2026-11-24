@@ -88,4 +88,11 @@ const classes = computed(() => [
   width: 32px;
   height: 32px;
 }
+
+@media (pointer: coarse), (max-width: 767px) {
+  .at-icon-btn--sm {
+    width: var(--at-touch-min);
+    height: var(--at-touch-min);
+  }
+}
 </style>

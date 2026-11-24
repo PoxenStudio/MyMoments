@@ -2,12 +2,22 @@
 import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
 import { asData, type NotesData } from '@/cards/types';
+import type { Note } from '@/types';
 import AppEmptyState from '@/components/base/AppEmptyState.vue';
 import AppIcon from '@/components/base/AppIcon.vue';
 
 const props = defineProps<{ data: unknown }>();
 const d = computed(() => asData<NotesData>(props.data));
 const items = computed(() => d.value?.items ?? []);
+
+function preview(note: Note): string {
+  if (note.body?.trim()) return note.body;
+  if (note.items?.length) {
+    const done = note.items.filter((item) => item.checked).length;
+    return `${note.items.length} 项清单 · 已完成 ${done} 项`;
+  }
+  return '';
+}
 </script>
 
 <template>
@@ -21,7 +31,7 @@ const items = computed(() => d.value?.items ?? []);
           <span class="notes__title">{{ note.title || '无标题便签' }}</span>
           <AppIcon v-if="note.pinned" name="pin" :size="14" class="notes__pin" />
         </span>
-        <span v-if="note.body" class="notes__body">{{ note.body }}</span>
+        <span v-if="preview(note)" class="notes__body">{{ preview(note) }}</span>
         <span class="notes__author">{{ note.authorName }}</span>
       </RouterLink>
     </li>

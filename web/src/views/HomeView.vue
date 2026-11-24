@@ -33,11 +33,12 @@ let timer: number | undefined;
 const collapseKey = computed(() => `mymoments:dashboard:collapsed:${auth.user?.id ?? 'anon'}`);
 
 const greetingText = computed(() => greeting(auth.user?.displayName ?? '家人'));
-const dateText = computed(() => new Intl.DateTimeFormat('zh-CN', {
-  month: 'long',
-  day: 'numeric',
-  weekday: 'long',
-}).format(new Date()));
+const dateText = computed(() => {
+  const now = new Date();
+  const date = new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric' }).format(now);
+  const weekday = new Intl.DateTimeFormat('zh-CN', { weekday: 'long' }).format(now);
+  return `${date} · ${weekday}`;
+});
 
 const overview = computed<OverviewData | null>(() => {
   const data = dashboard.cardMap.overview?.data;
@@ -234,7 +235,6 @@ onBeforeUnmount(() => {
             <div class="dash__heading">
               <span class="dash__icon"><AppIcon :name="cardRegistry[item.id].icon" :size="16" /></span>
               <div class="dash__heading-text">
-                <p class="at-caption-upper">{{ cardRegistry[item.id].title }}</p>
                 <h2 class="dash__title">{{ cardOf(item.id)?.title ?? cardRegistry[item.id].title }}</h2>
               </div>
             </div>
@@ -263,7 +263,7 @@ onBeforeUnmount(() => {
                 @click="moveCard(item.id, 1)"
               />
               <AppIconButton
-                :icon="isCollapsed(item.id) ? 'chevron-down' : 'chevron-up'"
+                :icon="isCollapsed(item.id) ? 'plus' : 'minus'"
                 :label="isCollapsed(item.id) ? '展开卡片' : '折叠卡片'"
                 size="sm"
                 @click="toggleCollapse(item.id)"
@@ -325,6 +325,10 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: var(--at-space-6);
+  width: 100%;
+  max-width: var(--at-content-max);
+  margin: 0 auto;
+  padding: var(--at-space-8) var(--at-space-6) var(--at-space-12);
 }
 
 .hero {
@@ -379,12 +383,12 @@ onBeforeUnmount(() => {
   grid-row: span 2;
 }
 
-.dash--bg-warm :deep(.at-panel) { background: #faf3e9; }
-.dash--bg-sage :deep(.at-panel) { background: #eef3ee; }
-.dash--bg-sky :deep(.at-panel) { background: #eef4f8; }
-.dash--bg-sand :deep(.at-panel) { background: #f6efe6; }
+.dash--bg-warm :deep(.at-panel) { background: var(--at-card-peach); }
+.dash--bg-sage :deep(.at-panel) { background: var(--at-card-mint); }
+.dash--bg-sky :deep(.at-panel) { background: var(--at-card-sky); }
+.dash--bg-sand :deep(.at-panel) { background: var(--at-card-sand); }
 .dash--bg-gradient :deep(.at-panel) {
-  background: linear-gradient(135deg, #f4eff7 0%, #faf3e9 52%, #eef3ee 100%);
+  background: linear-gradient(135deg, var(--at-card-lavender) 0%, var(--at-card-peach) 52%, var(--at-card-mint) 100%);
 }
 
 .dash__heading {
@@ -522,6 +526,10 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 1100px) {
+  .home {
+    padding: var(--at-space-6) var(--at-space-4) var(--at-space-12);
+  }
+
   .dash,
   .dash--tall {
     grid-column: span 6;
@@ -533,6 +541,10 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 767px) {
+  .home {
+    padding: var(--at-space-5) var(--at-space-4) 96px;
+  }
+
   .hero {
     flex-direction: column;
     align-items: flex-start;

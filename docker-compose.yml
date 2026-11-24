@@ -3,7 +3,15 @@ services:
     image: mymoments:latest
     build: .
     restart: unless-stopped
-    env_file: .env
+    environment:
+      MYMOMENTS_ADDR: ":8080"
+      MYMOMENTS_DATA_DIR: /data
+      MYMOMENTS_DEFAULT_TZ: ${MYMOMENTS_DEFAULT_TZ:-Asia/Shanghai}
+      MYMOMENTS_SESSION_SECRET: ${MYMOMENTS_SESSION_SECRET:-}
+      MYMOMENTS_WEATHER_PROVIDER: ${MYMOMENTS_WEATHER_PROVIDER:-open-meteo}
+      MYMOMENTS_WEATHER_API_KEY: ${MYMOMENTS_WEATHER_API_KEY:-}
+      MYMOMENTS_TRUST_PROXY: ${MYMOMENTS_TRUST_PROXY:-false}
+      MYMOMENTS_HOUSEHOLD_QUOTA: ${MYMOMENTS_HOUSEHOLD_QUOTA:-1073741824}
     ports:
       - "8080:8080"
     volumes:

@@ -203,11 +203,19 @@ function canMove(index: number, dir: -1 | 1): boolean {
 }
 
 .customizer__swatch {
+  position: relative;
   width: 20px;
   height: 20px;
   border-radius: 50%;
   border: 1px solid var(--at-color-hairline-strong);
   transition: transform var(--at-duration-fast) var(--at-ease), box-shadow var(--at-duration-fast) var(--at-ease);
+}
+
+.customizer__swatch::after {
+  content: '';
+  position: absolute;
+  inset: -12px;
+  border-radius: 50%;
 }
 
 .customizer__swatch:hover {

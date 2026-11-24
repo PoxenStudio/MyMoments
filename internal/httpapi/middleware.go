@@ -92,7 +92,7 @@ func (s *Server) originCheck(next http.Handler) http.Handler {
 			if origin == "" {
 				origin = r.Header.Get("Referer")
 			}
-			if origin != "" && !sameHost(origin, r.Host) {
+			if origin != "" && !s.originAllowed(origin, r.Host) {
 				writeError(w, &APIError{Status: http.StatusForbidden, Code: "permission.denied", Message: "请求来源不受信任"})
 				return
 			}
@@ -110,6 +110,39 @@ func sameHost(origin, host string) bool {
 		trimmed = trimmed[:i]
 	}
 	return strings.EqualFold(trimmed, host)
+}
+
+// originAllowed 在开发模式下放行本机回环地址之间的跨端口请求，便于 Vite 代理联调。
+func (s *Server) originAllowed(origin, host string) bool {
+	if sameHost(origin, host) {
+		return true
+	}
+	if !s.cfg.Dev {
+		return false
+	}
+	return isLoopbackOrigin(origin) && isLoopbackHost(host)
+}
+
+func isLoopbackOrigin(origin string) bool {
+	trimmed := origin
+	if i := strings.Index(trimmed, "://"); i >= 0 {
+		trimmed = trimmed[i+3:]
+	}
+	if i := strings.IndexAny(trimmed, "/?#"); i >= 0 {
+		trimmed = trimmed[:i]
+	}
+	if h, _, err := net.SplitHostPort(trimmed); err == nil {
+		trimmed = h
+	}
+	return isLoopbackHost(trimmed)
+}
+
+func isLoopbackHost(host string) bool {
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
+	host = strings.Trim(host, "[]")
+	return strings.EqualFold(host, "localhost") || host == "127.0.0.1" || host == "::1"
 }
 
 func clientIP(r *http.Request, trustProxy bool) string {

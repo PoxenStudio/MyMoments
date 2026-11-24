@@ -1,10 +1,24 @@
-.PHONY: dev api web web-build build test fmt lint check docker clean
+.PHONY: help dev dev-up dev-down dev-status dev-logs api web web-build build test fmt lint check docker clean
 
 GO ?= go
 NPM ?= npm
 
-dev:
-	@echo "Run 'make api' and 'make web' in two terminals."
+help: ## 列出可用目标
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
+
+dev: dev-up
+
+dev-up: ## 启动本地测试页面（API + Vite）
+	@sh scripts/dev.sh up
+
+dev-down: ## 停止本地测试页面
+	@sh scripts/dev.sh down
+
+dev-status: ## 查看本地测试服务状态
+	@sh scripts/dev.sh status
+
+dev-logs: ## 跟踪本地测试服务日志
+	@sh scripts/dev.sh logs
 
 api:
 	$(GO) run ./cmd/server

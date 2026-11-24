@@ -213,6 +213,15 @@ async function logout(): Promise<void> {
           <img src="/icons/icon-192.png" alt="" width="30" height="30" class="brand__mark" />
           <span class="brand__name at-display">家时光</span>
         </RouterLink>
+        <button
+          type="button"
+          class="sidebar__toggle"
+          :title="collapsed ? '展开侧边栏' : '收起侧边栏'"
+          :aria-label="collapsed ? '展开侧边栏' : '收起侧边栏'"
+          @click="toggleSidebar"
+        >
+          <AppIcon :name="collapsed ? 'sidebar-expand' : 'sidebar-collapse'" :size="18" />
+        </button>
         <button type="button" class="sidebar__close" aria-label="关闭导航" @click="closeDrawer()">
           <AppIcon name="close" :size="20" />
         </button>
@@ -246,17 +255,6 @@ async function logout(): Promise<void> {
           <AppIcon :name="item.icon" :size="20" />
           <span class="sidebar__label">{{ item.label }}</span>
         </RouterLink>
-
-        <button
-          type="button"
-          class="sidebar__link sidebar__minimize"
-          :title="collapsed ? '展开侧边栏' : '收起侧边栏'"
-          :aria-label="collapsed ? '展开侧边栏' : '收起侧边栏'"
-          @click="toggleSidebar"
-        >
-          <AppIcon :name="collapsed ? 'sidebar-expand' : 'sidebar-collapse'" :size="20" />
-          <span class="sidebar__label">{{ collapsed ? '展开' : '收起' }}</span>
-        </button>
 
         <div class="sidebar__user">
           <AppAvatar :name="initials" :size="32" />
@@ -426,6 +424,22 @@ async function logout(): Promise<void> {
   white-space: nowrap;
 }
 
+.sidebar__toggle {
+  display: grid;
+  place-items: center;
+  flex: none;
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--at-radius-md);
+  color: var(--at-color-muted);
+}
+
+.sidebar__toggle:hover {
+  background: var(--at-bg-canvas-soft);
+  color: var(--at-color-ink);
+}
+
 .sidebar__close {
   display: none;
   margin-left: auto;
@@ -500,10 +514,6 @@ async function logout(): Promise<void> {
   text-overflow: ellipsis;
 }
 
-.sidebar__minimize {
-  color: var(--at-color-muted-soft);
-}
-
 .sidebar__user {
   display: flex;
   align-items: center;
@@ -539,8 +549,20 @@ async function logout(): Promise<void> {
 
 .shell.is-collapsed .sidebar__head {
   justify-content: center;
+  gap: 2px;
   padding-left: 0;
   padding-right: 0;
+}
+
+.shell.is-collapsed .brand__mark {
+  width: 26px;
+  height: 26px;
+}
+
+.shell.is-collapsed .sidebar__toggle {
+  width: 28px;
+  height: 28px;
+  margin-left: 0;
 }
 
 .shell.is-collapsed .brand__name,
@@ -830,6 +852,10 @@ async function logout(): Promise<void> {
 
   .sidebar__close {
     display: grid;
+  }
+
+  .sidebar__toggle {
+    display: none;
   }
 
   .topbar__menu {

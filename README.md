@@ -82,7 +82,9 @@ cd mymoments
 docker compose up -d --build
 ```
 
-打开 <http://localhost:8080>，按首次引导创建家庭与管理员账号即可。数据保存在 `mymoments-data` 卷中，升级时重新执行 `docker compose up -d --build` 不会丢失。
+打开 <http://localhost:8080>，按首次引导创建家庭与管理员账号即可。系统没有预置的默认账号或密码，首次访问时创建管理员所填写的密码即为登录密码。
+
+数据写入容器内的 `/data` 目录，Compose 通过命名卷 `mymoments-data` 持久化（实际存放位置由 Docker 管理），升级时重新执行 `docker compose up -d --build` 不会丢失。如需改为宿主机目录，把 `docker-compose.yml` 中的 `mymoments-data:/data` 改为 `./data:/data`，并确保该目录对容器内的 `app` 用户可写。
 
 如需自定义时区、会话密钥、天气 Key 或存储配额，先复制环境变量示例再修改，Compose 会自动读取：
 
@@ -131,9 +133,9 @@ make check   # gofmt、go vet、Go 测试与前端测试、lint
 
 ### 首次使用
 
-1. 打开站点，填写家庭名称并创建管理员账号。
+1. 打开站点，填写家庭名称并创建管理员账号（系统无默认密码，登录密码即此处设置的密码）。
 2. 在「家庭」页添加成员，设置临时密码并告知对方。
 3. 在「设置 → 家庭设置」选择时区与家庭默认城市，天气卡片即可自动获取。
 4. 在首页「整理首页」中调整卡片，管理员可发布为家庭默认布局。
 
-> 建议通过 HTTPS 反向代理对外提供服务，并定期备份数据卷中的 `app.db` 与附件目录。
+> 建议通过 HTTPS 反向代理对外提供服务，并定期备份 `mymoments-data` 卷（或你绑定的宿主机目录）中的 `app.db` 与附件目录。

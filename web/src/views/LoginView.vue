@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { ApiError } from '@/api/client';
@@ -16,8 +16,13 @@ const router = useRouter();
 
 const username = ref('');
 const password = ref('');
+const showPassword = ref(false);
 const loading = ref(false);
 const error = ref('');
+
+watch([username, password], () => {
+  if (error.value) error.value = '';
+});
 
 async function submit(): Promise<void> {
   if (!username.value.trim() || !password.value) {
@@ -61,9 +66,28 @@ async function submit(): Promise<void> {
             <AppInput id="login-username" v-model="username" autocomplete="username" placeholder="例如：xiaoming" />
           </AppField>
           <AppField label="密码" for-id="login-password">
-            <AppInput id="login-password" v-model="password" type="password" autocomplete="current-password" placeholder="输入密码" />
+            <div class="auth__password">
+              <AppInput
+                id="login-password"
+                v-model="password"
+                :type="showPassword ? 'text' : 'password'"
+                autocomplete="current-password"
+                placeholder="输入密码"
+                :invalid="!!error"
+              />
+              <button
+                type="button"
+                class="auth__reveal"
+                :aria-label="showPassword ? '隐藏密码' : '显示密码'"
+                :aria-pressed="showPassword"
+                :title="showPassword ? '隐藏密码' : '显示密码'"
+                @click="showPassword = !showPassword"
+              >
+                <AppIcon :name="showPassword ? 'eye-off' : 'eye'" :size="18" />
+              </button>
+            </div>
           </AppField>
-          <p v-if="error" class="auth__error" role="alert">
+          <p v-if="error" class="auth__error" role="alert" aria-live="polite">
             <AppIcon name="alert" :size="16" />{{ error }}
           </p>
           <AppButton type="submit" block :loading="loading">登录</AppButton>
@@ -172,12 +196,43 @@ async function submit(): Promise<void> {
   margin-bottom: var(--at-space-2);
 }
 
+.auth__password {
+  position: relative;
+}
+
+.auth__password :deep(.at-input) {
+  padding-right: 46px;
+}
+
+.auth__reveal {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--at-radius-md);
+  color: var(--at-color-muted);
+}
+
+.auth__reveal:hover {
+  background: var(--at-bg-canvas-soft);
+  color: var(--at-color-ink);
+}
+
 .auth__error {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
+  padding: 10px var(--at-space-3);
+  border: 1px solid #fecaca;
+  border-radius: var(--at-radius-md);
+  background: var(--at-color-danger-soft);
   color: var(--at-color-danger);
   font-size: 13px;
+  line-height: 1.45;
 }
 
 .auth__help {

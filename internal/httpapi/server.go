@@ -115,6 +115,8 @@ func (s *Server) routes(mux *http.ServeMux) {
 	mux.Handle("DELETE "+api+"/messages/{id}", s.requireAuth(http.HandlerFunc(s.handleMessageDelete)))
 	mux.Handle("POST "+api+"/messages/{id}/replies", s.requireAuth(http.HandlerFunc(s.handleMessageReply)))
 
+	mux.Handle("GET "+api+"/timeline", s.requireAuth(http.HandlerFunc(s.handleTimeline)))
+
 	mux.Handle("GET "+api+"/notifications", s.requireAuth(http.HandlerFunc(s.handleNotificationsList)))
 	mux.Handle("POST "+api+"/notifications/read-all", s.requireAuth(http.HandlerFunc(s.handleNotificationsReadAll)))
 	mux.Handle("PATCH "+api+"/notifications/{id}/read", s.requireAuth(http.HandlerFunc(s.handleNotificationRead)))

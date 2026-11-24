@@ -76,3 +76,50 @@ func canWriteContact(u *model.User, c *model.Contact) bool {
 func canDeleteContact(u *model.User, c *model.Contact) bool {
 	return c.CreatedBy == u.ID || (u.Role == "admin" && c.OwnerScope != "private")
 }
+
+func containsID(ids []int64, id int64) bool {
+	for _, v := range ids {
+		if v == id {
+			return true
+		}
+	}
+	return false
+}
+
+func canReadMessage(u *model.User, m *model.MessagePost) bool {
+	switch m.Visibility {
+	case "private":
+		return m.AuthorID == u.ID
+	case "selected":
+		return m.AuthorID == u.ID || containsID(m.AudienceIDs, u.ID)
+	default:
+		return true
+	}
+}
+
+func canWriteMessage(u *model.User, m *model.MessagePost) bool {
+	return canReadMessage(u, m)
+}
+
+func canDeleteMessage(u *model.User, m *model.MessagePost) bool {
+	return m.AuthorID == u.ID || (u.Role == "admin" && m.Visibility != "private")
+}
+
+func canReadNote(u *model.User, n *model.Note) bool {
+	switch n.Visibility {
+	case "private":
+		return n.AuthorID == u.ID
+	case "selected":
+		return n.AuthorID == u.ID || containsID(n.AudienceIDs, u.ID)
+	default:
+		return true
+	}
+}
+
+func canWriteNote(u *model.User, n *model.Note) bool {
+	return canReadNote(u, n)
+}
+
+func canDeleteNote(u *model.User, n *model.Note) bool {
+	return n.AuthorID == u.ID || (u.Role == "admin" && n.Visibility != "private")
+}

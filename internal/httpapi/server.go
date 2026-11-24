@@ -102,6 +102,23 @@ func (s *Server) routes(mux *http.ServeMux) {
 	mux.Handle("PATCH "+api+"/birthdays/{id}", s.requireAuth(http.HandlerFunc(s.handleBirthdayPatch)))
 	mux.Handle("DELETE "+api+"/birthdays/{id}", s.requireAuth(http.HandlerFunc(s.handleBirthdayDelete)))
 
+	mux.Handle("GET "+api+"/notes", s.requireAuth(http.HandlerFunc(s.handleNotesList)))
+	mux.Handle("POST "+api+"/notes", s.requireAuth(http.HandlerFunc(s.handleNoteCreate)))
+	mux.Handle("GET "+api+"/notes/{id}", s.requireAuth(http.HandlerFunc(s.handleNoteGet)))
+	mux.Handle("PATCH "+api+"/notes/{id}", s.requireAuth(http.HandlerFunc(s.handleNotePatch)))
+	mux.Handle("DELETE "+api+"/notes/{id}", s.requireAuth(http.HandlerFunc(s.handleNoteDelete)))
+
+	mux.Handle("GET "+api+"/messages", s.requireAuth(http.HandlerFunc(s.handleMessagesList)))
+	mux.Handle("POST "+api+"/messages", s.requireAuth(http.HandlerFunc(s.handleMessageCreate)))
+	mux.Handle("GET "+api+"/messages/{id}", s.requireAuth(http.HandlerFunc(s.handleMessageGet)))
+	mux.Handle("PATCH "+api+"/messages/{id}", s.requireAuth(http.HandlerFunc(s.handleMessagePatch)))
+	mux.Handle("DELETE "+api+"/messages/{id}", s.requireAuth(http.HandlerFunc(s.handleMessageDelete)))
+	mux.Handle("POST "+api+"/messages/{id}/replies", s.requireAuth(http.HandlerFunc(s.handleMessageReply)))
+
+	mux.Handle("GET "+api+"/notifications", s.requireAuth(http.HandlerFunc(s.handleNotificationsList)))
+	mux.Handle("POST "+api+"/notifications/read-all", s.requireAuth(http.HandlerFunc(s.handleNotificationsReadAll)))
+	mux.Handle("PATCH "+api+"/notifications/{id}/read", s.requireAuth(http.HandlerFunc(s.handleNotificationRead)))
+
 	mux.Handle("GET "+api+"/reminders", s.requireAuth(http.HandlerFunc(s.handleRemindersList)))
 	mux.Handle("PATCH "+api+"/reminders/{id}", s.requireAuth(http.HandlerFunc(s.handleReminderPatch)))
 

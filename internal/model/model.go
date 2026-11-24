@@ -235,6 +235,77 @@ type Birthday struct {
 	Age             *int    `json:"age,omitempty"`
 }
 
+// MessagePost 是留言板主贴，含回复与提及信息。
+type MessagePost struct {
+	ID             int64          `json:"id"`
+	Body           string         `json:"body"`
+	AuthorID       int64          `json:"authorId"`
+	AuthorName     string         `json:"authorName,omitempty"`
+	OccurrenceDate *string        `json:"occurrenceDate"`
+	Pinned         bool           `json:"pinned"`
+	Visibility     string         `json:"visibility"`
+	EditedAt       *int64         `json:"editedAt"`
+	CreatedAt      int64          `json:"createdAt"`
+	UpdatedAt      int64          `json:"updatedAt"`
+	AudienceIDs    []int64        `json:"audienceIds"`
+	MentionIDs     []int64        `json:"mentionIds"`
+	Replies        []MessageReply `json:"replies"`
+	ReplyCount     int            `json:"replyCount"`
+}
+
+// MessageReply 是留言下的回复。
+type MessageReply struct {
+	ID         int64  `json:"id"`
+	PostID     int64  `json:"postId"`
+	AuthorID   int64  `json:"authorId"`
+	AuthorName string `json:"authorName,omitempty"`
+	Body       string `json:"body"`
+	CreatedAt  int64  `json:"createdAt"`
+}
+
+// NoteItem 是便签的检查清单项。
+type NoteItem struct {
+	ID       int64  `json:"id"`
+	NoteID   int64  `json:"noteId,omitempty"`
+	Text     string `json:"text"`
+	Checked  bool   `json:"checked"`
+	Position int    `json:"position"`
+}
+
+// Note 是家庭便签。
+type Note struct {
+	ID          int64      `json:"id"`
+	Title       *string    `json:"title"`
+	Body        *string    `json:"body"`
+	Color       *string    `json:"color"`
+	Pinned      bool       `json:"pinned"`
+	Category    *string    `json:"category"`
+	AuthorID    int64      `json:"authorId"`
+	AuthorName  string     `json:"authorName,omitempty"`
+	MemoryDate  *string    `json:"memoryDate"`
+	Visibility  string     `json:"visibility"`
+	AudienceIDs []int64    `json:"audienceIds"`
+	MentionIDs  []int64    `json:"mentionIds"`
+	Items       []NoteItem `json:"items"`
+	CreatedAt   int64      `json:"createdAt"`
+	UpdatedAt   int64      `json:"updatedAt"`
+}
+
+// Notification 是个人收件箱消息。
+type Notification struct {
+	ID             int64   `json:"id"`
+	UserID         int64   `json:"userId"`
+	SourceType     string  `json:"sourceType"`
+	SourceID       int64   `json:"sourceId"`
+	Summary        *string `json:"summary"`
+	ActorID        *int64  `json:"actorId"`
+	ActorName      string  `json:"actorName,omitempty"`
+	OccurrenceDate *string `json:"occurrenceDate"`
+	CreatedAt      int64   `json:"createdAt"`
+	ReadAt         *int64  `json:"readAt"`
+	InvalidatedAt  *int64  `json:"invalidatedAt"`
+}
+
 // APIToken 是长期访问令牌，Hash 为令牌哈希。
 type APIToken struct {
 	ID         int64

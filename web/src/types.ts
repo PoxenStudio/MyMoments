@@ -181,6 +181,8 @@ export interface Note {
   authorName?: string;
   memoryDate: string | null;
   visibility: Visibility;
+  audienceIds: number[];
+  mentionIds: number[];
   createdAt: number;
   updatedAt: number;
   items: NoteItem[];
@@ -214,6 +216,8 @@ export interface MessagePost {
   editedAt: number | null;
   createdAt: number;
   updatedAt: number;
+  audienceIds: number[];
+  mentionIds: number[];
   replies: MessageReply[];
   replyCount?: number;
 }

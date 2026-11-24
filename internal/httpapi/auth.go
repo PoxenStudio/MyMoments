@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
@@ -15,6 +16,11 @@ const sessionCookie = "mymoments_session"
 func currentUser(r *http.Request) (*model.User, bool) {
 	u, ok := r.Context().Value(ctxUser).(*model.User)
 	return u, ok
+}
+
+func currentToken(r *http.Request) (*model.APIToken, bool) {
+	t, ok := r.Context().Value(ctxToken).(*model.APIToken)
+	return t, ok
 }
 
 func currentSessionID(r *http.Request) string {
@@ -33,8 +39,96 @@ func (s *Server) requireAuth(next http.Handler) http.Handler {
 			writeError(w, &APIError{Status: http.StatusForbidden, Code: "auth.password_change_required", Message: "请先设置新密码"})
 			return
 		}
-		next.ServeHTTP(w, r)
+		token, viaToken := currentToken(r)
+		if !viaToken {
+			next.ServeHTTP(w, r)
+			return
+		}
+		module, action, allowed := tokenAccessRule(r)
+		if !allowed || !tokenAllows(token, module, action) {
+			_ = s.store.RecordTokenAudit(r.Context(), token.ID, module+":"+action, "denied", truncate(r.UserAgent(), 120))
+			writeError(w, &APIError{Status: http.StatusForbidden, Code: "permission.denied", Message: "Token 无权执行此操作"})
+			return
+		}
+		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+		next.ServeHTTP(rec, r)
+		result := "ok"
+		if rec.status == http.StatusForbidden || rec.status == http.StatusUnauthorized {
+			result = "denied"
+		} else if rec.status >= 500 {
+			result = "error"
+		}
+		_ = s.store.RecordTokenAudit(r.Context(), token.ID, module+":"+action, result, truncate(r.UserAgent(), 120))
 	})
+}
+
+var tokenReadOnlyModules = map[string]bool{
+	"family": true, "timeline": true, "reminders": true, "weather": true,
+}
+
+// tokenAccessRule 把请求映射到 Token scope 的模块与操作。
+func tokenAccessRule(r *http.Request) (string, string, bool) {
+	path := strings.TrimPrefix(r.URL.Path, "/api/v1/")
+	segment := path
+	if i := strings.Index(segment, "/"); i >= 0 {
+		segment = segment[:i]
+	}
+	var module string
+	switch segment {
+	case "tasks", "templates", "media":
+		module = "tasks"
+	case "events":
+		module = "calendar"
+	case "birthdays":
+		module = "birthdays"
+	case "contacts":
+		module = "contacts"
+	case "family", "household":
+		module = "family"
+	case "messages":
+		module = "messages"
+	case "notes":
+		module = "notes"
+	case "timeline":
+		module = "timeline"
+	case "reminders":
+		module = "reminders"
+	case "weather":
+		module = "weather"
+	default:
+		return "", "", false
+	}
+	var action string
+	switch r.Method {
+	case http.MethodGet, http.MethodHead:
+		action = "read"
+	case http.MethodDelete:
+		action = "delete"
+	case http.MethodPost, http.MethodPut, http.MethodPatch:
+		action = "write"
+	default:
+		return "", "", false
+	}
+	return module, action, true
+}
+
+func tokenAllows(token *model.APIToken, module, action string) bool {
+	if token == nil || module == "" {
+		return false
+	}
+	if tokenReadOnlyModules[module] && action != "read" {
+		return false
+	}
+	var scopes map[string][]string
+	if err := json.Unmarshal([]byte(token.Scopes), &scopes); err != nil {
+		return false
+	}
+	for _, allowed := range scopes[module] {
+		if allowed == action {
+			return true
+		}
+	}
+	return false
 }
 
 func passwordChangeAllowed(path string) bool {
@@ -73,9 +167,10 @@ func (s *Server) resolveUser(next http.Handler) http.Handler {
 			}
 		}
 		if _, ok := currentUser(r.WithContext(ctx)); !ok {
-			if u, tokenID, ok := s.resolveBearer(ctx, r); ok {
+			if u, token, ok := s.resolveBearer(ctx, r); ok {
 				ctx = context.WithValue(ctx, ctxUser, u)
-				ctx = context.WithValue(ctx, ctxTokenID, tokenID)
+				ctx = context.WithValue(ctx, ctxTokenID, token.ID)
+				ctx = context.WithValue(ctx, ctxToken, token)
 				ctx = context.WithValue(ctx, ctxViaToken, true)
 			}
 		}
@@ -83,22 +178,21 @@ func (s *Server) resolveUser(next http.Handler) http.Handler {
 	})
 }
 
-// resolveBearer 在 M7 接入 API Token 时实现；当前返回匿名。
-func (s *Server) resolveBearer(ctx context.Context, r *http.Request) (*model.User, int64, bool) {
+func (s *Server) resolveBearer(ctx context.Context, r *http.Request) (*model.User, *model.APIToken, bool) {
 	header := r.Header.Get("Authorization")
 	if !strings.HasPrefix(header, "Bearer ") {
-		return nil, 0, false
+		return nil, nil, false
 	}
 	token, err := s.store.GetTokenByHash(ctx, auth.HashToken(strings.TrimSpace(strings.TrimPrefix(header, "Bearer "))))
 	if err != nil {
-		return nil, 0, false
+		return nil, nil, false
 	}
 	u, err := s.store.GetUserByID(ctx, token.UserID)
 	if err != nil || u.Status != "active" {
-		return nil, 0, false
+		return nil, nil, false
 	}
 	_ = s.store.TouchToken(ctx, token.ID)
-	return u, token.ID, true
+	return u, token, true
 }
 
 func (s *Server) setSessionCookie(w http.ResponseWriter, r *http.Request, raw string, ttl time.Duration) {

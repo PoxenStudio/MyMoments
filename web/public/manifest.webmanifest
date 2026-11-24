@@ -1,18 +1,27 @@
 {
+  "id": "/",
   "name": "家时光",
   "short_name": "家时光",
-  "description": "家庭生活记录与规划面板",
+  "description": "家庭生活记录与规划面板：待办、行事历、生日、留言与天气。",
   "lang": "zh-CN",
   "dir": "ltr",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "orientation": "any",
   "background_color": "#f5f5f5",
   "theme_color": "#f5f5f5",
+  "categories": ["lifestyle", "productivity"],
+  "prefer_related_applications": false,
   "icons": [
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
     { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "待办", "short_name": "待办", "url": "/tasks", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "行事历", "short_name": "行事历", "url": "/calendar", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "留言", "short_name": "留言", "url": "/messages", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
   ]
 }

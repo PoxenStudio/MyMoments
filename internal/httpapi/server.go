@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"crypto/sha256"
+	_ "embed"
 	"encoding/hex"
 	"io/fs"
 	"log/slog"
@@ -130,6 +131,11 @@ func (s *Server) routes(mux *http.ServeMux) {
 	mux.Handle("PUT "+api+"/dashboard/layout", s.requireAuth(http.HandlerFunc(s.handleDashboardLayoutPut)))
 	mux.Handle("PUT "+api+"/household/default-layout", s.requireAdmin(http.HandlerFunc(s.handleHouseholdDefaultLayout)))
 	mux.Handle("GET "+api+"/weather", s.requireAuth(http.HandlerFunc(s.handleWeather)))
+	mux.Handle("GET "+api+"/search", s.requireAuth(http.HandlerFunc(s.handleSearch)))
+
+	mux.Handle("GET "+api+"/tokens", s.requireAuth(http.HandlerFunc(s.handleTokensList)))
+	mux.Handle("POST "+api+"/tokens", s.requireAuth(http.HandlerFunc(s.handleTokenCreate)))
+	mux.Handle("DELETE "+api+"/tokens/{id}", s.requireAuth(http.HandlerFunc(s.handleTokenDelete)))
 
 	mux.Handle("GET "+api+"/notifications", s.requireAuth(http.HandlerFunc(s.handleNotificationsList)))
 	mux.Handle("POST "+api+"/notifications/read-all", s.requireAuth(http.HandlerFunc(s.handleNotificationsReadAll)))
@@ -169,9 +175,12 @@ func (s *Server) handleOpenAPI(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(b)
 }
 
-// openAPISpec 在 M7 填充，当前返回最小桩。
+//go:embed openapi.yaml
+var openAPIBytes []byte
+
+// openAPISpec 返回内置的 OpenAPI 文档。
 func openAPISpec() ([]byte, error) {
-	return []byte("openapi: 3.1.0\ninfo:\n  title: MyMoments API\n  version: v1\npaths: {}\n"), nil
+	return openAPIBytes, nil
 }
 
 func (s *Server) handleStatic(w http.ResponseWriter, r *http.Request) {

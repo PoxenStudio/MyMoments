@@ -12,6 +12,7 @@ import AppInput from '@/components/base/AppInput.vue';
 import AppPanel from '@/components/base/AppPanel.vue';
 import AppSelect from '@/components/base/AppSelect.vue';
 import AppStatusTag from '@/components/base/AppStatusTag.vue';
+import ApiTokensPanel from '@/components/business/ApiTokensPanel.vue';
 
 const auth = useAuthStore();
 const toast = useToastStore();
@@ -219,6 +220,10 @@ onMounted(async () => {
         </div>
       </AppPanel>
     </div>
+
+    <div class="settings__api">
+      <ApiTokensPanel />
+    </div>
   </div>
 </template>
 
@@ -228,6 +233,10 @@ onMounted(async () => {
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: var(--at-space-4);
   align-items: start;
+}
+
+.settings__api {
+  margin-top: var(--at-space-4);
 }
 
 .settings__identity {

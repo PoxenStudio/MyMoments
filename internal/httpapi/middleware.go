@@ -15,6 +15,7 @@ const (
 	ctxUser      ctxKey = "user"
 	ctxSessionID ctxKey = "session_id"
 	ctxTokenID   ctxKey = "token_id"
+	ctxToken     ctxKey = "token"
 	ctxViaToken  ctxKey = "via_token"
 	ctxRequestID ctxKey = "request_id"
 )

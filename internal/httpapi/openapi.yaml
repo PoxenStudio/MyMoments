@@ -1,0 +1,1113 @@
+openapi: 3.1.0
+info:
+  title: MyMoments API
+  version: v1
+  description: |
+    家时光（MyMoments）家庭协作 API。浏览器使用 Cookie 会话；
+    自动化客户端使用 `Authorization: Bearer <API_TOKEN>`。
+    日期为 `YYYY-MM-DD`，日期时间为 `YYYY-MM-DD HH:MM:SS`，时间戳为 Unix 秒。
+servers:
+  - url: /api/v1
+security:
+  - cookieAuth: []
+  - bearerAuth: []
+tags:
+  - name: auth
+  - name: me
+  - name: family
+  - name: tasks
+  - name: calendar
+  - name: contacts
+  - name: birthdays
+  - name: notes
+  - name: messages
+  - name: timeline
+  - name: dashboard
+  - name: notifications
+  - name: weather
+  - name: search
+  - name: tokens
+  - name: media
+paths:
+  /bootstrap:
+    get:
+      tags: [auth]
+      summary: 读取初始化状态与当前会话
+      security: []
+      responses:
+        '200': { description: Bootstrap 数据 }
+  /setup:
+    post:
+      tags: [auth]
+      summary: 首次初始化管理员与家庭
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, displayName, password]
+              properties:
+                username: { type: string }
+                displayName: { type: string }
+                password: { type: string, minLength: 10 }
+                householdName: { type: string }
+      responses:
+        '201': { description: 初始化完成 }
+        '409': { description: 已初始化 }
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: 登录
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string }
+                password: { type: string }
+      responses:
+        '200': { description: 登录成功 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /auth/session:
+    get:
+      tags: [auth]
+      summary: 当前会话
+      responses:
+        '200': { description: 当前用户 }
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: 退出登录
+      responses:
+        '204': { description: 已退出 }
+  /auth/password:
+    post:
+      tags: [auth]
+      summary: 修改密码
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string }
+                newPassword: { type: string, minLength: 10 }
+      responses:
+        '204': { description: 已修改 }
+  /me:
+    get:
+      tags: [me]
+      summary: 当前用户资料
+      responses:
+        '200': { description: 用户 }
+    patch:
+      tags: [me]
+      summary: 更新当前用户资料
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                displayName: { type: string }
+                avatarKey: { type: string, nullable: true }
+      responses:
+        '200': { description: 用户 }
+  /me/preferences:
+    get:
+      tags: [me]
+      summary: 读取个人偏好
+      responses:
+        '200': { description: 偏好设置 }
+    patch:
+      tags: [me]
+      summary: 更新个人偏好（含仪表盘布局与天气位置）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                locale: { type: string }
+                dateFormat: { type: string, enum: ['24h', '12h'] }
+                dashboard: { type: string, nullable: true }
+                weatherCity: { type: string, nullable: true }
+                weatherLat: { type: number, nullable: true }
+                weatherLon: { type: number, nullable: true }
+                weatherAuto: { type: boolean }
+                notificationPrefs: { type: string, nullable: true }
+      responses:
+        '200': { description: 偏好设置 }
+  /family/members:
+    get:
+      tags: [family]
+      summary: 家庭成员列表
+      responses:
+        '200': { description: 成员列表 }
+    post:
+      tags: [family]
+      summary: 添加家庭成员（管理员）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, displayName, password]
+              properties:
+                username: { type: string }
+                displayName: { type: string }
+                password: { type: string }
+                relation: { type: string }
+                role: { type: string, enum: [admin, member] }
+      responses:
+        '201': { description: 已创建 }
+  /family/members/{id}:
+    patch:
+      tags: [family]
+      summary: 更新成员资料
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                displayName: { type: string }
+                relation: { type: string }
+                role: { type: string, enum: [admin, member] }
+                status: { type: string, enum: [active, inactive] }
+      responses:
+        '200': { description: 成员 }
+  /family/members/{id}/reset-password:
+    post:
+      tags: [family]
+      summary: 重置成员密码（管理员）
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password: { type: string }
+      responses:
+        '204': { description: 已重置 }
+  /household:
+    get:
+      tags: [family]
+      summary: 家庭设置
+      responses:
+        '200': { description: 家庭 }
+    patch:
+      tags: [family]
+      summary: 更新家庭设置（管理员）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                timezone: { type: string }
+                weekStart: { type: integer }
+                defaultWeatherCity: { type: string, nullable: true }
+                defaultWeatherLat: { type: number, nullable: true }
+                defaultWeatherLon: { type: number, nullable: true }
+                defaultReminderOffset: { type: integer }
+                defaultDashboard: { type: string, nullable: true }
+      responses:
+        '200': { description: 家庭 }
+  /household/default-layout:
+    put:
+      tags: [dashboard]
+      summary: 发布家庭默认首页布局（管理员）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/LayoutRequest'
+                - type: object
+                  properties:
+                    reset: { type: boolean }
+      responses:
+        '200': { description: 布局 }
+  /tasks:
+    get:
+      tags: [tasks]
+      summary: 待办列表
+      parameters:
+        - name: scope
+          in: query
+          schema: { type: string, enum: [open, completed, archived, all] }
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: assignee
+          in: query
+          schema: { type: integer }
+        - name: due
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 待办列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Task' }
+                  counts: { $ref: '#/components/schemas/TaskCounts' }
+    post:
+      tags: [tasks]
+      summary: 创建待办
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TaskInput' }
+      responses:
+        '201': { description: 已创建 }
+  /tasks/{id}:
+    get:
+      tags: [tasks]
+      summary: 待办详情
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      responses:
+        '200': { description: 待办 }
+    patch:
+      tags: [tasks]
+      summary: 更新待办
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TaskInput' }
+      responses:
+        '200': { description: 待办 }
+    delete:
+      tags: [tasks]
+      summary: 删除待办
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      responses:
+        '204': { description: 已删除 }
+  /tasks/{id}/completion:
+    post:
+      tags: [tasks]
+      summary: 完成待办
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                occurrenceDate: { type: string }
+                actualUserId: { type: integer }
+      responses:
+        '200': { description: 已完成 }
+    delete:
+      tags: [tasks]
+      summary: 撤销完成
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      responses:
+        '200': { description: 已撤销 }
+  /tasks/{id}/subtasks/{subId}:
+    patch:
+      tags: [tasks]
+      summary: 更新子任务
+      parameters:
+        - { $ref: '#/components/parameters/ID' }
+        - name: subId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                done: { type: boolean }
+      responses:
+        '200': { description: 子任务 }
+  /tasks/{id}/media:
+    get:
+      tags: [media]
+      summary: 待办媒体列表
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      responses:
+        '200': { description: 媒体列表 }
+    post:
+      tags: [media]
+      summary: 上传媒体
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '201': { description: 已上传 }
+  /templates:
+    get:
+      tags: [tasks]
+      summary: 待办模板列表
+      responses:
+        '200': { description: 模板列表 }
+    post:
+      tags: [tasks]
+      summary: 创建待办模板
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                title: { type: string }
+                description: { type: string }
+                recurrenceRule: { type: string }
+      responses:
+        '201': { description: 已创建 }
+  /templates/{id}:
+    patch:
+      tags: [tasks]
+      summary: 更新模板
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      responses:
+        '200': { description: 模板 }
+    delete:
+      tags: [tasks]
+      summary: 删除模板
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      responses:
+        '204': { description: 已删除 }
+  /events:
+    get:
+      tags: [calendar]
+      summary: 日程列表（含重复日程展开）
+      parameters:
+        - name: from
+          in: query
+          schema: { type: string }
+        - name: to
+          in: query
+          schema: { type: string }
+        - name: birthday
+          in: query
+          schema: { type: boolean }
+      responses:
+        '200': { description: 日程列表 }
+    post:
+      tags: [calendar]
+      summary: 创建日程
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EventInput' }
+      responses:
+        '201': { description: 已创建 }
+  /events/{id}:
+    get:
+      tags: [calendar]
+      summary: 日程详情
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      responses:
+        '200': { description: 日程 }
+    patch:
+      tags: [calendar]
+      summary: 更新日程
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EventInput' }
+      responses:
+        '200': { description: 日程 }
+    delete:
+      tags: [calendar]
+      summary: 删除日程
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      responses:
+        '204': { description: 已删除 }
+  /contacts:
+    get:
+      tags: [contacts]
+      summary: 通讯录列表
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: category
+          in: query
+          schema: { type: string }
+      responses:
+        '200': { description: 联系人列表 }
+    post:
+      tags: [contacts]
+      summary: 创建联系人
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ContactInput' }
+      responses:
+        '201': { description: 已创建 }
+  /contacts/{id}:
+    get:
+      tags: [contacts]
+      summary: 联系人详情
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      responses:
+        '200': { description: 联系人 }
+    patch:
+      tags: [contacts]
+      summary: 更新联系人
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ContactInput' }
+      responses:
+        '200': { description: 联系人 }
+    delete:
+      tags: [contacts]
+      summary: 删除联系人
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      responses:
+        '204': { description: 已删除 }
+  /birthdays:
+    get:
+      tags: [birthdays]
+      summary: 生日列表
+      responses:
+        '200':
+          description: 生日列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Birthday' }
+    post:
+      tags: [birthdays]
+      summary: 创建生日
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BirthdayInput' }
+      responses:
+        '201': { description: 已创建 }
+  /birthdays/{id}:
+    patch:
+      tags: [birthdays]
+      summary: 更新生日
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BirthdayInput' }
+      responses:
+        '200': { description: 生日 }
+    delete:
+      tags: [birthdays]
+      summary: 删除生日
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      responses:
+        '204': { description: 已删除 }
+  /notes:
+    get:
+      tags: [notes]
+      summary: 便签列表
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer }
+      responses:
+        '200': { description: 便签列表 }
+    post:
+      tags: [notes]
+      summary: 创建便签
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NoteInput' }
+      responses:
+        '201': { description: 已创建 }
+  /notes/{id}:
+    get:
+      tags: [notes]
+      summary: 便签详情
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      responses:
+        '200': { description: 便签 }
+    patch:
+      tags: [notes]
+      summary: 更新便签
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NoteInput' }
+      responses:
+        '200': { description: 便签 }
+    delete:
+      tags: [notes]
+      summary: 删除便签
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      responses:
+        '204': { description: 已删除 }
+  /messages:
+    get:
+      tags: [messages]
+      summary: 留言列表
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer }
+      responses:
+        '200': { description: 留言列表 }
+    post:
+      tags: [messages]
+      summary: 发布留言
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string }
+                occurrenceDate: { type: string, nullable: true }
+                visibility: { type: string, enum: [household, selected, private] }
+                audienceIds: { type: array, items: { type: integer } }
+                pinned: { type: boolean }
+      responses:
+        '201': { description: 已发布 }
+  /messages/{id}:
+    get:
+      tags: [messages]
+      summary: 留言详情
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      responses:
+        '200': { description: 留言 }
+    patch:
+      tags: [messages]
+      summary: 更新留言
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                body: { type: string }
+                pinned: { type: boolean }
+                visibility: { type: string, enum: [household, selected, private] }
+                audienceIds: { type: array, items: { type: integer } }
+      responses:
+        '200': { description: 留言 }
+    delete:
+      tags: [messages]
+      summary: 删除留言
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      responses:
+        '204': { description: 已删除 }
+  /messages/{id}/replies:
+    post:
+      tags: [messages]
+      summary: 回复留言
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string }
+      responses:
+        '201': { description: 已回复 }
+  /timeline:
+    get:
+      tags: [timeline]
+      summary: 家庭时光轴
+      parameters:
+        - name: direction
+          in: query
+          schema: { type: string, enum: [past, future] }
+        - name: anchor
+          in: query
+          schema: { type: string }
+        - name: from
+          in: query
+          schema: { type: string }
+        - name: to
+          in: query
+          schema: { type: string }
+        - name: types
+          in: query
+          schema: { type: string }
+        - name: q
+          in: query
+          schema: { type: string }
+      responses:
+        '200': { description: 时光轴条目 }
+  /dashboard:
+    get:
+      tags: [dashboard]
+      summary: 首页布局与卡片数据
+      responses:
+        '200':
+          description: 首页数据
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Dashboard' }
+  /dashboard/layout:
+    get:
+      tags: [dashboard]
+      summary: 读取当前布局
+      responses:
+        '200': { description: 布局 }
+    put:
+      tags: [dashboard]
+      summary: 保存个人布局或恢复默认
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/LayoutRequest'
+                - type: object
+                  properties:
+                    reset: { type: boolean }
+      responses:
+        '200': { description: 布局 }
+  /weather:
+    get:
+      tags: [weather]
+      summary: 天气（服务端代理与缓存）
+      parameters:
+        - name: lat
+          in: query
+          schema: { type: number }
+        - name: lon
+          in: query
+          schema: { type: number }
+        - name: city
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: 天气
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Weather' }
+        '400': { description: 尚未设置位置 }
+        '503': { description: 天气服务不可用 }
+  /search:
+    get:
+      tags: [search]
+      summary: 跨模块搜索
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, maxLength: 50 }
+      responses:
+        '200':
+          description: 搜索结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/SearchResult' }
+  /notifications:
+    get:
+      tags: [notifications]
+      summary: 通知列表
+      responses:
+        '200': { description: 通知列表 }
+  /notifications/read-all:
+    post:
+      tags: [notifications]
+      summary: 全部标记已读
+      responses:
+        '204': { description: 已读 }
+  /notifications/{id}/read:
+    patch:
+      tags: [notifications]
+      summary: 标记单条已读
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      responses:
+        '204': { description: 已读 }
+  /reminders:
+    get:
+      tags: [notifications]
+      summary: 提醒列表
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, delivered, dismissed] }
+      responses:
+        '200': { description: 提醒列表 }
+  /reminders/{id}:
+    patch:
+      tags: [notifications]
+      summary: 更新提醒状态
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string, enum: [pending, delivered, dismissed] }
+      responses:
+        '200': { description: 提醒 }
+  /tokens:
+    get:
+      tags: [tokens]
+      summary: 我的 API Token 列表
+      responses:
+        '200':
+          description: Token 列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Token' }
+    post:
+      tags: [tokens]
+      summary: 创建 API Token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, scopes]
+              properties:
+                name: { type: string, maxLength: 60 }
+                scopes:
+                  type: object
+                  additionalProperties:
+                    type: array
+                    items: { type: string, enum: [read, write, delete] }
+                expiresInDays:
+                  type: integer
+                  description: 30 / 90 / 180 / 365，0 表示永不过期
+      responses:
+        '201':
+          description: Token 与一次性明文
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  item: { $ref: '#/components/schemas/Token' }
+  /tokens/{id}:
+    delete:
+      tags: [tokens]
+      summary: 撤销 API Token
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      responses:
+        '204': { description: 已撤销 }
+  /media/{id}:
+    get:
+      tags: [media]
+      summary: 原始媒体文件
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      responses:
+        '200': { description: 文件 }
+    delete:
+      tags: [media]
+      summary: 删除媒体
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      responses:
+        '204': { description: 已删除 }
+  /media/{id}/thumbnail:
+    get:
+      tags: [media]
+      summary: 缩略图
+      parameters: [{ $ref: '#/components/parameters/ID' }]
+      responses:
+        '200': { description: 图片 }
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: mymoments_session
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: 在「设置 → AI 与 API」创建的 Token
+  parameters:
+    ID:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+  responses:
+    Unauthorized:
+      description: 未登录或凭证失效
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        username: { type: string }
+        displayName: { type: string }
+        avatarKey: { type: string, nullable: true }
+        role: { type: string, enum: [admin, member] }
+        status: { type: string, enum: [active, inactive] }
+        relation: { type: string, nullable: true }
+    TaskCounts:
+      type: object
+      properties:
+        open: { type: integer }
+        completed: { type: integer }
+        archived: { type: integer }
+        today: { type: integer }
+        overdue: { type: integer }
+    Task:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        status: { type: string, enum: [todo, in_progress, completed] }
+        priority: { type: string, enum: [low, normal, high, urgent] }
+        dueDate: { type: string, nullable: true }
+        dueTime: { type: string, nullable: true }
+        visibility: { type: string, enum: [household, selected, private] }
+        completedAt: { type: integer, nullable: true }
+        assignees:
+          type: array
+          items: { $ref: '#/components/schemas/User' }
+        subtasks: { type: array, items: { type: object } }
+        createdAt: { type: integer }
+        updatedAt: { type: integer }
+    TaskInput:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string }
+        description: { type: string, nullable: true }
+        dueDate: { type: string, nullable: true }
+        dueTime: { type: string, nullable: true }
+        priority: { type: string, enum: [low, normal, high, urgent] }
+        visibility: { type: string, enum: [household, selected, private] }
+        assigneeIds: { type: array, items: { type: integer } }
+        reminderOffsets: { type: array, items: { type: integer } }
+        recurrenceRule: { type: string, nullable: true }
+    EventInput:
+      type: object
+      required: [title, startLocal]
+      properties:
+        title: { type: string }
+        description: { type: string, nullable: true }
+        startLocal: { type: string }
+        endLocal: { type: string, nullable: true }
+        allDay: { type: boolean }
+        location: { type: string, nullable: true }
+        color: { type: string, nullable: true }
+        visibility: { type: string, enum: [household, selected, private] }
+        recurrenceRule: { type: string, nullable: true }
+        reminderOffsets: { type: array, items: { type: integer } }
+    ContactInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        organization: { type: string, nullable: true }
+        title: { type: string, nullable: true }
+        note: { type: string, nullable: true }
+        birthdayOn: { type: string, nullable: true }
+        category: { type: string, nullable: true }
+        ownerScope: { type: string, enum: [household, private] }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              kind: { type: string, enum: [phone, email, address] }
+              label: { type: string, nullable: true }
+              value: { type: string }
+    Birthday:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        month: { type: integer }
+        day: { type: integer }
+        yearUnknown: { type: boolean }
+        birthYear: { type: integer, nullable: true }
+        note: { type: string, nullable: true }
+        daysUntil: { type: integer }
+        age: { type: integer, nullable: true }
+    BirthdayInput:
+      type: object
+      required: [name, month, day]
+      properties:
+        name: { type: string }
+        month: { type: integer, minimum: 1, maximum: 12 }
+        day: { type: integer, minimum: 1, maximum: 31 }
+        yearUnknown: { type: boolean }
+        birthYear: { type: integer, nullable: true }
+        note: { type: string, nullable: true }
+        reminderOffset: { type: integer, nullable: true }
+    NoteInput:
+      type: object
+      properties:
+        title: { type: string, nullable: true }
+        body: { type: string, nullable: true }
+        color: { type: string, nullable: true }
+        pinned: { type: boolean }
+        visibility: { type: string, enum: [household, selected, private] }
+        audienceIds: { type: array, items: { type: integer } }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              text: { type: string }
+              checked: { type: boolean }
+    Weather:
+      type: object
+      properties:
+        city: { type: string }
+        temperature: { type: number }
+        apparent: { type: number, nullable: true }
+        description: { type: string }
+        code: { type: integer }
+        high: { type: number, nullable: true }
+        low: { type: number, nullable: true }
+        updatedAt: { type: integer }
+        stale: { type: boolean }
+        forecast:
+          type: array
+          items:
+            type: object
+            properties:
+              date: { type: string }
+              max: { type: number }
+              min: { type: number }
+              code: { type: integer }
+              description: { type: string }
+    LayoutItem:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+          enum: [overview, tasks, calendar, birthdays, reminders, timeline, messages, notes, weather, members, contacts]
+        visible: { type: boolean }
+        size: { type: string, enum: [standard, wide, tall] }
+        background: { type: string, enum: [default, warm, sage, sky, sand, gradient] }
+    LayoutRequest:
+      type: object
+      required: [layout]
+      properties:
+        layout:
+          type: array
+          items: { $ref: '#/components/schemas/LayoutItem' }
+    Dashboard:
+      type: object
+      properties:
+        layout:
+          type: array
+          items: { $ref: '#/components/schemas/LayoutItem' }
+        layoutSource: { type: string, enum: [personal, household, default] }
+        today: { type: string }
+        cards:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              title: { type: string }
+              visible: { type: boolean }
+              size: { type: string }
+              background: { type: string }
+              error: { type: string, nullable: true }
+              data: {}
+    SearchResult:
+      type: object
+      properties:
+        type: { type: string, enum: [task, event, contact, message, note] }
+        id: { type: integer }
+        title: { type: string }
+        summary: { type: string, nullable: true }
+        date: { type: string, nullable: true }
+    Token:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        prefix: { type: string }
+        scopes:
+          type: object
+          additionalProperties:
+            type: array
+            items: { type: string }
+        expiresAt: { type: integer, nullable: true }
+        lastUsedAt: { type: integer, nullable: true }
+        createdAt: { type: integer }

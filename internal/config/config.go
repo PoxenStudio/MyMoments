@@ -21,6 +21,7 @@ type Config struct {
 	SessionTTL         time.Duration
 	WeatherProvider    string
 	WeatherAPIKey      string
+	WeatherBaseURL     string
 	MaxImageBytes      int64
 	MaxAudioBytes      int64
 	MaxVideoBytes      int64
@@ -38,6 +39,7 @@ func Load() (Config, error) {
 		SessionTTL:         30 * 24 * time.Hour,
 		WeatherProvider:    env("MYMOMENTS_WEATHER_PROVIDER", "open-meteo"),
 		WeatherAPIKey:      env("MYMOMENTS_WEATHER_API_KEY", ""),
+		WeatherBaseURL:     env("MYMOMENTS_WEATHER_BASE_URL", "https://api.open-meteo.com/v1"),
 		MaxImageBytes:      20 << 20,
 		MaxAudioBytes:      100 << 20,
 		MaxVideoBytes:      200 << 20,

@@ -87,7 +87,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function updateHousehold(payload: Partial<Household>): Promise<Household> {
-    const res = await api.patch<{ household: Household }>('/family/household', payload);
+    const res = await api.patch<{ household: Household }>('/household', payload);
     household.value = res.household;
     return res.household;
   }

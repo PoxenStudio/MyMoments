@@ -1,0 +1,73 @@
+package httpapi
+
+import (
+	"context"
+	"net/http"
+	"strconv"
+	"strings"
+)
+
+// handleWeather 代理上游天气，位置优先级：查询坐标 → 个人偏好 → 家庭默认。
+func (s *Server) handleWeather(w http.ResponseWriter, r *http.Request) {
+	u, _ := currentUser(r)
+	q := r.URL.Query()
+	lat, lon, city, apiErr := s.weatherLocationFor(r.Context(), u.ID, q.Get("lat"), q.Get("lon"), q.Get("city"))
+	if apiErr != nil {
+		writeError(w, apiErr)
+		return
+	}
+	data, err := s.weather.Current(r.Context(), lat, lon, city)
+	if err != nil {
+		writeError(w, &APIError{
+			Status:  http.StatusServiceUnavailable,
+			Code:    "weather.unavailable",
+			Message: "天气服务暂时不可用，请稍后再试",
+		})
+		return
+	}
+	writeJSON(w, http.StatusOK, data)
+}
+
+func (s *Server) weatherLocationFor(ctx context.Context, userID int64, latRaw, lonRaw, cityRaw string) (float64, float64, string, *APIError) {
+	lat, latOK := parseCoord(latRaw, -90, 90)
+	lon, lonOK := parseCoord(lonRaw, -180, 180)
+	if latOK && lonOK {
+		return lat, lon, strings.TrimSpace(cityRaw), nil
+	}
+
+	prefs, err := s.store.GetPreferences(ctx, userID)
+	if err != nil {
+		return 0, 0, "", serverError(err)
+	}
+	city := strings.TrimSpace(cityRaw)
+	if city == "" && prefs.WeatherCity != nil {
+		city = *prefs.WeatherCity
+	}
+	if prefs.WeatherLat != nil && prefs.WeatherLon != nil {
+		return *prefs.WeatherLat, *prefs.WeatherLon, city, nil
+	}
+
+	h, err := s.store.GetHousehold(ctx)
+	if err != nil {
+		return 0, 0, "", serverError(err)
+	}
+	if city == "" && h.DefaultWeatherCity != nil {
+		city = *h.DefaultWeatherCity
+	}
+	if h.DefaultWeatherLat != nil && h.DefaultWeatherLon != nil {
+		return *h.DefaultWeatherLat, *h.DefaultWeatherLon, city, nil
+	}
+	return 0, 0, "", badRequest("请先在设置中指定天气城市")
+}
+
+func parseCoord(raw string, min, max float64) (float64, bool) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return 0, false
+	}
+	v, err := strconv.ParseFloat(raw, 64)
+	if err != nil || v < min || v > max {
+		return 0, false
+	}
+	return v, true
+}

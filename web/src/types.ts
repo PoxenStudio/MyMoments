@@ -281,7 +281,7 @@ export interface DashboardCardState {
   id: string;
   title: string;
   visible: boolean;
-  size: 'standard' | 'wide';
+  size: 'standard' | 'wide' | 'tall';
   background: string;
   error: string | null;
   data: unknown;
@@ -290,12 +290,15 @@ export interface DashboardCardState {
 export interface DashboardLayoutItem {
   id: string;
   visible: boolean;
-  size: 'standard' | 'wide';
+  size: 'standard' | 'wide' | 'tall';
   background: string;
 }
 
+export type DashboardLayoutSource = 'personal' | 'household' | 'default';
+
 export interface DashboardPayload {
   layout: DashboardLayoutItem[];
+  layoutSource?: DashboardLayoutSource;
   cards: DashboardCardState[];
   today: string;
 }

@@ -14,6 +14,7 @@ import (
 
 	"mymoments/internal/config"
 	"mymoments/internal/store"
+	"mymoments/internal/weather"
 	"mymoments/internal/webui"
 )
 
@@ -23,6 +24,7 @@ type Server struct {
 	store   *store.Store
 	web     fs.FS
 	limiter *loginLimiter
+	weather *weather.Client
 }
 
 // New 构造 HTTP 服务。
@@ -31,7 +33,13 @@ func New(cfg config.Config, st *store.Store) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Server{cfg: cfg, store: st, web: web, limiter: newLoginLimiter(8, 5*time.Minute)}, nil
+	return &Server{
+		cfg:     cfg,
+		store:   st,
+		web:     web,
+		limiter: newLoginLimiter(8, 5*time.Minute),
+		weather: weather.New(cfg.WeatherBaseURL, cfg.WeatherAPIKey, 10*time.Minute),
+	}, nil
 }
 
 // Handler 返回完整中间件链。
@@ -116,6 +124,12 @@ func (s *Server) routes(mux *http.ServeMux) {
 	mux.Handle("POST "+api+"/messages/{id}/replies", s.requireAuth(http.HandlerFunc(s.handleMessageReply)))
 
 	mux.Handle("GET "+api+"/timeline", s.requireAuth(http.HandlerFunc(s.handleTimeline)))
+
+	mux.Handle("GET "+api+"/dashboard", s.requireAuth(http.HandlerFunc(s.handleDashboard)))
+	mux.Handle("GET "+api+"/dashboard/layout", s.requireAuth(http.HandlerFunc(s.handleDashboardLayout)))
+	mux.Handle("PUT "+api+"/dashboard/layout", s.requireAuth(http.HandlerFunc(s.handleDashboardLayoutPut)))
+	mux.Handle("PUT "+api+"/household/default-layout", s.requireAdmin(http.HandlerFunc(s.handleHouseholdDefaultLayout)))
+	mux.Handle("GET "+api+"/weather", s.requireAuth(http.HandlerFunc(s.handleWeather)))
 
 	mux.Handle("GET "+api+"/notifications", s.requireAuth(http.HandlerFunc(s.handleNotificationsList)))
 	mux.Handle("POST "+api+"/notifications/read-all", s.requireAuth(http.HandlerFunc(s.handleNotificationsReadAll)))

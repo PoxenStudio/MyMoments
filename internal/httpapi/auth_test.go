@@ -18,6 +18,11 @@ import (
 
 func newTestServer(t *testing.T) (*httptest.Server, *http.Client) {
 	t.Helper()
+	return newTestServerWithConfig(t, nil)
+}
+
+func newTestServerWithConfig(t *testing.T, mutate func(*config.Config)) (*httptest.Server, *http.Client) {
+	t.Helper()
 	dir := t.TempDir()
 	st, err := store.Open(context.Background(), "file:"+filepath.Join(dir, "test.db")+"?_pragma=foreign_keys(1)")
 	if err != nil {
@@ -32,6 +37,9 @@ func newTestServer(t *testing.T) (*httptest.Server, *http.Client) {
 		MaxAudioBytes:  100 << 20,
 		MaxVideoBytes:  200 << 20,
 		HouseholdQuota: 1 << 30,
+	}
+	if mutate != nil {
+		mutate(&cfg)
 	}
 	srv, err := New(cfg, st)
 	if err != nil {

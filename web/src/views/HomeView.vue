@@ -1,347 +1,566 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
+import { greeting, todayISO } from '@/utils/chrono';
 import { useAuthStore } from '@/stores/auth';
-import { useTasksStore } from '@/stores/tasks';
+import { useDashboardStore } from '@/stores/dashboard';
 import { useToastStore } from '@/stores/toast';
 import { ApiError } from '@/api/client';
-import { todayISO } from '@/utils/chrono';
-import { greetingFor } from '@/utils/task';
+import { cardRegistry } from '@/cards/registry';
+import type { OverviewData } from '@/cards/types';
+import type { DashboardLayoutItem } from '@/types';
 import AppButton from '@/components/base/AppButton.vue';
 import AppEmptyState from '@/components/base/AppEmptyState.vue';
 import AppIcon from '@/components/base/AppIcon.vue';
+import AppIconButton from '@/components/base/AppIconButton.vue';
+import AppPanel from '@/components/base/AppPanel.vue';
+import AppConfirmDialog from '@/components/base/AppConfirmDialog.vue';
 import TaskFormDialog from '@/components/business/TaskFormDialog.vue';
-import TaskItem from '@/components/business/TaskItem.vue';
-import type { Task } from '@/types';
+import DashboardCustomizer from '@/components/business/DashboardCustomizer.vue';
+import WeatherSettingsDialog from '@/components/business/WeatherSettingsDialog.vue';
 
 const auth = useAuthStore();
-const tasks = useTasksStore();
+const dashboard = useDashboardStore();
 const toast = useToastStore();
 
 const formOpen = ref(false);
-const today = computed(() => tasks.today || todayISO());
+const customizerOpen = ref(false);
+const weatherOpen = ref(false);
+const resetOpen = ref(false);
+const collapsed = ref<Set<string>>(new Set());
+let timer: number | undefined;
 
-const greeting = computed(() => greetingFor(auth.user?.displayName ?? '家人'));
+const collapseKey = computed(() => `mymoments:dashboard:collapsed:${auth.user?.id ?? 'anon'}`);
+
+const greetingText = computed(() => greeting(auth.user?.displayName ?? '家人'));
 const dateText = computed(() => new Intl.DateTimeFormat('zh-CN', {
   month: 'long',
   day: 'numeric',
   weekday: 'long',
 }).format(new Date()));
 
-const recent = computed(() => tasks.tasks.slice(0, 6));
-const overdue = computed(() => tasks.tasks.filter((t) => t.dueDate && t.dueDate < today.value).length);
-const todayCount = computed(() => tasks.tasks.filter((t) => t.dueDate === today.value).length);
+const overview = computed<OverviewData | null>(() => {
+  const data = dashboard.cardMap.overview?.data;
+  if (!data || typeof data !== 'object') return null;
+  return data as OverviewData;
+});
+
 const summary = computed(() => {
-  if (!tasks.counts.open) return '今天没有待办，享受一点空闲。';
-  if (overdue.value) return `有 ${overdue.value} 件已经逾期，先从最小的一件开始。`;
-  if (todayCount.value) return `今天有 ${todayCount.value} 件待办，慢慢来。`;
-  return `还有 ${tasks.counts.open} 件待办在后面等着。`;
+  if (dashboard.loading && !dashboard.cards.length) return '正在整理今天的首页…';
+  const counts = overview.value?.counts;
+  if (!counts) return '希望今天也有一点轻松、一点热闹。';
+  if (counts.overdue > 0) return `有 ${counts.overdue} 件已经逾期，先从最小的一件开始。`;
+  if (counts.today > 0) return `今天有 ${counts.today} 件待办，慢慢来。`;
+  if (counts.open > 0) return `还有 ${counts.open} 件待办在后面等着。`;
+  return '今天没有待办，享受一点空闲。';
 });
 
-onMounted(() => {
-  void tasks.load({ scope: 'open' }).catch(() => undefined);
-});
+const visibleItems = computed(() => dashboard.layout.filter((item) => item.visible && cardRegistry[item.id]));
 
-async function completeTask(task: Task): Promise<void> {
+function cardOf(id: string) {
+  return dashboard.cardMap[id];
+}
+
+function isCollapsed(id: string): boolean {
+  return collapsed.value.has(id);
+}
+
+function toggleCollapse(id: string): void {
+  const next = new Set(collapsed.value);
+  if (next.has(id)) next.delete(id);
+  else next.add(id);
+  collapsed.value = next;
+}
+
+function canMove(id: string, dir: -1 | 1): boolean {
+  const index = dashboard.layout.findIndex((item) => item.id === id);
+  const target = index + dir;
+  return index > 0 && target > 0 && target < dashboard.layout.length;
+}
+
+async function moveCard(id: string, dir: -1 | 1): Promise<void> {
+  const index = dashboard.layout.findIndex((item) => item.id === id);
+  const target = index + dir;
+  if (index <= 0 || target <= 0 || target >= dashboard.layout.length) return;
+  const next = dashboard.layout.map((item) => ({ ...item }));
+  [next[index], next[target]] = [next[target], next[index]];
+  await persist(next);
+}
+
+function toggleCard(id: string): void {
+  if (id === 'overview') return;
+  const next = dashboard.layout.map((item) => (item.id === id ? { ...item, visible: !item.visible } : { ...item }));
+  void persist(next);
+}
+
+function resizeCard(id: string, size: DashboardLayoutItem['size']): void {
+  const next = dashboard.layout.map((item) => (item.id === id ? { ...item, size } : { ...item }));
+  void persist(next);
+}
+
+function backgroundCard(id: string, background: string): void {
+  const next = dashboard.layout.map((item) => (item.id === id ? { ...item, background } : { ...item }));
+  void persist(next);
+}
+
+async function persist(items: DashboardLayoutItem[]): Promise<void> {
   try {
-    const result = await tasks.completeTask(task.id);
-    await tasks.load({ scope: 'open' });
-    const next = result.nextTask?.dueDate ? `，下次 ${result.nextTask.dueDate.slice(5)}` : '';
-    toast.undo(`已完成「${task.title}」${next}`, () => {
-      void undoTask(task);
-    });
+    await dashboard.saveLayout(items);
   } catch (err) {
-    toast.error(err instanceof ApiError ? err.message : '完成待办失败');
+    toast.error(err instanceof ApiError ? err.message : '保存首页布局失败');
   }
 }
 
-async function undoTask(task: Task): Promise<void> {
+async function load(silent = false): Promise<void> {
   try {
-    const result = await tasks.undoTask(task.id);
-    await tasks.load({ scope: 'open' });
-    toast.success(result.nextTaskRemoved ? '已撤销完成并撤回下一次待办' : '已撤销完成');
-  } catch (err) {
-    toast.error(err instanceof ApiError ? err.message : '撤销失败');
+    await dashboard.load(silent);
+  } catch {
+    if (!silent) toast.error('首页加载失败，请稍后重试');
   }
 }
 
-async function onSaved(): Promise<void> {
+async function refresh(): Promise<void> {
+  await load(true);
+}
+
+async function resetLayout(): Promise<void> {
+  resetOpen.value = false;
+  try {
+    await dashboard.resetLayout();
+    toast.success('已恢复家庭默认布局');
+  } catch (err) {
+    toast.error(err instanceof ApiError ? err.message : '恢复失败');
+  }
+}
+
+async function publishLayout(): Promise<void> {
+  try {
+    await dashboard.publishHouseholdLayout(dashboard.layout);
+    toast.success('已发布为家庭默认布局');
+  } catch (err) {
+    toast.error(err instanceof ApiError ? err.message : '发布失败');
+  }
+}
+
+function onSaved(): void {
   toast.success('待办已创建');
-  await tasks.load({ scope: 'open' });
+  void load(true);
 }
+
+function loadCollapsed(): void {
+  try {
+    const raw = localStorage.getItem(collapseKey.value);
+    const ids = raw ? (JSON.parse(raw) as string[]) : [];
+    collapsed.value = new Set(Array.isArray(ids) ? ids : []);
+  } catch {
+    collapsed.value = new Set();
+  }
+}
+
+watch(collapsed, (value) => {
+  try {
+    localStorage.setItem(collapseKey.value, JSON.stringify([...value]));
+  } catch {
+    /* 忽略存储失败 */
+  }
+});
+
+watch(collapseKey, () => loadCollapsed());
+
+onMounted(async () => {
+  loadCollapsed();
+  await load();
+  timer = window.setInterval(() => {
+    if (document.hidden) return;
+    void load(todayISO() !== dashboard.today ? false : true);
+  }, 5 * 60 * 1000);
+});
+
+onBeforeUnmount(() => {
+  if (timer) window.clearInterval(timer);
+});
 </script>
 
 <template>
   <div class="home">
     <header class="hero">
-      <p class="at-caption-upper hero__date">{{ dateText }}</p>
-      <h1 class="at-display hero__title">{{ greeting }}</h1>
-      <p class="hero__sub">{{ summary }}</p>
+      <div class="hero__text">
+        <p class="at-caption-upper hero__date">{{ dateText }}</p>
+        <h1 class="at-display hero__title">{{ greetingText }}</h1>
+        <p class="hero__sub">{{ summary }}</p>
+      </div>
       <div class="hero__actions">
         <AppButton @click="formOpen = true"><AppIcon name="plus" :size="16" />新建待办</AppButton>
-        <RouterLink to="/tasks" class="hero__link">全部待办<AppIcon name="arrow-right" :size="15" /></RouterLink>
+        <AppButton variant="outline" @click="customizerOpen = true">
+          <AppIcon name="grid" :size="16" />整理首页
+        </AppButton>
+        <AppIconButton
+          icon="refresh"
+          label="刷新首页"
+          :active="dashboard.refreshing"
+          @click="refresh"
+        />
       </div>
     </header>
 
-    <div class="home__grid">
-      <section class="panel">
-        <div class="panel__head">
-          <div>
-            <p class="at-caption-upper">Today</p>
-            <h2 class="panel__title">近期待办</h2>
-          </div>
-          <RouterLink to="/tasks" class="panel__more">查看全部</RouterLink>
-        </div>
-        <div v-if="tasks.loading && !tasks.tasks.length" class="panel__loading">
-          <span v-for="n in 3" :key="n" class="panel__loading-row" />
-        </div>
-        <div v-else-if="recent.length" class="panel__list">
-          <TaskItem
-            v-for="task in recent"
-            :key="task.id"
-            :task="task"
-            :today="today"
-            compact
-            @complete="completeTask"
-            @undo="undoTask"
-            @open="$router.push({ name: 'tasks', query: { open: String(task.id) } })"
-          />
-        </div>
-        <AppEmptyState v-else title="今天没有待办" description="把想做的事记下来，家里人会看到" icon="tasks">
-          <AppButton size="sm" variant="outline" @click="formOpen = true">新建一条</AppButton>
-        </AppEmptyState>
-      </section>
-
-      <aside class="side">
-        <section class="side__card">
-          <p class="at-caption-upper">Overview</p>
-          <dl class="stats">
-            <div class="stats__item">
-              <dt>待办</dt>
-              <dd>{{ tasks.counts.open }}</dd>
-            </div>
-            <div class="stats__item">
-              <dt>今天</dt>
-              <dd>{{ tasks.counts.today }}</dd>
-            </div>
-            <div class="stats__item">
-              <dt>逾期</dt>
-              <dd :class="{ 'is-danger': tasks.counts.overdue > 0 }">{{ tasks.counts.overdue }}</dd>
-            </div>
-          </dl>
-        </section>
-
-        <section class="side__note">
-          <p class="side__quote at-display">把每天的小事，慢慢收好。</p>
-          <p class="side__caption">家时光 · MyMoments</p>
-        </section>
-      </aside>
+    <div v-if="dashboard.loading && !dashboard.cards.length" class="home__grid" aria-busy="true" aria-label="正在加载首页">
+      <div v-for="n in 3" :key="n" class="home__skeleton" :class="{ 'is-wide': n === 1 }">
+        <span class="home__skeleton-line home__skeleton-line--short" />
+        <span class="home__skeleton-line" />
+        <span class="home__skeleton-line" />
+      </div>
     </div>
 
-    <TaskFormDialog v-model="formOpen" :templates="tasks.templates" :default-date="today" @saved="onSaved" />
+    <div v-else-if="dashboard.error && !dashboard.cards.length" class="home__error">
+      <p>首页暂时没能加载出来。</p>
+      <AppButton variant="outline" size="sm" @click="load()">重试</AppButton>
+    </div>
+
+    <div v-else-if="!visibleItems.length" class="home__empty">
+      <AppEmptyState title="首页还没有卡片" description="挑选想看的卡片，放到每天打开就能看到的位置" icon="grid">
+        <AppButton size="sm" variant="outline" @click="customizerOpen = true">添加首页卡片</AppButton>
+      </AppEmptyState>
+    </div>
+
+    <div v-else class="home__grid">
+      <article
+        v-for="item in visibleItems"
+        :key="item.id"
+        class="dash"
+        :class="[`dash--${item.size}`, `dash--bg-${item.background}`, { 'is-collapsed': isCollapsed(item.id) }]"
+      >
+        <AppPanel padding="sm" hoverable>
+          <template #header>
+            <div class="dash__heading">
+              <span class="dash__icon"><AppIcon :name="cardRegistry[item.id].icon" :size="16" /></span>
+              <div class="dash__heading-text">
+                <p class="at-caption-upper">{{ cardRegistry[item.id].title }}</p>
+                <h2 class="dash__title">{{ cardOf(item.id)?.title ?? cardRegistry[item.id].title }}</h2>
+              </div>
+            </div>
+          </template>
+          <template #actions>
+            <div class="dash__actions">
+              <AppIconButton
+                v-if="item.id === 'weather'"
+                icon="settings"
+                label="设置天气位置"
+                size="sm"
+                @click="weatherOpen = true"
+              />
+              <AppIconButton
+                icon="chevron-up"
+                label="上移"
+                size="sm"
+                :disabled="!canMove(item.id, -1)"
+                @click="moveCard(item.id, -1)"
+              />
+              <AppIconButton
+                icon="chevron-down"
+                label="下移"
+                size="sm"
+                :disabled="!canMove(item.id, 1)"
+                @click="moveCard(item.id, 1)"
+              />
+              <AppIconButton
+                :icon="isCollapsed(item.id) ? 'chevron-down' : 'chevron-up'"
+                :label="isCollapsed(item.id) ? '展开卡片' : '折叠卡片'"
+                size="sm"
+                @click="toggleCollapse(item.id)"
+              />
+            </div>
+          </template>
+
+          <div v-show="!isCollapsed(item.id)" class="dash__body">
+            <div v-if="cardOf(item.id)?.error" class="dash__card-error">
+              <AppIcon name="alert" :size="15" />
+              <span>{{ cardOf(item.id)?.error }}</span>
+              <button type="button" class="dash__card-retry" @click="refresh">重试</button>
+            </div>
+            <component
+              :is="cardRegistry[item.id].component"
+              v-else
+              :data="cardOf(item.id)?.data ?? null"
+              @refresh="refresh"
+              @configure="weatherOpen = true"
+            />
+          </div>
+
+          <template v-if="cardRegistry[item.id].path" #footer>
+            <RouterLink :to="cardRegistry[item.id].path!" class="dash__more">
+              查看全部<AppIcon name="arrow-right" :size="14" />
+            </RouterLink>
+          </template>
+        </AppPanel>
+      </article>
+    </div>
+
+    <TaskFormDialog v-model="formOpen" @saved="onSaved" />
+    <DashboardCustomizer
+      v-model="customizerOpen"
+      :layout="dashboard.layout"
+      :layout-source="dashboard.layoutSource"
+      :saving="dashboard.saving"
+      :is-admin="auth.isAdmin"
+      @toggle="toggleCard"
+      @move="moveCard"
+      @resize="resizeCard"
+      @background="backgroundCard"
+      @reset="resetOpen = true"
+      @publish="publishLayout"
+    />
+    <WeatherSettingsDialog v-model="weatherOpen" @saved="load(true)" />
+    <AppConfirmDialog
+      v-model="resetOpen"
+      title="恢复家庭默认布局"
+      message="会使用家庭管理员发布的默认卡片顺序与显示设置，你当前的自定义布局将被覆盖。"
+      confirm-text="恢复默认"
+      @confirm="resetLayout"
+    />
   </div>
 </template>
 
 <style scoped>
 .home {
-  max-width: var(--at-content-max);
-  margin: 0 auto;
-  padding: var(--at-space-8) var(--at-space-6) var(--at-space-12);
+  display: flex;
+  flex-direction: column;
+  gap: var(--at-space-6);
 }
 
 .hero {
-  padding: var(--at-space-6) 0 var(--at-space-8);
-  border-bottom: 1px solid var(--at-color-hairline);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--at-space-6);
+  padding: var(--at-space-4) 0 var(--at-space-2);
 }
 
 .hero__date {
-  margin-bottom: var(--at-space-3);
+  color: var(--at-color-muted);
 }
 
 .hero__title {
-  font-size: var(--at-text-display-xl);
-  line-height: 1.15;
+  margin-top: var(--at-space-2);
 }
 
 .hero__sub {
-  margin-top: var(--at-space-3);
+  margin-top: var(--at-space-2);
+  max-width: 42ch;
   font-size: var(--at-text-body-sm);
   color: var(--at-color-muted);
+  line-height: 1.65;
 }
 
 .hero__actions {
   display: flex;
   align-items: center;
-  gap: var(--at-space-4);
-  margin-top: var(--at-space-5);
-}
-
-.hero__link {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: var(--at-text-caption);
-  color: var(--at-color-body);
-}
-
-.hero__link:hover {
-  color: var(--at-color-ink);
+  gap: var(--at-space-2);
+  flex: none;
 }
 
 .home__grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.7fr) minmax(240px, 1fr);
-  gap: var(--at-space-6);
-  padding-top: var(--at-space-8);
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--at-space-4);
   align-items: start;
 }
 
-.panel {
-  background: var(--at-bg-surface);
-  border: 1px solid var(--at-color-hairline);
-  border-radius: var(--at-radius-xl);
-  box-shadow: var(--at-shadow-panel);
-  padding: var(--at-space-5) var(--at-space-6);
+.dash {
+  grid-column: span 4;
+  min-width: 0;
 }
 
-.panel__head {
+.dash--wide {
+  grid-column: span 8;
+}
+
+.dash--tall {
+  grid-column: span 4;
+  grid-row: span 2;
+}
+
+.dash--bg-warm :deep(.at-panel) { background: #faf3e9; }
+.dash--bg-sage :deep(.at-panel) { background: #eef3ee; }
+.dash--bg-sky :deep(.at-panel) { background: #eef4f8; }
+.dash--bg-sand :deep(.at-panel) { background: #f6efe6; }
+.dash--bg-gradient :deep(.at-panel) {
+  background: linear-gradient(135deg, #f4eff7 0%, #faf3e9 52%, #eef3ee 100%);
+}
+
+.dash__heading {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--at-space-3);
-  padding-bottom: var(--at-space-3);
-  border-bottom: 1px solid var(--at-color-hairline);
+  align-items: center;
+  gap: var(--at-space-2);
+  min-width: 0;
 }
 
-.panel__title {
-  margin-top: 2px;
+.dash__icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--at-bg-surface-strong) 82%, transparent);
+  color: var(--at-color-body);
+}
+
+.dash__heading-text {
+  min-width: 0;
+}
+
+.dash__title {
   font-family: var(--at-font-display);
-  font-size: 24px;
-  font-weight: 300;
+  font-size: var(--at-text-title-sm);
+  font-weight: 400;
+  line-height: 1.2;
   letter-spacing: 0.2px;
 }
 
-.panel__more {
+.dash__actions {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  opacity: 0;
+  transition: opacity var(--at-duration-fast) var(--at-ease);
+}
+
+.dash:hover .dash__actions,
+.dash__actions:focus-within {
+  opacity: 1;
+}
+
+.dash.is-collapsed .dash__actions {
+  opacity: 1;
+}
+
+.dash__body {
+  min-width: 0;
+}
+
+.dash__card-error {
+  display: flex;
+  align-items: center;
+  gap: var(--at-space-2);
+  min-height: 72px;
   font-size: var(--at-text-caption);
   color: var(--at-color-muted);
 }
 
-.panel__more:hover {
+.dash__card-retry {
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: var(--at-text-caption);
+  color: var(--at-color-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.dash__more {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--at-text-caption);
+  color: var(--at-color-muted);
+  transition: color var(--at-duration-fast) var(--at-ease);
+}
+
+.dash__more:hover {
   color: var(--at-color-ink);
 }
 
-.panel__list {
+.home__skeleton {
+  grid-column: span 4;
   display: flex;
   flex-direction: column;
-}
-
-.panel__loading {
-  display: flex;
-  flex-direction: column;
-  gap: var(--at-space-2);
-  padding-top: var(--at-space-3);
-}
-
-.panel__loading-row {
-  height: 44px;
-  border-radius: var(--at-radius-md);
-  background: var(--at-bg-surface-strong);
-  animation: pulse 1.4s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.55; }
-}
-
-.side {
-  display: flex;
-  flex-direction: column;
-  gap: var(--at-space-4);
-}
-
-.side__card {
+  gap: var(--at-space-3);
   padding: var(--at-space-5);
+  min-height: 200px;
+  border-radius: var(--at-radius-xl);
   background: var(--at-bg-surface);
   border: 1px solid var(--at-color-hairline);
-  border-radius: var(--at-radius-xl);
-  box-shadow: var(--at-shadow-panel);
 }
 
-.stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+.home__skeleton.is-wide {
+  grid-column: span 8;
+}
+
+.home__skeleton-line {
+  display: block;
+  height: 12px;
+  border-radius: var(--at-radius-pill);
+  background: var(--at-bg-surface-strong);
+  animation: home-pulse 1.6s var(--at-ease) infinite;
+}
+
+.home__skeleton-line--short {
+  width: 40%;
+}
+
+.home__error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   gap: var(--at-space-3);
-  margin-top: var(--at-space-3);
-}
-
-.stats__item dt {
-  font-size: var(--at-text-micro);
+  padding: var(--at-space-6);
+  border: 1px solid var(--at-color-hairline);
+  border-radius: var(--at-radius-xl);
   color: var(--at-color-muted);
 }
 
-.stats__item dd {
-  margin-top: 2px;
-  font-family: var(--at-font-display);
-  font-size: 32px;
-  font-weight: 300;
-  color: var(--at-color-ink);
-}
-
-.stats__item dd.is-danger {
-  color: var(--at-color-danger);
-}
-
-.side__note {
-  padding: var(--at-space-6);
-  background: var(--at-bg-dark);
+.home__empty {
+  border: 1px dashed var(--at-color-hairline-strong);
   border-radius: var(--at-radius-xl);
-  color: var(--at-text-on-dark);
+  background: var(--at-bg-surface);
 }
 
-.side__quote {
-  font-size: 24px;
-  line-height: 1.5;
-  font-weight: 300;
+@keyframes home-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
 }
 
-.side__caption {
-  margin-top: var(--at-space-4);
-  font-size: var(--at-text-micro);
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--at-text-on-dark-soft);
-}
-
-@media (max-width: 1023px) {
-  .home {
-    padding: var(--at-space-6) var(--at-space-4) var(--at-space-12);
+@media (max-width: 1100px) {
+  .dash,
+  .dash--tall {
+    grid-column: span 6;
   }
 
-  .home__grid {
-    grid-template-columns: 1fr;
-  }
-
-  .hero__title {
-    font-size: var(--at-text-display-lg);
+  .dash--wide {
+    grid-column: span 12;
   }
 }
 
-@media (max-width: 639px) {
-  .home {
-    padding: var(--at-space-5) var(--at-space-4) 96px;
-  }
-
+@media (max-width: 767px) {
   .hero {
-    padding-top: var(--at-space-2);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--at-space-4);
   }
 
-  .hero__title {
-    font-size: 34px;
+  .hero__actions {
+    flex-wrap: wrap;
   }
 
-  .panel {
-    padding: var(--at-space-4);
+  .dash,
+  .dash--wide,
+  .dash--tall {
+    grid-column: span 12;
+  }
+
+  .dash--tall {
+    grid-row: auto;
+  }
+
+  .dash__actions {
+    opacity: 1;
+  }
+}
+
+@media (hover: none) {
+  .dash__actions {
+    opacity: 1;
   }
 }
 </style>

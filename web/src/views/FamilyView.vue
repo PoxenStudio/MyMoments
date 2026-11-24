@@ -267,7 +267,7 @@ onMounted(() => {
     </AppEmptyState>
 
     <ul v-else class="family__list">
-      <li v-for="member in sortedMembers" :key="member.id" class="family__member" :class="{ 'is-inactive': member.status !== 'active' }">
+      <li v-for="member in sortedMembers" :key="member.id" class="family__member at-card" :class="{ 'is-inactive': member.status !== 'active' }">
         <AppAvatar :name="member.displayName" :size="44" />
         <div class="family__info">
           <div class="family__name-row">
@@ -477,8 +477,6 @@ onMounted(() => {
   align-items: center;
   gap: var(--at-space-4);
   padding: var(--at-space-4) var(--at-space-5);
-  background: var(--at-bg-surface);
-  border: 1px solid var(--at-color-hairline);
   border-radius: var(--at-radius-xl);
 }
 

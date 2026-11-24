@@ -153,7 +153,7 @@ function mediaURL(id: number): string {
       </div>
     </header>
 
-    <section class="controls">
+    <section class="controls at-card">
       <div class="controls__row">
         <label class="date-jump">
           <AppIcon name="calendar" :size="16" />
@@ -232,7 +232,7 @@ function mediaURL(id: number): string {
           <li
             v-for="entry in group.items"
             :key="entry.occurrenceKey"
-            class="entry"
+            class="entry at-card at-card--hover"
             tabindex="0"
             role="button"
             @click="openEntry(entry)"
@@ -280,8 +280,6 @@ function mediaURL(id: number): string {
 .controls {
   padding: var(--at-space-4);
   margin-bottom: var(--at-space-5);
-  background: var(--at-bg-surface);
-  border: 1px solid var(--at-color-hairline);
   border-radius: var(--at-radius-xl);
   display: flex;
   flex-direction: column;
@@ -456,18 +454,12 @@ function mediaURL(id: number): string {
   align-items: flex-start;
   gap: var(--at-space-3);
   padding: var(--at-space-3) var(--at-space-4);
-  background: var(--at-bg-surface);
-  border: 1px solid var(--at-color-hairline);
-  border-radius: var(--at-radius-lg);
   cursor: pointer;
-  transition: transform var(--at-duration-fast) var(--at-ease), box-shadow var(--at-duration-fast) var(--at-ease);
 }
 
 .entry:hover,
 .entry:focus-visible {
   outline: none;
-  transform: translateY(-1px);
-  box-shadow: var(--at-shadow-hover);
 }
 
 .entry__icon {

@@ -342,7 +342,7 @@ function memberNames(task: Task): string {
             <span class="group__count">{{ column.items.length }}</span>
           </div>
           <div class="board__cards">
-            <article v-for="task in column.items" :key="task.id" class="bcard">
+            <article v-for="task in column.items" :key="task.id" class="bcard at-card at-card--hover">
               <button type="button" class="bcard__main" @click="openDetail(task)">
                 <span class="bcard__title">{{ task.title }}</span>
                 <span class="bcard__meta" :class="`is-${dueLabel(task, today).tone}`">
@@ -599,16 +599,7 @@ function memberNames(task: Task): string {
   flex-direction: column;
   gap: var(--at-space-2);
   padding: var(--at-space-3);
-  background: var(--at-bg-surface);
-  border: 1px solid var(--at-color-hairline);
   border-radius: var(--at-radius-md);
-  box-shadow: var(--at-shadow-panel);
-  transition: box-shadow var(--at-duration-fast) var(--at-ease), transform var(--at-duration-fast) var(--at-ease);
-}
-
-.bcard:hover {
-  box-shadow: var(--at-shadow-hover);
-  transform: translateY(-1px);
 }
 
 .bcard__main {

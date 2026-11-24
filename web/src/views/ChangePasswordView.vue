@@ -62,7 +62,7 @@ async function submit(): Promise<void> {
         </p>
       </div>
     </header>
-    <form class="change__form" @submit.prevent="submit">
+    <form class="change__form at-card" @submit.prevent="submit">
       <AppField label="当前密码" for-id="pw-current">
         <AppInput id="pw-current" v-model="current" type="password" autocomplete="current-password" />
       </AppField>
@@ -88,8 +88,6 @@ async function submit(): Promise<void> {
   flex-direction: column;
   gap: var(--at-space-4);
   padding: var(--at-space-5);
-  background: var(--at-bg-surface);
-  border: 1px solid var(--at-color-hairline);
   border-radius: var(--at-radius-xl);
 }
 

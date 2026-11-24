@@ -248,7 +248,7 @@ async function confirmDelete(): Promise<void> {
       </div>
     </header>
 
-    <section v-if="composing" class="composer">
+    <section v-if="composing" class="composer at-card">
       <div class="composer__head">
         <AppAvatar :name="auth.user?.displayName ?? ''" :size="34" />
         <div>
@@ -329,7 +329,7 @@ async function confirmDelete(): Promise<void> {
         v-for="post in store.items"
         :id="`post-${post.id}`"
         :key="post.id"
-        class="post"
+        class="post at-card"
         :class="{ 'is-highlight': highlightId === post.id }"
       >
         <header class="post__head">
@@ -466,8 +466,6 @@ async function confirmDelete(): Promise<void> {
   display: flex;
   flex-direction: column;
   gap: var(--at-space-3);
-  background: var(--at-bg-surface);
-  border: 1px solid var(--at-color-hairline);
   border-radius: var(--at-radius-xl);
 }
 
@@ -594,15 +592,13 @@ async function confirmDelete(): Promise<void> {
 
 .post {
   padding: var(--at-space-5);
-  background: var(--at-bg-surface);
-  border: 1px solid var(--at-color-hairline);
   border-radius: var(--at-radius-xl);
-  transition: box-shadow var(--at-duration-base) var(--at-ease), border-color var(--at-duration-base) var(--at-ease);
+  transition: border-color var(--at-duration-base) var(--at-ease);
 }
 
 .post.is-highlight {
   border-color: var(--at-color-ink);
-  box-shadow: var(--at-shadow-hover);
+  box-shadow: var(--at-shadow-card-hover), inset 0 1px 0 rgba(255, 255, 255, 0.72);
 }
 
 .post__head {

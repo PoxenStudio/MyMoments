@@ -205,7 +205,7 @@ onBeforeUnmount(() => {
     </header>
 
     <div v-if="dashboard.loading && !dashboard.cards.length" class="home__grid" aria-busy="true" aria-label="正在加载首页">
-      <div v-for="n in 3" :key="n" class="home__skeleton" :class="{ 'is-wide': n === 1 }">
+      <div v-for="n in 3" :key="n" class="home__skeleton at-card" :class="{ 'is-wide': n === 1 }">
         <span class="home__skeleton-line home__skeleton-line--short" />
         <span class="home__skeleton-line" />
         <span class="home__skeleton-line" />
@@ -483,8 +483,6 @@ onBeforeUnmount(() => {
   padding: var(--at-space-5);
   min-height: 200px;
   border-radius: var(--at-radius-xl);
-  background: var(--at-bg-surface);
-  border: 1px solid var(--at-color-hairline);
 }
 
 .home__skeleton.is-wide {

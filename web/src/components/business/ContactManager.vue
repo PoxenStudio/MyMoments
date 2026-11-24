@@ -223,7 +223,7 @@ onMounted(load);
     <template v-else>
       <p class="contacts__count">共 {{ filteredContacts.length }} 位联系人<span v-if="categories.length"> · {{ categories.join(' / ') }}</span></p>
       <ul class="contacts__grid">
-        <li v-for="contact in filteredContacts" :key="contact.id" class="contact">
+        <li v-for="contact in filteredContacts" :key="contact.id" class="contact at-card">
           <header class="contact__head">
             <AppAvatar :name="contact.name" :size="42" />
             <div class="contact__who">
@@ -369,8 +369,6 @@ onMounted(load);
   flex-direction: column;
   gap: var(--at-space-3);
   padding: var(--at-space-4);
-  background: var(--at-bg-surface);
-  border: 1px solid var(--at-color-hairline);
   border-radius: var(--at-radius-xl);
   min-width: 0;
 }

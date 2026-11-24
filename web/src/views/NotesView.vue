@@ -269,7 +269,7 @@ async function confirmDelete(): Promise<void> {
       <article
         v-for="note in store.items"
         :key="note.id"
-        class="note"
+        class="note at-card at-card--hover"
         :class="[`note--${note.color ?? 'default'}`, { 'is-pinned': note.pinned }]"
         tabindex="0"
         role="button"
@@ -475,22 +475,22 @@ async function confirmDelete(): Promise<void> {
   break-inside: avoid;
   margin-bottom: var(--at-space-4);
   padding: var(--at-space-4);
-  border: 1px solid rgba(12, 10, 9, 0.06);
-  border-radius: var(--at-radius-lg);
   background: var(--at-card-default);
   cursor: pointer;
-  transition: transform var(--at-duration-base) var(--at-ease), box-shadow var(--at-duration-base) var(--at-ease);
 }
 
 .note:hover,
 .note:focus-visible {
   outline: none;
-  transform: translateY(-2px);
-  box-shadow: var(--at-shadow-hover);
 }
 
 .note.is-pinned {
-  box-shadow: inset 0 0 0 1px var(--at-color-hairline-strong);
+  box-shadow: var(--at-shadow-card), inset 0 0 0 1px var(--at-color-hairline-strong);
+}
+
+.note.is-pinned:hover,
+.note.is-pinned:focus-visible {
+  box-shadow: var(--at-shadow-card-hover), inset 0 0 0 1px var(--at-color-hairline-strong);
 }
 
 .note--soft { background: var(--at-card-soft); }

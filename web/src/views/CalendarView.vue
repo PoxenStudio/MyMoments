@@ -391,7 +391,7 @@ function pillLabel(entry: DayEntry): string {
       <div v-for="n in 5" :key="n" class="skeleton__row" />
     </div>
 
-    <section v-else-if="view === 'month'" class="month">
+    <section v-else-if="view === 'month'" class="month at-card">
       <div class="month__weekdays">
         <span v-for="day in WEEKDAYS" :key="day">{{ day }}</span>
       </div>
@@ -422,7 +422,7 @@ function pillLabel(entry: DayEntry): string {
     </section>
 
     <section v-else-if="view === 'week'" class="week">
-      <div v-for="date in weekDates" :key="date" class="week__col" :class="{ 'is-today': date === today }">
+      <div v-for="date in weekDates" :key="date" class="week__col at-card" :class="{ 'is-today': date === today }">
         <button type="button" class="week__head" @click="selectDate(date)">
           <span class="at-caption-upper">{{ WEEKDAYS[(parseDate(date).getDay() + 6) % 7] }}</span>
           <span class="week__date">{{ Number(date.slice(8)) }}</span>
@@ -445,7 +445,7 @@ function pillLabel(entry: DayEntry): string {
       </div>
     </section>
 
-    <section v-else-if="view === 'day'" class="day">
+    <section v-else-if="view === 'day'" class="day at-card">
       <div class="day__head">
         <h2 class="day__title">{{ dayLabel(anchor) }}</h2>
         <div class="day__actions">
@@ -477,7 +477,7 @@ function pillLabel(entry: DayEntry): string {
       </div>
     </section>
 
-    <section v-else class="agenda">
+    <section v-else class="agenda at-card">
       <div v-for="day in agendaDays" :key="day.date" class="agenda__group">
         <div class="agenda__head">
           <h2 class="agenda__date">{{ dayLabel(day.date) }}</h2>
@@ -504,7 +504,7 @@ function pillLabel(entry: DayEntry): string {
       </div>
     </section>
 
-    <section v-if="view === 'month'" class="day-panel">
+    <section v-if="view === 'month'" class="day-panel at-card">
       <div class="day-panel__head">
         <div>
           <p class="at-caption-upper">当日安排</p>
@@ -673,11 +673,8 @@ function pillLabel(entry: DayEntry): string {
 
 .month {
   margin-top: var(--at-space-4);
-  background: var(--at-bg-surface);
-  border: 1px solid var(--at-color-hairline);
   border-radius: var(--at-radius-xl);
   overflow: hidden;
-  box-shadow: var(--at-shadow-panel);
 }
 
 .month__weekdays {
@@ -772,11 +769,8 @@ function pillLabel(entry: DayEntry): string {
 
 .day-panel {
   margin-top: var(--at-space-6);
-  background: var(--at-bg-surface);
-  border: 1px solid var(--at-color-hairline);
   border-radius: var(--at-radius-xl);
   padding: var(--at-space-4) var(--at-space-5);
-  box-shadow: var(--at-shadow-panel);
 }
 
 .day-panel__head {
@@ -895,8 +889,6 @@ function pillLabel(entry: DayEntry): string {
 }
 
 .week__col {
-  background: var(--at-bg-surface);
-  border: 1px solid var(--at-color-hairline);
   border-radius: var(--at-radius-lg);
   min-height: 300px;
   display: flex;
@@ -949,11 +941,8 @@ function pillLabel(entry: DayEntry): string {
 .day,
 .agenda {
   margin-top: var(--at-space-5);
-  background: var(--at-bg-surface);
-  border: 1px solid var(--at-color-hairline);
   border-radius: var(--at-radius-xl);
   padding: var(--at-space-5);
-  box-shadow: var(--at-shadow-panel);
 }
 
 .day__head {

@@ -241,7 +241,7 @@ onMounted(load);
       <AppButton variant="outline" @click="openCreate">添加第一个生日</AppButton>
     </AppEmptyState>
     <ul v-else class="birthdays__list">
-      <li v-for="birthday in calendar.birthdays" :key="birthday.id" class="birthday">
+      <li v-for="birthday in calendar.birthdays" :key="birthday.id" class="birthday at-card">
         <AppAvatar :name="birthday.name" :size="42" />
         <div class="birthday__main">
           <div class="birthday__name-row">
@@ -372,8 +372,6 @@ onMounted(load);
   align-items: flex-start;
   gap: var(--at-space-3);
   padding: var(--at-space-4);
-  background: var(--at-bg-surface);
-  border: 1px solid var(--at-color-hairline);
   border-radius: var(--at-radius-xl);
 }
 

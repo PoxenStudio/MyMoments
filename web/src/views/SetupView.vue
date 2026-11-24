@@ -55,6 +55,8 @@ async function submit(): Promise<void> {
 
 <template>
   <div class="setup">
+    <span class="setup__orb setup__orb--mint" />
+    <span class="setup__orb setup__orb--peach" />
     <div class="setup__panel">
       <div class="setup__brand">
         <img src="/icons/icon-192.png" alt="" width="36" height="36" />
@@ -90,23 +92,48 @@ async function submit(): Promise<void> {
 
 <style scoped>
 .setup {
+  position: relative;
+  overflow: hidden;
   min-height: 100vh;
   display: grid;
   place-items: center;
   padding: var(--at-space-6);
-  background:
-    radial-gradient(circle at 15% 10%, var(--at-color-brand-soft), transparent 40%),
-    radial-gradient(circle at 90% 90%, #fdf4ee, transparent 45%),
-    var(--at-bg-page);
+  background: var(--at-bg-dark);
+}
+
+.setup__orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.setup__orb--mint {
+  width: 420px;
+  height: 420px;
+  top: -140px;
+  right: -80px;
+  background: var(--at-gradient-mint);
+}
+
+.setup__orb--peach {
+  width: 320px;
+  height: 320px;
+  bottom: -110px;
+  left: -70px;
+  background: var(--at-gradient-peach);
 }
 
 .setup__panel {
+  position: relative;
+  z-index: 1;
   width: min(100%, 520px);
   padding: var(--at-space-8);
   background: var(--at-bg-surface);
   border: 1px solid var(--at-color-hairline);
   border-radius: var(--at-radius-xxl);
-  box-shadow: var(--at-shadow-panel);
+  box-shadow: var(--at-shadow-dialog);
   display: flex;
   flex-direction: column;
   gap: var(--at-space-4);

@@ -22,8 +22,8 @@ const hasFooter = computed(() => !!slots.footer);
 
 <template>
   <section
-    class="at-panel"
-    :class="[`at-panel--pad-${padding}`, `at-panel--${tone}`, hoverable ? 'at-panel--hover' : '']"
+    class="at-panel at-card"
+    :class="[`at-panel--pad-${padding}`, `at-panel--${tone}`, hoverable ? 'at-card--hover' : '']"
   >
     <header v-if="hasHeader" class="at-panel__header">
       <slot name="header">
@@ -47,10 +47,7 @@ const hasFooter = computed(() => !!slots.footer);
 
 <style scoped>
 .at-panel {
-  background: var(--at-bg-surface);
-  border: 1px solid var(--at-color-hairline);
   border-radius: var(--at-radius-xl);
-  box-shadow: var(--at-shadow-panel);
   overflow: hidden;
 }
 
@@ -67,15 +64,6 @@ const hasFooter = computed(() => !!slots.footer);
 .at-panel--dark .at-panel__title,
 .at-panel--dark .at-panel__subtitle {
   color: var(--at-text-on-dark);
-}
-
-.at-panel--hover {
-  transition: box-shadow var(--at-duration-base) var(--at-ease), transform var(--at-duration-base) var(--at-ease), border-color var(--at-duration-base) var(--at-ease);
-}
-
-.at-panel--hover:hover {
-  box-shadow: var(--at-shadow-hover);
-  border-color: var(--at-color-hairline-strong);
 }
 
 .at-panel--pad-none .at-panel__header {

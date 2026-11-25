@@ -212,7 +212,7 @@ actions: {
 
 - 头像：`AppAvatar` 可点击 → 上传/选择头像（`POST /api/v1/me/avatar`）。
 - 昵称：沿用现有「称呼」字段（`displayName`）。
-- 显示的卡片：跳转首页「整理首页」（现有 `DashboardCustomizer`），或在此内嵌卡片可见性清单。
+- 显示的卡片：跳转首页「整理首页」编辑模式（栅格内拖放位置与大小），或在此内嵌卡片可见性清单。
 - 自定义样式：见 §7.4「我的样式」。
 
 ### 7.6 家庭成员管理（FamilyView 扩展，管理员）
@@ -256,7 +256,7 @@ mux.Handle("PATCH "+api+"/family/members/{id}/style", s.requireAdmin(http.Handle
 
 ## 10. 无障碍与响应式
 
-- 色调 swatch 提供 `aria-label`（中文名称）+ `aria-pressed` 状态（复用 `DashboardCustomizer` 的 swatch 模式）。
+- 色调 swatch 提供 `aria-label`（中文名称）+ `aria-pressed` 状态（复用首页整理模式的 swatch 模式）。
 - 圆角/虚化用 `AppSlider`，提供可见数值与键盘方向键调节，触控目标 ≥ 44px。
 - 角图/背景图均为纯装饰，`aria-hidden` + `pointer-events: none`，不影响对比度（正文仍用品牌墨色）。
 - 尊重 `prefers-reduced-motion`：色调/圆角切换不做动画，仅背景图虚化过渡在非 reduced-motion 下渐变。

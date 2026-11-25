@@ -1122,8 +1122,11 @@ components:
           type: string
           enum: [overview, tasks, calendar, birthdays, reminders, timeline, messages, notes, weather, members, contacts]
         visible: { type: boolean }
-        size: { type: string, enum: [standard, wide, tall] }
         background: { type: string, enum: [default, warm, sage, sky, sand, gradient] }
+        x: { type: integer, description: 栅格列起点（0 基，共 12 列） }
+        y: { type: integer, description: 栅格行起点（0 基） }
+        w: { type: integer, description: 横向占用列数，最小 3 }
+        h: { type: integer, description: 纵向占用行数，最小 5 }
     LayoutRequest:
       type: object
       required: [layout]
@@ -1147,8 +1150,11 @@ components:
               id: { type: string }
               title: { type: string }
               visible: { type: boolean }
-              size: { type: string }
               background: { type: string }
+              x: { type: integer }
+              y: { type: integer }
+              w: { type: integer }
+              h: { type: integer }
               error: { type: string, nullable: true }
               data: {}
     SearchResult:

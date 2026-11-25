@@ -204,11 +204,15 @@ async function submitEdit(): Promise<void> {
       const byId = new Map(memberLayout.value.map((item) => [item.id, item]));
       const nextLayout: DashboardLayoutItem[] = cardDefs.map((def) => {
         const existing = byId.get(def.id);
+        const wide = def.id === 'overview' || def.id === 'timeline';
         return {
           id: def.id,
           visible: def.id === 'overview' ? true : (memberCards[def.id] ?? existing?.visible ?? def.defaultVisible),
-          size: existing?.size ?? 'standard',
           background: existing?.background ?? 'default',
+          x: existing?.x ?? 0,
+          y: existing?.y ?? 0,
+          w: existing?.w ?? (wide ? 8 : 4),
+          h: existing?.h ?? 6,
         };
       });
       await api.patch(`/family/members/${target.id}/style`, { dashboard: JSON.stringify(nextLayout) });

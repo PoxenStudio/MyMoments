@@ -39,19 +39,48 @@ var dashboardCardDefs = []dashboardCardDef{
 var dashboardSizes = map[string]bool{"standard": true, "wide": true, "tall": true}
 var dashboardBackgrounds = map[string]bool{"default": true, "warm": true, "sage": true, "sky": true, "sand": true, "gradient": true}
 
+// 首页栅格：12 列、固定行高，与前端保持一致（参考 react-grid-layout / GridStack 的通用做法）。
+const (
+	dashboardColumns = 12
+	dashboardMinW    = 3
+	dashboardMinH    = 5
+	dashboardMaxH    = 60
+	dashboardMaxRows = 200
+)
+
+// dashboardCardDims 返回旧版尺寸对应的栅格宽高，用于旧布局迁移与默认值。
+func dashboardCardDims(size string) (int, int) {
+	switch size {
+	case "wide":
+		return 8, 6
+	case "tall":
+		return 4, 9
+	default:
+		return 4, 6
+	}
+}
+
 type dashboardLayoutItem struct {
 	ID         string `json:"id"`
 	Visible    bool   `json:"visible"`
-	Size       string `json:"size"`
 	Background string `json:"background"`
+	X          int    `json:"x"`
+	Y          int    `json:"y"`
+	W          int    `json:"w"`
+	H          int    `json:"h"`
+	// Size 仅用于兼容旧版布局，新布局不再返回该字段。
+	Size string `json:"size,omitempty"`
 }
 
 type dashboardCard struct {
 	ID         string  `json:"id"`
 	Title      string  `json:"title"`
 	Visible    bool    `json:"visible"`
-	Size       string  `json:"size"`
 	Background string  `json:"background"`
+	X          int     `json:"x"`
+	Y          int     `json:"y"`
+	W          int     `json:"w"`
+	H          int     `json:"h"`
 	Error      *string `json:"error"`
 	Data       any     `json:"data"`
 }
@@ -65,67 +94,228 @@ func dashboardCardTitle(id string) string {
 	return id
 }
 
+// defaultDashboardLayout 按 12 列栅格从左到右、从上到下紧凑排列默认卡片。
 func defaultDashboardLayout() []dashboardLayoutItem {
 	out := make([]dashboardLayoutItem, 0, len(dashboardCardDefs))
+	x, y, rowHeight := 0, 0, 0
 	for _, def := range dashboardCardDefs {
+		w, h := dashboardCardDims(def.DefaultSize)
+		if x+w > dashboardColumns {
+			x = 0
+			y += rowHeight
+			rowHeight = 0
+		}
 		out = append(out, dashboardLayoutItem{
-			ID: def.ID, Visible: def.DefaultVisible, Size: def.DefaultSize, Background: def.DefaultBackground,
+			ID: def.ID, Visible: def.DefaultVisible, Background: def.DefaultBackground,
+			X: x, Y: y, W: w, H: h,
 		})
+		x += w
+		if h > rowHeight {
+			rowHeight = h
+		}
 	}
 	return out
 }
 
-// normalizeLayout 校验并补全布局：未知/重复卡片报错，缺失卡片按默认值补在末尾。
+func normalizeBackground(raw string) (string, error) {
+	if raw == "" {
+		return "default", nil
+	}
+	if !dashboardBackgrounds[raw] {
+		return "", fmt.Errorf("卡片背景无效：%s", raw)
+	}
+	return raw, nil
+}
+
+// normalizeRects 将卡片限制在栅格内，并保证最小宽高。
+func normalizeRects(items []dashboardLayoutItem) {
+	for i := range items {
+		item := &items[i]
+		if item.X < 0 {
+			item.X = 0
+		}
+		if item.X > dashboardColumns-1 {
+			item.X = dashboardColumns - 1
+		}
+		if item.W < dashboardMinW {
+			item.W = dashboardMinW
+		}
+		if item.W > dashboardColumns {
+			item.W = dashboardColumns
+		}
+		if item.X+item.W > dashboardColumns {
+			item.X = dashboardColumns - item.W
+			if item.X < 0 {
+				item.X = 0
+				item.W = dashboardColumns
+			}
+		}
+		if item.H < dashboardMinH {
+			item.H = dashboardMinH
+		}
+		if item.H > dashboardMaxH {
+			item.H = dashboardMaxH
+		}
+		if item.Y < 0 {
+			item.Y = 0
+		}
+		if item.Y+item.H > dashboardMaxRows {
+			item.Y = dashboardMaxRows - item.H
+			if item.Y < 0 {
+				item.Y = 0
+			}
+		}
+	}
+}
+
+func layoutItemsOverlap(a, b dashboardLayoutItem) bool {
+	return a.X < b.X+b.W && a.X+a.W > b.X && a.Y < b.Y+b.H && a.Y+a.H > b.Y
+}
+
+// resolveLayoutOverlaps 保持数组顺序优先级，将冲突卡片依次下移，避免任意两卡重叠。
+func resolveLayoutOverlaps(items []dashboardLayoutItem) {
+	placed := make([]dashboardLayoutItem, 0, len(items))
+	for i := range items {
+		item := items[i]
+		for {
+			conflict := false
+			for _, other := range placed {
+				if layoutItemsOverlap(item, other) {
+					conflict = true
+					break
+				}
+			}
+			if !conflict {
+				break
+			}
+			item.Y++
+		}
+		items[i] = item
+		placed = append(placed, item)
+	}
+}
+
+// normalizeLayout 校验并补全布局：未知/重复卡片报错，缺失卡片按默认位置补在末尾。
+// 旧版布局只包含 size 字段，此时按输入顺序重新排布；新版布局使用 x/y/w/h。
 func normalizeLayout(in []dashboardLayoutItem) ([]dashboardLayoutItem, error) {
+	if len(in) == 0 {
+		return nil, fmt.Errorf("布局不能为空")
+	}
+	defs := defaultDashboardLayout()
+	defByID := make(map[string]dashboardLayoutItem, len(defs))
+	for _, def := range defs {
+		defByID[def.ID] = def
+	}
+
 	seen := map[string]bool{}
-	out := make([]dashboardLayoutItem, 0, len(dashboardCardDefs))
-	for _, item := range in {
+	positioned := false
+	cleaned := make([]dashboardLayoutItem, len(in))
+	for i, item := range in {
 		id := strings.TrimSpace(item.ID)
 		if id == "" {
 			return nil, fmt.Errorf("卡片标识不能为空")
 		}
-		known := false
-		for _, def := range dashboardCardDefs {
-			if def.ID == id {
-				known = true
-				break
-			}
-		}
-		if !known {
+		if _, ok := defByID[id]; !ok {
 			return nil, fmt.Errorf("未知的卡片：%s", id)
 		}
 		if seen[id] {
 			return nil, fmt.Errorf("卡片重复：%s", id)
 		}
 		seen[id] = true
-		size := item.Size
-		if size == "" {
-			size = "standard"
+		if item.W > 0 || item.H > 0 {
+			positioned = true
 		}
-		if !dashboardSizes[size] {
-			return nil, fmt.Errorf("卡片尺寸无效：%s", size)
-		}
-		bg := item.Background
-		if bg == "" {
-			bg = "default"
-		}
-		if !dashboardBackgrounds[bg] {
-			return nil, fmt.Errorf("卡片背景无效：%s", bg)
-		}
-		out = append(out, dashboardLayoutItem{ID: id, Visible: item.Visible, Size: size, Background: bg})
+		item.ID = id
+		cleaned[i] = item
 	}
-	for _, def := range dashboardCardDefs {
-		if !seen[def.ID] {
+	in = cleaned
+
+	out := make([]dashboardLayoutItem, 0, len(defs))
+	if !positioned {
+		// 旧布局：沿用输入顺序与旧尺寸，重新贴合到栅格。
+		x, y, rowHeight := 0, 0, 0
+		place := func(item dashboardLayoutItem, w, h int) dashboardLayoutItem {
+			if x+w > dashboardColumns {
+				x = 0
+				y += rowHeight
+				rowHeight = 0
+			}
+			item.X, item.Y, item.W, item.H = x, y, w, h
+			x += w
+			if h > rowHeight {
+				rowHeight = h
+			}
+			return item
+		}
+		for _, item := range in {
+			base := defByID[item.ID]
+			bg, err := normalizeBackground(item.Background)
+			if err != nil {
+				return nil, err
+			}
+			base.Visible = item.Visible
+			base.Background = bg
+			w, h := base.W, base.H
+			if item.Size != "" {
+				if !dashboardSizes[item.Size] {
+					return nil, fmt.Errorf("卡片尺寸无效：%s", item.Size)
+				}
+				w, h = dashboardCardDims(item.Size)
+			}
+			out = append(out, place(base, w, h))
+		}
+		for _, def := range defs {
+			if !seen[def.ID] {
+				def.Visible = false
+				out = append(out, place(def, def.W, def.H))
+			}
+		}
+	} else {
+		for _, item := range in {
+			base := defByID[item.ID]
+			bg, err := normalizeBackground(item.Background)
+			if err != nil {
+				return nil, err
+			}
+			w, h := item.W, item.H
+			if w <= 0 || h <= 0 {
+				dw, dh := base.W, base.H
+				if item.Size != "" {
+					if !dashboardSizes[item.Size] {
+						return nil, fmt.Errorf("卡片尺寸无效：%s", item.Size)
+					}
+					dw, dh = dashboardCardDims(item.Size)
+				}
+				if w <= 0 {
+					w = dw
+				}
+				if h <= 0 {
+					h = dh
+				}
+			}
+			x, y := item.X, item.Y
+			if item.W <= 0 && item.H <= 0 {
+				x, y = base.X, base.Y
+			}
 			out = append(out, dashboardLayoutItem{
-				ID: def.ID, Visible: false, Size: def.DefaultSize, Background: def.DefaultBackground,
+				ID: item.ID, Visible: item.Visible, Background: bg,
+				X: x, Y: y, W: w, H: h,
 			})
 		}
+		for _, def := range defs {
+			if !seen[def.ID] {
+				def.Visible = false
+				out = append(out, def)
+			}
+		}
 	}
-	// 今日概览固定置顶且可见。
-	for i, item := range out {
-		if item.ID == "overview" {
-			out[0], out[i] = out[i], out[0]
-			out[0].Visible = true
+
+	normalizeRects(out)
+	resolveLayoutOverlaps(out)
+	// 今日概览始终可见。
+	for i := range out {
+		if out[i].ID == "overview" {
+			out[i].Visible = true
 			break
 		}
 	}
@@ -192,7 +382,7 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	for _, item := range layout {
 		card := dashboardCard{
 			ID: item.ID, Title: dashboardCardTitle(item.ID), Visible: item.Visible,
-			Size: item.Size, Background: item.Background,
+			Background: item.Background, X: item.X, Y: item.Y, W: item.W, H: item.H,
 		}
 		if item.Visible {
 			data, err := s.safeCardData(r, u, item.ID, today)

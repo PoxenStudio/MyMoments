@@ -361,8 +361,11 @@ export interface DashboardCardState {
   id: string;
   title: string;
   visible: boolean;
-  size: 'standard' | 'wide' | 'tall';
   background: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
   error: string | null;
   data: unknown;
 }
@@ -370,8 +373,15 @@ export interface DashboardCardState {
 export interface DashboardLayoutItem {
   id: string;
   visible: boolean;
-  size: 'standard' | 'wide' | 'tall';
   background: string;
+  /** 栅格列起点（0 基），总列数 12 */
+  x: number;
+  /** 栅格行起点（0 基），行高固定 */
+  y: number;
+  /** 横向占用的列数，最小 3 */
+  w: number;
+  /** 纵向占用的行数，最小 5 */
+  h: number;
 }
 
 export type DashboardLayoutSource = 'personal' | 'household' | 'default';

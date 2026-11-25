@@ -3,10 +3,10 @@ import { ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import AppButton from '@/components/base/AppButton.vue';
 import AppIcon from '@/components/base/AppIcon.vue';
-import { radiusPx, radiusOptions, tonePresets } from '@/data/theme';
+import { radiusPx, radiusOptions, tonePresets, cardTonePresets } from '@/data/theme';
 import { useThemeStore } from '@/stores/theme';
 import { useToastStore } from '@/stores/toast';
-import type { CardRadius, ThemeTone } from '@/types';
+import type { CardRadius, CardTone, ThemeTone } from '@/types';
 
 const theme = useThemeStore();
 const toast = useToastStore();
@@ -17,6 +17,18 @@ async function pickTone(tone: ThemeTone): Promise<void> {
   busy.value = true;
   try {
     await theme.setPersonal({ tone });
+  } catch {
+    toast.error('样式保存失败');
+  } finally {
+    busy.value = false;
+  }
+}
+
+async function pickCardTone(cardTone: CardTone): Promise<void> {
+  if (busy.value) return;
+  busy.value = true;
+  try {
+    await theme.setPersonal({ cardTone });
   } catch {
     toast.error('样式保存失败');
   } finally {
@@ -75,6 +87,28 @@ async function restore(): Promise<void> {
           @click="pickTone(tone.key)"
         >
           <span v-if="theme.effective.tone === tone.key" class="quick-tone__check">
+            <AppIcon name="check" :size="14" />
+          </span>
+        </button>
+      </div>
+    </section>
+
+    <section class="quick-menu__section">
+      <p class="quick-menu__label">卡片色调</p>
+      <div class="quick-menu__tones quick-menu__tones--cards" role="group" aria-label="快速切换卡片色调">
+        <button
+          v-for="tone in cardTonePresets"
+          :key="tone.key"
+          type="button"
+          class="quick-tone"
+          :class="{ 'is-active': (theme.effective.cardTone ?? 'default') === tone.key }"
+          :aria-pressed="(theme.effective.cardTone ?? 'default') === tone.key"
+          :aria-label="tone.label"
+          :title="tone.label"
+          :style="{ background: tone.swatch }"
+          @click="pickCardTone(tone.key)"
+        >
+          <span v-if="(theme.effective.cardTone ?? 'default') === tone.key" class="quick-tone__check">
             <AppIcon name="check" :size="14" />
           </span>
         </button>
@@ -165,6 +199,10 @@ async function restore(): Promise<void> {
   display: grid;
   grid-template-columns: repeat(11, 1fr);
   gap: 4px;
+}
+
+.quick-menu__tones--cards {
+  grid-template-columns: repeat(8, 1fr);
 }
 
 .quick-tone {

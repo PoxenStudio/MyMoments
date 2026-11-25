@@ -3,12 +3,13 @@ import { computed } from 'vue';
 import AppSlider from '@/components/base/AppSlider.vue';
 import {
   backgroundPresets,
+  cardTonePresets,
   cornerPresets,
   radiusOptions,
   radiusPx,
   tonePresets,
 } from '@/data/theme';
-import type { ThemeConfig, ThemePatch } from '@/types';
+import type { CardTone, ThemeConfig, ThemePatch } from '@/types';
 
 const props = withDefaults(defineProps<{
   model: ThemeConfig;
@@ -29,6 +30,10 @@ const selectedBg = computed(() => props.model.pageBackground);
 
 function pickTone(key: ThemeConfig['tone']): void {
   emit('change', { tone: key });
+}
+
+function pickCardTone(key: CardTone): void {
+  emit('change', { cardTone: key });
 }
 
 function pickRadius(key: ThemeConfig['cardRadius']): void {
@@ -78,6 +83,29 @@ function setCornerOpacity(value: number): void {
           :aria-label="tone.label"
           :title="`${tone.label} · ${tone.description}`"
           @click="pickTone(tone.key)"
+        >
+          <span class="tone-swatch__dot" :style="{ background: tone.swatch }" />
+          <span class="tone-swatch__label">{{ tone.label }}</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="style-editor__section">
+      <div class="style-editor__heading">
+        <h3>卡片色调</h3>
+        <p>独立于页面色调，只改变卡片与面板的底色。</p>
+      </div>
+      <div class="tone-grid" role="group" aria-label="卡片色调">
+        <button
+          v-for="tone in cardTonePresets"
+          :key="tone.key"
+          type="button"
+          class="tone-swatch"
+          :class="{ 'is-active': (model.cardTone ?? 'default') === tone.key }"
+          :aria-pressed="(model.cardTone ?? 'default') === tone.key"
+          :aria-label="tone.label"
+          :title="tone.label"
+          @click="pickCardTone(tone.key)"
         >
           <span class="tone-swatch__dot" :style="{ background: tone.swatch }" />
           <span class="tone-swatch__label">{{ tone.label }}</span>

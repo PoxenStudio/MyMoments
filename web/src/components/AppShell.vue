@@ -65,6 +65,7 @@ const title = computed(() => (route.meta.title ? String(route.meta.title) : '家
 const showCreateFab = computed(() => currentName.value !== 'settings');
 const initials = computed(() => auth.user?.displayName ?? '家');
 const roleLabel = computed(() => (auth.user?.role === 'admin' ? '管理员' : '家庭成员'));
+const isDark = computed(() => theme.scheme === 'dark');
 
 const collapsed = computed(() => {
   if (isMobile.value) return false;
@@ -212,6 +213,14 @@ async function logout(): Promise<void> {
   toast.push('已退出登录');
   await router.replace({ name: 'login' });
 }
+
+async function toggleScheme(): Promise<void> {
+  try {
+    await theme.setScheme(isDark.value ? 'light' : 'dark');
+  } catch {
+    toast.error('主题切换失败');
+  }
+}
 </script>
 
 <template>
@@ -307,6 +316,11 @@ async function logout(): Promise<void> {
           <p class="topbar__title at-display">{{ title }}</p>
 
           <div class="topbar__actions">
+            <AppIconButton
+              :icon="isDark ? 'sun' : 'moon'"
+              :label="isDark ? '切换到浅色' : '切换到深色'"
+              @click="toggleScheme"
+            />
             <div ref="styleWrap" class="style-menu">
               <AppIconButton
                 icon="palette"

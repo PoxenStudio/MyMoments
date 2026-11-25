@@ -256,6 +256,97 @@ html[data-theme='cartoon-lemon'] {
   --at-border: #ece3c9;
 }
 
+/* 卡片色调：独立于页面色调，只覆盖卡片表面与内衬，不改画布 */
+html[data-card-tone='soft'] {
+  --at-bg-surface: var(--at-card-soft);
+  --at-bg-surface-strong: #f0efed;
+}
+
+html[data-card-tone='sand'] {
+  --at-bg-surface: var(--at-card-sand);
+  --at-bg-surface-strong: #ece3d2;
+}
+
+html[data-card-tone='mint'] {
+  --at-bg-surface: var(--at-card-mint);
+  --at-bg-surface-strong: #dcece5;
+}
+
+html[data-card-tone='peach'] {
+  --at-bg-surface: var(--at-card-peach);
+  --at-bg-surface-strong: #f2e0d4;
+}
+
+html[data-card-tone='lavender'] {
+  --at-bg-surface: var(--at-card-lavender);
+  --at-bg-surface-strong: #e6ddef;
+}
+
+html[data-card-tone='sky'] {
+  --at-bg-surface: var(--at-card-sky);
+  --at-bg-surface-strong: #dbe8f2;
+}
+
+html[data-card-tone='rose'] {
+  --at-bg-surface: var(--at-card-rose);
+  --at-bg-surface-strong: #efdde1;
+}
+
+/* 深色模式：整体反转画布 / 表面 / 墨色文字，覆盖任意浅色色调 */
+html[data-scheme='dark'] {
+  color-scheme: dark;
+
+  --at-bg-page: #14110f;
+  --at-bg-canvas-soft: #1a1715;
+  --at-bg-surface: #211d1a;
+  --at-bg-surface-strong: #2c2723;
+  --at-bg-dark: #0c0a09;
+  --at-bg-dark-elevated: #1c1917;
+
+  --at-color-primary: #ece8e2;
+  --at-color-primary-active: #ffffff;
+  --at-color-ink: #f0ece6;
+  --at-color-body: #b9b2a8;
+  --at-color-body-strong: #d9d2c8;
+  --at-color-muted: #8f877e;
+  --at-color-muted-soft: #6a645c;
+  --at-color-hairline: #322d28;
+  --at-color-hairline-soft: #292522;
+  --at-color-hairline-strong: #443e38;
+  --at-border: #322d28;
+  --at-text-primary: #f0ece6;
+  --at-text-secondary: #b9b2a8;
+  --at-text-on-primary: #1c1917;
+
+  --at-color-success: #34d399;
+  --at-color-danger: #f87171;
+  --at-color-warning: #fbbf24;
+  --at-color-danger-soft: rgba(248, 113, 113, 0.14);
+  --at-color-success-soft: rgba(52, 211, 153, 0.14);
+  --at-color-scrim: rgba(0, 0, 0, 0.62);
+
+  --at-color-brand: #7fb7cb;
+  --at-color-brand-soft: rgba(127, 183, 203, 0.16);
+
+  --at-card-default: #211d1a;
+  --at-card-soft: #1a1715;
+  --at-card-sand: #292219;
+  --at-card-mint: #1c2620;
+  --at-card-peach: #291f1a;
+  --at-card-lavender: #241f2b;
+  --at-card-sky: #1c252b;
+  --at-card-rose: #291f22;
+}
+
+html[data-scheme='dark'] .at-card {
+  box-shadow: var(--at-shadow-card), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+html[data-scheme='dark'] .at-card--hover:hover,
+html[data-scheme='dark'] .at-card--hover:focus-visible {
+  box-shadow: var(--at-shadow-card-hover), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
 @media (max-width: 639px) {
   :root {
     --at-text-display-xl: 32px;

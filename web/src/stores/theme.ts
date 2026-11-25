@@ -7,7 +7,7 @@ import {
   cornerByKey,
   radiusPx,
 } from '@/data/theme';
-import type { ThemeConfig, ThemePatch } from '@/types';
+import type { ThemeConfig, ThemePatch, ThemeScheme } from '@/types';
 
 type StoredTheme = Partial<ThemeConfig> & {
   pageBackground?: Partial<ThemeConfig['pageBackground']>;
@@ -16,6 +16,8 @@ type StoredTheme = Partial<ThemeConfig> & {
 
 function cloneSystem(): ThemeConfig {
   return {
+    scheme: SYSTEM_THEME.scheme,
+    cardTone: SYSTEM_THEME.cardTone,
     tone: SYSTEM_THEME.tone,
     cardRadius: SYSTEM_THEME.cardRadius,
     pageBackground: { ...SYSTEM_THEME.pageBackground },
@@ -27,6 +29,8 @@ function mergeTheme(base: ThemeConfig, patch: StoredTheme | null | undefined): T
   if (!patch) return { ...base, pageBackground: { ...base.pageBackground }, cardCorner: { ...base.cardCorner } };
   return {
     useDefault: patch.useDefault,
+    scheme: patch.scheme ?? base.scheme,
+    cardTone: patch.cardTone ?? base.cardTone,
     tone: patch.tone ?? base.tone,
     cardRadius: patch.cardRadius ?? base.cardRadius,
     pageBackground: { ...base.pageBackground, ...(patch.pageBackground ?? {}) },
@@ -61,6 +65,7 @@ export const useThemeStore = defineStore('theme', () => {
   });
 
   const useDefault = computed(() => personal.value?.useDefault !== false);
+  const scheme = computed<ThemeScheme>(() => (personal.value?.scheme === 'dark' ? 'dark' : 'light'));
   const pageImage = computed(() => {
     const bg = effective.value.pageBackground;
     if (bg.kind !== 'image' || !bg.image) return null;
@@ -77,9 +82,15 @@ export const useThemeStore = defineStore('theme', () => {
     const root = document.documentElement;
     const theme = effective.value;
     root.dataset.theme = theme.tone;
+    root.dataset.scheme = scheme.value;
+    if (theme.cardTone && theme.cardTone !== 'default') {
+      root.dataset.cardTone = theme.cardTone;
+    } else {
+      delete root.dataset.cardTone;
+    }
     root.style.setProperty('--at-radius-card', `${radiusPx[theme.cardRadius]}px`);
     const bg = theme.pageBackground;
-    if (bg.kind === 'color' && bg.color) {
+    if (bg.kind === 'color' && bg.color && scheme.value === 'light') {
       root.style.setProperty('--at-bg-page', bg.color);
     } else {
       root.style.removeProperty('--at-bg-page');
@@ -119,7 +130,14 @@ export const useThemeStore = defineStore('theme', () => {
     const base = personal.value && personal.value.useDefault === false
       ? mergeTheme(cloneSystem(), personal.value)
       : effective.value;
-    const next = mergeTheme(base, { ...patch, useDefault: false } as StoredTheme);
+    const next = mergeTheme(base, { ...patch, useDefault: false, scheme: patch.scheme ?? scheme.value } as StoredTheme);
+    personal.value = next;
+    apply();
+    await persistPersonal(next);
+  }
+
+  async function setScheme(nextScheme: ThemeScheme): Promise<void> {
+    const next: StoredTheme = { ...(personal.value ?? {}), scheme: nextScheme };
     personal.value = next;
     apply();
     await persistPersonal(next);
@@ -187,12 +205,14 @@ export const useThemeStore = defineStore('theme', () => {
     effective,
     householdTheme,
     useDefault,
+    scheme,
     pageImage,
     pageBlur,
     cornerImage,
     load,
     apply,
     setPersonal,
+    setScheme,
     setUseDefault,
     resetPersonal,
     setHousehold,

@@ -36,6 +36,10 @@ export type ThemeTone =
 
 export type CardRadius = 'sm' | 'md' | 'lg' | 'xl';
 
+export type ThemeScheme = 'light' | 'dark';
+
+export type CardTone = 'default' | 'soft' | 'sand' | 'mint' | 'peach' | 'lavender' | 'sky' | 'rose';
+
 export interface ThemeBackground {
   kind: 'color' | 'image';
   color?: string;
@@ -50,6 +54,8 @@ export interface ThemeCorner {
 
 export interface ThemeConfig {
   useDefault?: boolean;
+  scheme?: ThemeScheme;
+  cardTone?: CardTone;
   tone: ThemeTone;
   cardRadius: CardRadius;
   pageBackground: ThemeBackground;

@@ -1,4 +1,4 @@
-import type { CardRadius, ThemeConfig, ThemeTone } from '@/types';
+import type { CardRadius, CardTone, ThemeConfig, ThemeTone } from '@/types';
 
 function svgUrl(svg: string): string {
   return `data:image/svg+xml,${encodeURIComponent(svg.replace(/\s{2,}/g, ' ').trim())}`;
@@ -34,6 +34,23 @@ export const radiusOptions: { key: CardRadius; label: string; px: number }[] = [
 ];
 
 export const radiusPx: Record<CardRadius, number> = { sm: 8, md: 12, lg: 16, xl: 24 };
+
+export interface CardTonePreset {
+  key: CardTone;
+  label: string;
+  swatch: string;
+}
+
+export const cardTonePresets: CardTonePreset[] = [
+  { key: 'default', label: '默认', swatch: '#ffffff' },
+  { key: 'soft', label: '浅灰', swatch: '#fafafa' },
+  { key: 'sand', label: '沙色', swatch: '#f7f4ef' },
+  { key: 'mint', label: '薄荷', swatch: '#eef7f3' },
+  { key: 'peach', label: '蜜桃', swatch: '#fbf2ec' },
+  { key: 'lavender', label: '薰衣草', swatch: '#f4f0f9' },
+  { key: 'sky', label: '天空', swatch: '#edf3fa' },
+  { key: 'rose', label: '玫瑰', swatch: '#faf0f2' },
+];
 
 export interface BackgroundPreset {
   key: string;
@@ -242,6 +259,8 @@ export const cornerByKey: Record<string, CornerPreset> = Object.fromEntries(
 );
 
 export const SYSTEM_THEME: ThemeConfig = {
+  scheme: 'light',
+  cardTone: 'default',
   tone: 'default',
   cardRadius: 'lg',
   pageBackground: { kind: 'color', blur: 8 },

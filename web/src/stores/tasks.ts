@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { api } from '@/api/client';
 import type { MentionTarget, Task, TaskTemplate } from '@/types';
+import { toMentionRefs } from '@/utils/mentions';
 
 export interface TaskCounts {
   open: number;
@@ -50,6 +51,10 @@ export interface CompletionResult {
   task: Task;
   nextTask: Task | null;
   completion: Task['completion'];
+}
+
+function withMentionRefs(payload: TaskPayload): TaskPayload {
+  return payload.mentions ? { ...payload, mentions: toMentionRefs(payload.mentions) } : payload;
 }
 
 export interface TemplatePayload {
@@ -112,12 +117,12 @@ export const useTasksStore = defineStore('tasks', () => {
   }
 
   async function createTask(payload: TaskPayload): Promise<Task> {
-    const res = await api.post<{ task: Task }>('/tasks', payload);
+    const res = await api.post<{ task: Task }>('/tasks', withMentionRefs(payload));
     return res.task;
   }
 
   async function updateTask(id: number, payload: TaskPayload): Promise<Task> {
-    const res = await api.patch<{ task: Task }>(`/tasks/${id}`, payload);
+    const res = await api.patch<{ task: Task }>(`/tasks/${id}`, withMentionRefs(payload));
     return res.task;
   }
 

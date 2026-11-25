@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { api } from '@/api/client';
 import type { MessagePost, MessageReply, MentionTarget, Visibility } from '@/types';
+import { toMentionRefs } from '@/utils/mentions';
 
 export interface MessageQuery {
   q?: string;
@@ -16,6 +17,10 @@ export interface MessagePayload {
   audienceIds?: number[];
   mentions?: MentionTarget[];
   pinned?: boolean;
+}
+
+function withMentionRefs(payload: MessagePayload): MessagePayload {
+  return payload.mentions ? { ...payload, mentions: toMentionRefs(payload.mentions) } : payload;
 }
 
 export const useMessagesStore = defineStore('messages', () => {
@@ -49,13 +54,13 @@ export const useMessagesStore = defineStore('messages', () => {
   }
 
   async function create(payload: MessagePayload): Promise<MessagePost> {
-    const res = await api.post<{ message: MessagePost }>('/messages', payload);
+    const res = await api.post<{ message: MessagePost }>('/messages', withMentionRefs(payload));
     items.value = [res.message, ...items.value];
     return res.message;
   }
 
   async function update(id: number, payload: MessagePayload): Promise<MessagePost> {
-    const res = await api.patch<{ message: MessagePost }>(`/messages/${id}`, payload);
+    const res = await api.patch<{ message: MessagePost }>(`/messages/${id}`, withMentionRefs(payload));
     items.value = items.value.map((m) => (m.id === id ? res.message : m));
     return res.message;
   }
@@ -66,7 +71,7 @@ export const useMessagesStore = defineStore('messages', () => {
   }
 
   async function reply(id: number, body: string, mentions: MentionTarget[]): Promise<MessageReply> {
-    const res = await api.post<{ reply: MessageReply }>(`/messages/${id}/replies`, { body, mentions });
+    const res = await api.post<{ reply: MessageReply }>(`/messages/${id}/replies`, { body, mentions: toMentionRefs(mentions) });
     items.value = items.value.map((m) => (m.id === id
       ? { ...m, replies: [...m.replies, res.reply], replyCount: (m.replyCount ?? m.replies.length) + 1 }
       : m));

@@ -22,6 +22,8 @@ const props = withDefaults(defineProps<{
   rows?: number;
   maxlength?: number;
   disabled?: boolean;
+  /** 单行输入（用于标题等场景） */
+  single?: boolean;
 }>(), {
   contacts: () => [],
   id: undefined,
@@ -29,6 +31,7 @@ const props = withDefaults(defineProps<{
   rows: 3,
   maxlength: undefined,
   disabled: false,
+  single: false,
 });
 
 const emit = defineEmits<{
@@ -37,7 +40,7 @@ const emit = defineEmits<{
 }>();
 
 const root = ref<HTMLElement | null>(null);
-const area = ref<HTMLTextAreaElement | null>(null);
+const area = ref<HTMLInputElement | HTMLTextAreaElement | null>(null);
 const triggerPos = ref<number | null>(null);
 const query = ref<string | null>(null);
 const activeIndex = ref(0);
@@ -69,7 +72,7 @@ function resolveName(t: MentionTarget): string | undefined {
 }
 
 function onInput(event: Event): void {
-  const el = event.target as HTMLTextAreaElement;
+  const el = event.target as HTMLInputElement | HTMLTextAreaElement;
   emit('update:modelValue', el.value);
   const kept = props.mentions.filter((t) => {
     const name = resolveName(t);
@@ -79,7 +82,7 @@ function onInput(event: Event): void {
   refreshQuery(el);
 }
 
-function refreshQuery(el: HTMLTextAreaElement): void {
+function refreshQuery(el: HTMLInputElement | HTMLTextAreaElement): void {
   const caret = el.selectionStart ?? el.value.length;
   const before = el.value.slice(0, caret);
   const match = /(?:^|[\s(（[【,，、:：])@([^\s@]{0,20})$/.exec(before);
@@ -151,7 +154,23 @@ defineExpose({
 
 <template>
   <div ref="root" class="mention">
+    <input
+      v-if="single"
+      :id="id"
+      ref="area"
+      class="mention__input mention__input--single"
+      type="text"
+      autocomplete="off"
+      :value="modelValue"
+      :placeholder="placeholder"
+      :maxlength="maxlength"
+      :disabled="disabled"
+      @input="onInput"
+      @keydown="onKeydown"
+      @click="refreshQuery($event.target as HTMLInputElement)"
+    />
     <textarea
+      v-else
       :id="id"
       ref="area"
       class="mention__input"
@@ -201,6 +220,13 @@ defineExpose({
   line-height: 1.6;
   resize: vertical;
   transition: border-color var(--at-duration-fast) var(--at-ease), box-shadow var(--at-duration-fast) var(--at-ease);
+}
+
+.mention__input--single {
+  height: 44px;
+  min-height: 0;
+  padding: 0 var(--at-space-4);
+  resize: none;
 }
 
 .mention__input::placeholder {

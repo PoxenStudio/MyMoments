@@ -64,7 +64,8 @@ interface FormState {
 }
 
 const form = reactive<FormState>(blankForm());
-const mentions = ref<MentionTarget[]>([]);
+const titleMentions = ref<MentionTarget[]>([]);
+const descriptionMentions = ref<MentionTarget[]>([]);
 const moreOpen = ref(false);
 const saving = ref(false);
 const error = ref('');
@@ -160,7 +161,10 @@ function resetFromTask(task: Task | null): void {
     next.assigneeIds = task.assignees.map((a) => a.id);
     next.subtasks = task.subtasks.map((s) => ({ id: s.id, title: s.title, done: s.done }));
     next.templateId = task.templateId ?? null;
-    mentions.value = [...(task.mentions ?? [])];
+    const mentioned = task.mentions ?? [];
+    const inTitle = (m: MentionTarget): boolean => Boolean(m.name && task.title.includes(`@${m.name}`));
+    titleMentions.value = mentioned.filter(inTitle);
+    descriptionMentions.value = mentioned.filter((m) => !inTitle(m));
     const rule = parseRecurrence(task.recurrenceRule);
     if (rule) {
       next.freq = rule.freq;
@@ -173,7 +177,10 @@ function resetFromTask(task: Task | null): void {
     next.reminder = offsets.length ? String(offsets[0]) : '';
   }
   Object.assign(form, next);
-  if (!task) mentions.value = [];
+  if (!task) {
+    titleMentions.value = [];
+    descriptionMentions.value = [];
+  }
   moreOpen.value = Boolean(task && (task.recurrenceRule || task.visibility !== 'household' || (task.reminderOffsets?.length ?? 0) > 0));
 }
 
@@ -254,6 +261,14 @@ function buildRule(): string | null {
   });
 }
 
+function collectMentions(): MentionTarget[] {
+  const out: MentionTarget[] = [];
+  for (const m of [...titleMentions.value, ...descriptionMentions.value]) {
+    if (!out.some((t) => t.type === m.type && t.id === m.id)) out.push(m);
+  }
+  return out;
+}
+
 function buildPayload(): TaskPayload {
   const subtasks: SubtaskPayload[] = form.subtasks
     .filter((s) => s.title.trim())
@@ -270,7 +285,7 @@ function buildPayload(): TaskPayload {
     subtasks,
     reminderOffsets: form.reminder === '' ? [] : [Number(form.reminder)],
     recurrenceRule: buildRule(),
-    mentions: mentions.value,
+    mentions: collectMentions(),
   };
   if (form.templateId) payload.templateId = form.templateId;
   return payload;
@@ -315,12 +330,15 @@ async function submit(): Promise<void> {
   >
     <form class="task-form" @submit.prevent="submit">
       <AppField label="标题" for-id="task-title" required>
-        <AppInput
+        <MentionTextarea
           id="task-title"
           v-model="form.title"
-          placeholder="要做什么？"
+          v-model:mentions="titleMentions"
+          :members="mentionMembers"
+          :contacts="mentionContacts"
+          single
+          placeholder="要做什么？输入 @ 可以提及家人或联系人"
           :maxlength="120"
-          :invalid="Boolean(error) && !form.title.trim()"
         />
       </AppField>
 
@@ -328,7 +346,7 @@ async function submit(): Promise<void> {
         <MentionTextarea
           id="task-desc"
           v-model="form.description"
-          v-model:mentions="mentions"
+          v-model:mentions="descriptionMentions"
           :members="mentionMembers"
           :contacts="mentionContacts"
           :rows="3"

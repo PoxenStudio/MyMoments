@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { api } from '@/api/client';
 import type { MentionTarget, Note, NoteItem, Visibility } from '@/types';
+import { toMentionRefs } from '@/utils/mentions';
 
 export interface NoteQuery {
   q?: string;
@@ -20,6 +21,10 @@ export interface NotePayload {
   mentions?: MentionTarget[];
   pinned?: boolean;
   items?: Pick<NoteItem, 'text' | 'checked'>[];
+}
+
+function withMentionRefs(payload: NotePayload): NotePayload {
+  return payload.mentions ? { ...payload, mentions: toMentionRefs(payload.mentions) } : payload;
 }
 
 export const useNotesStore = defineStore('notes', () => {
@@ -60,13 +65,13 @@ export const useNotesStore = defineStore('notes', () => {
   }
 
   async function create(payload: NotePayload): Promise<Note> {
-    const res = await api.post<{ note: Note }>('/notes', payload);
+    const res = await api.post<{ note: Note }>('/notes', withMentionRefs(payload));
     items.value = sort([res.note, ...items.value]);
     return res.note;
   }
 
   async function update(id: number, payload: NotePayload): Promise<Note> {
-    const res = await api.patch<{ note: Note }>(`/notes/${id}`, payload);
+    const res = await api.patch<{ note: Note }>(`/notes/${id}`, withMentionRefs(payload));
     items.value = sort(items.value.map((n) => (n.id === id ? res.note : n)));
     return res.note;
   }

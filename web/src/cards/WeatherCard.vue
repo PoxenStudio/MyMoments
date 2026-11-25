@@ -3,25 +3,13 @@ import { computed } from 'vue';
 import { asData } from '@/cards/types';
 import { relativeDayLabel } from '@/utils/chrono';
 import AppButton from '@/components/base/AppButton.vue';
-import AppIcon from '@/components/base/AppIcon.vue';
 import AppEmptyState from '@/components/base/AppEmptyState.vue';
+import WeatherIcon from '@/components/base/WeatherIcon.vue';
 import type { WeatherData } from '@/types';
-import type { IconName } from '@/components/base/icons';
 
 const props = defineProps<{ data: unknown }>();
 defineEmits<{ configure: [] }>();
 const d = computed(() => asData<WeatherData>(props.data));
-
-function iconFor(code: number | undefined): IconName {
-  if (code === undefined) return 'cloud';
-  if (code === 0 || code === 1) return 'sun';
-  if (code === 2 || code === 3) return 'cloud';
-  if (code === 45 || code === 48) return 'cloud-fog';
-  if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return 'cloud-rain';
-  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return 'cloud-snow';
-  if (code >= 95) return 'cloud-storm';
-  return 'cloud';
-}
 
 const updatedText = computed(() => {
   if (!d.value) return '';
@@ -38,7 +26,7 @@ const updatedText = computed(() => {
   </div>
   <div v-else class="weather">
     <div class="weather__now">
-      <span class="weather__icon"><AppIcon :name="iconFor(d.code)" :size="38" :stroke-width="1.3" /></span>
+      <span class="weather__icon"><WeatherIcon :code="d.code" :size="40" /></span>
       <div class="weather__temp">
         <span class="weather__value">{{ Math.round(d.temperature) }}°</span>
         <span class="weather__desc">{{ d.description }} · {{ d.city }}</span>
@@ -52,7 +40,7 @@ const updatedText = computed(() => {
     <ul v-if="d.forecast.length > 1" class="weather__forecast">
       <li v-for="day in d.forecast.slice(1)" :key="day.date" class="weather__day">
         <span class="weather__day-label">{{ relativeDayLabel(day.date) }}</span>
-        <AppIcon :name="iconFor(day.code)" :size="18" :stroke-width="1.4" />
+        <WeatherIcon :code="day.code" :size="19" />
         <span class="weather__day-temp">{{ Math.round(day.max) }}° / {{ Math.round(day.min) }}°</span>
       </li>
     </ul>

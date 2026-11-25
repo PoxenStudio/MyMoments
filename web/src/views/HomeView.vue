@@ -363,7 +363,7 @@ onBeforeUnmount(() => {
 }
 
 .hero__title {
-  margin-top: var(--at-space-2);
+  margin-top: 0;
 }
 
 .hero__headline {
@@ -371,6 +371,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: var(--at-space-3);
   flex-wrap: wrap;
+  margin-top: var(--at-space-2);
 }
 
 .hero__sub {

@@ -10,7 +10,14 @@ const props = withDefaults(defineProps<{
   src: null,
 });
 
-const palette = ['#eaf3f7', '#f7f4ef', '#eef7f3', '#f4f0f9', '#fbf2ec', '#f0efed'];
+const palette = [
+  'var(--at-card-sky)',
+  'var(--at-card-sand)',
+  'var(--at-card-mint)',
+  'var(--at-card-lavender)',
+  'var(--at-card-peach)',
+  'var(--at-bg-surface-strong)',
+];
 const color = computed(() => {
   let hash = 0;
   for (const ch of props.name) hash = (hash * 31 + ch.charCodeAt(0)) % 997;

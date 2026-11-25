@@ -24,6 +24,7 @@ export interface Household {
   defaultWeatherCity: string | null;
   defaultWeatherLat: number | null;
   defaultWeatherLon: number | null;
+  defaultWeatherProvider: string | null;
   defaultReminderOffset: number;
   defaultDashboard: string | null;
   style: string | null;
@@ -390,6 +391,7 @@ export interface WeatherForecastDay {
 }
 
 export interface WeatherData {
+  source: string;
   city: string;
   temperature: number;
   apparent: number | null;
@@ -400,6 +402,26 @@ export interface WeatherData {
   updatedAt: number;
   stale: boolean;
   forecast: WeatherForecastDay[];
+}
+
+export interface WeatherSource {
+  id: string;
+  name: string;
+  note: string;
+  available: boolean;
+  default: boolean;
+}
+
+export interface CalendarDayMeta {
+  date: string;
+  lunar: string;
+  lunarMonth: number;
+  lunarDay: number;
+  lunarLeap: boolean;
+  festival?: string;
+  holiday?: string;
+  offDay: boolean;
+  workday: boolean;
 }
 
 export interface ApiToken {

@@ -23,6 +23,9 @@ type Config struct {
 	WeatherProvider    string
 	WeatherAPIKey      string
 	WeatherBaseURL     string
+	QWeatherKey        string
+	QWeatherBaseURL    string
+	HolidayDataURL     string
 	MaxImageBytes      int64
 	MaxAudioBytes      int64
 	MaxVideoBytes      int64
@@ -41,6 +44,9 @@ func Load() (Config, error) {
 		WeatherProvider:    env("MYMOMENTS_WEATHER_PROVIDER", "open-meteo"),
 		WeatherAPIKey:      env("MYMOMENTS_WEATHER_API_KEY", ""),
 		WeatherBaseURL:     env("MYMOMENTS_WEATHER_BASE_URL", "https://api.open-meteo.com/v1"),
+		QWeatherKey:        env("MYMOMENTS_QWEATHER_KEY", ""),
+		QWeatherBaseURL:    env("MYMOMENTS_QWEATHER_BASE_URL", "https://devapi.qweather.com/v7"),
+		HolidayDataURL:     env("MYMOMENTS_HOLIDAY_DATA_URL", "https://raw.githubusercontent.com/NateScarlet/holiday-cn/master/{year}.json"),
 		MaxImageBytes:      20 << 20,
 		MaxAudioBytes:      100 << 20,
 		MaxVideoBytes:      200 << 20,
@@ -85,6 +91,9 @@ func (c Config) DSN() string {
 
 // MediaDir 是受控媒体目录。
 func (c Config) MediaDir() string { return filepath.Join(c.DataDir, "media") }
+
+// HolidayDir 是法定节假日远程数据的缓存目录。
+func (c Config) HolidayDir() string { return filepath.Join(c.DataDir, "holidays") }
 
 func loadSecret(dataDir string) ([]byte, error) {
 	if v := strings.TrimSpace(os.Getenv("MYMOMENTS_SESSION_SECRET")); v != "" {

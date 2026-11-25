@@ -117,22 +117,17 @@ func DragonBoat(year int) string { return Lunar(year, 5, 5) }
 // MidAutumn 中秋节（八月十五）。
 func MidAutumn(year int) string { return Lunar(year, 8, 15) }
 
-// WinterSolstice 冬至（近似公历 12 月 21–23 日）。
+// WinterSolstice 冬至（21 世纪通用公式，公历 12 月 21–23 日）。
 func WinterSolstice(year int) string {
-	// 简化：1900–2099 间冬至通常在 12 月 21/22 日，闰年次年 21 日。
-	day := 22
-	if year%4 == 0 {
-		day = 21
-	}
+	y := year % 100
+	day := int(float64(y)*0.2422+21.94) - y/4
 	return date(year, 12, day).Format("2006-01-02")
 }
 
-// Qingming 清明（近似公历 4 月 4–6 日）。
+// Qingming 清明（21 世纪通用公式，公历 4 月 4–6 日）。
 func Qingming(year int) string {
-	day := 5
-	if year%4 == 0 {
-		day = 4
-	}
+	y := year % 100
+	day := int(float64(y)*0.2422+4.81) - y/4
 	return date(year, 4, day).Format("2006-01-02")
 }
 

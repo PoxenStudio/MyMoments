@@ -276,16 +276,17 @@ func (s *Server) handleMemberResetPassword(w http.ResponseWriter, r *http.Reques
 }
 
 type householdPatchRequest struct {
-	Name                  *string  `json:"name"`
-	Timezone              *string  `json:"timezone"`
-	WeekStart             *int     `json:"weekStart"`
-	DateFormat            *string  `json:"dateFormat"`
-	DefaultReminderOffset *int     `json:"defaultReminderOffset"`
-	DefaultWeatherCity    *string  `json:"defaultWeatherCity"`
-	DefaultWeatherLat     *float64 `json:"defaultWeatherLat"`
-	DefaultWeatherLon     *float64 `json:"defaultWeatherLon"`
-	DefaultDashboard      *string  `json:"defaultDashboard"`
-	Style                 *string  `json:"style"`
+	Name                   *string  `json:"name"`
+	Timezone               *string  `json:"timezone"`
+	WeekStart              *int     `json:"weekStart"`
+	DateFormat             *string  `json:"dateFormat"`
+	DefaultReminderOffset  *int     `json:"defaultReminderOffset"`
+	DefaultWeatherCity     *string  `json:"defaultWeatherCity"`
+	DefaultWeatherLat      *float64 `json:"defaultWeatherLat"`
+	DefaultWeatherLon      *float64 `json:"defaultWeatherLon"`
+	DefaultWeatherProvider *string  `json:"defaultWeatherProvider"`
+	DefaultDashboard       *string  `json:"defaultDashboard"`
+	Style                  *string  `json:"style"`
 }
 
 func (s *Server) handleHousehold(w http.ResponseWriter, r *http.Request) {
@@ -357,6 +358,20 @@ func (s *Server) handleHouseholdPatch(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.DefaultWeatherLon != nil {
 		h.DefaultWeatherLon = req.DefaultWeatherLon
+	}
+	if req.DefaultWeatherProvider != nil {
+		provider := strings.TrimSpace(*req.DefaultWeatherProvider)
+		if provider == "" {
+			h.DefaultWeatherProvider = nil
+		} else if !s.weather.Has(provider) {
+			writeError(w, badRequest("未知的天气信息源"))
+			return
+		} else if !s.weather.Available(provider) {
+			writeError(w, badRequest("该天气信息源尚未配置，请联系部署者"))
+			return
+		} else {
+			h.DefaultWeatherProvider = &provider
+		}
 	}
 	if req.DefaultDashboard != nil {
 		if err := validateJSONField(*req.DefaultDashboard); err != nil {

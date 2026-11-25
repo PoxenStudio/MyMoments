@@ -320,7 +320,7 @@ func (s *Server) safeCardData(r *http.Request, u *model.User, id, today string) 
 		if apiErr != nil {
 			return nil, fmt.Errorf("尚未设置天气位置")
 		}
-		weatherData, wErr := s.weather.Current(r.Context(), lat, lon, city)
+		weatherData, _, wErr := s.weather.Current(r.Context(), s.weatherProvider(r.Context()), lat, lon, city)
 		if wErr != nil {
 			return nil, fmt.Errorf("天气服务暂时不可用")
 		}

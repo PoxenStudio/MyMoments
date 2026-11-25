@@ -5,10 +5,10 @@ import { greeting, todayISO } from '@/utils/chrono';
 import { useAuthStore } from '@/stores/auth';
 import { useDashboardStore } from '@/stores/dashboard';
 import { useToastStore } from '@/stores/toast';
-import { ApiError } from '@/api/client';
+import { api, ApiError } from '@/api/client';
 import { cardRegistry } from '@/cards/registry';
 import type { OverviewData } from '@/cards/types';
-import type { DashboardLayoutItem } from '@/types';
+import type { DashboardLayoutItem, WeatherData } from '@/types';
 import AppButton from '@/components/base/AppButton.vue';
 import AppEmptyState from '@/components/base/AppEmptyState.vue';
 import AppIcon from '@/components/base/AppIcon.vue';
@@ -18,12 +18,14 @@ import AppConfirmDialog from '@/components/base/AppConfirmDialog.vue';
 import TaskFormDialog from '@/components/business/TaskFormDialog.vue';
 import DashboardCustomizer from '@/components/business/DashboardCustomizer.vue';
 import WeatherSettingsDialog from '@/components/business/WeatherSettingsDialog.vue';
+import WeatherMiniCard from '@/components/business/WeatherMiniCard.vue';
 
 const auth = useAuthStore();
 const dashboard = useDashboardStore();
 const route = useRoute();
 const router = useRouter();
 const toast = useToastStore();
+const weather = ref<WeatherData | null>(null);
 
 const formOpen = ref(false);
 const customizerOpen = ref(false);
@@ -114,9 +116,17 @@ async function persist(items: DashboardLayoutItem[]): Promise<void> {
   }
 }
 
+async function loadWeather(): Promise<void> {
+  try {
+    weather.value = await api.get<WeatherData>('/weather');
+  } catch {
+    weather.value = null;
+  }
+}
+
 async function load(silent = false): Promise<void> {
   try {
-    await dashboard.load(silent);
+    await Promise.all([dashboard.load(silent), loadWeather()]);
   } catch {
     if (!silent) toast.error('首页加载失败，请稍后重试');
   }
@@ -193,7 +203,10 @@ onBeforeUnmount(() => {
     <header class="hero">
       <div class="hero__text">
         <p class="at-caption-upper hero__date">{{ dateText }}</p>
-        <h1 class="at-display hero__title">{{ greetingText }}</h1>
+        <div class="hero__headline">
+          <h1 class="at-display hero__title">{{ greetingText }}</h1>
+          <WeatherMiniCard v-if="weather" :data="weather" @configure="weatherOpen = true" />
+        </div>
         <p class="hero__sub">{{ summary }}</p>
       </div>
       <div class="hero__actions">
@@ -351,6 +364,13 @@ onBeforeUnmount(() => {
 
 .hero__title {
   margin-top: var(--at-space-2);
+}
+
+.hero__headline {
+  display: flex;
+  align-items: center;
+  gap: var(--at-space-3);
+  flex-wrap: wrap;
 }
 
 .hero__sub {

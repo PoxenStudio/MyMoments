@@ -27,6 +27,7 @@ type ForecastDay struct {
 
 // Data 是天气摘要，序列化后直接返回给前端。
 type Data struct {
+	Source      string        `json:"source"`
 	City        string        `json:"city"`
 	Temperature float64       `json:"temperature"`
 	Apparent    *float64      `json:"apparent"`
@@ -38,6 +39,12 @@ type Data struct {
 	Stale       bool          `json:"stale"`
 	Forecast    []ForecastDay `json:"forecast"`
 }
+
+// ID 实现 Provider 接口。
+func (c *Client) ID() string { return SourceOpenMeteo }
+
+// Available 实现 Provider 接口；Open-Meteo 无需密钥，始终可用。
+func (c *Client) Available() bool { return true }
 
 // Client 代理 Open-Meteo，并带内存缓存与降级。
 type Client struct {

@@ -16,7 +16,7 @@ func (s *Server) handleWeather(w http.ResponseWriter, r *http.Request) {
 		writeError(w, apiErr)
 		return
 	}
-	data, err := s.weather.Current(r.Context(), lat, lon, city)
+	data, _, err := s.weather.Current(r.Context(), s.weatherProvider(r.Context()), lat, lon, city)
 	if err != nil {
 		writeError(w, &APIError{
 			Status:  http.StatusServiceUnavailable,
@@ -26,6 +26,20 @@ func (s *Server) handleWeather(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, data)
+}
+
+// handleWeatherSources 返回可选的天气信息源列表。
+func (s *Server) handleWeatherSources(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{"items": s.weather.List()})
+}
+
+// weatherProvider 返回家庭设置的天气信息源；未设置时交给 Manager 使用默认源。
+func (s *Server) weatherProvider(ctx context.Context) string {
+	h, err := s.store.GetHousehold(ctx)
+	if err != nil || h.DefaultWeatherProvider == nil {
+		return ""
+	}
+	return *h.DefaultWeatherProvider
 }
 
 func (s *Server) weatherLocationFor(ctx context.Context, userID int64, latRaw, lonRaw, cityRaw string) (float64, float64, string, *APIError) {

@@ -17,12 +17,12 @@ var ErrNotFound = errors.New("not found")
 // GetHousehold 返回家庭设置；未初始化时返回 ErrNotFound。
 func (s *Store) GetHousehold(ctx context.Context) (*model.Household, error) {
 	row := s.DB.QueryRowContext(ctx, `SELECT id, name, timezone, week_start, date_format, default_weather_city, default_weather_lat,
-		default_weather_lon, default_reminder_offset, default_dashboard, style, created_at, updated_at FROM household_settings WHERE id = 1`)
+		default_weather_lon, default_reminder_offset, default_dashboard, style, default_weather_provider, created_at, updated_at FROM household_settings WHERE id = 1`)
 	var h model.Household
-	var city, dashboard, style sql.NullString
+	var city, dashboard, style, provider sql.NullString
 	var lat, lon sql.NullFloat64
 	if err := row.Scan(&h.ID, &h.Name, &h.Timezone, &h.WeekStart, &h.DateFormat, &city, &lat, &lon, &h.DefaultReminderOffset,
-		&dashboard, &style, &h.CreatedAt, &h.UpdatedAt); err != nil {
+		&dashboard, &style, &provider, &h.CreatedAt, &h.UpdatedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -42,6 +42,9 @@ func (s *Store) GetHousehold(ctx context.Context) (*model.Household, error) {
 	}
 	if style.Valid {
 		h.Style = &style.String
+	}
+	if provider.Valid {
+		h.DefaultWeatherProvider = &provider.String
 	}
 	return &h, nil
 }
@@ -66,9 +69,9 @@ func CreateHouseholdIfAbsent(ctx context.Context, tx *sql.Tx, name, timezone str
 func (s *Store) UpdateHousehold(ctx context.Context, h *model.Household) error {
 	_, err := s.DB.ExecContext(ctx, `UPDATE household_settings SET name=?, timezone=?, week_start=?, date_format=?,
 		default_weather_city=?, default_weather_lat=?, default_weather_lon=?, default_reminder_offset=?,
-		default_dashboard=?, style=?, updated_at=? WHERE id = 1`,
+		default_dashboard=?, style=?, default_weather_provider=?, updated_at=? WHERE id = 1`,
 		h.Name, h.Timezone, h.WeekStart, h.DateFormat, ns(h.DefaultWeatherCity), nf(h.DefaultWeatherLat), nf(h.DefaultWeatherLon),
-		h.DefaultReminderOffset, ns(h.DefaultDashboard), ns(h.Style), time.Now().Unix())
+		h.DefaultReminderOffset, ns(h.DefaultDashboard), ns(h.Style), ns(h.DefaultWeatherProvider), time.Now().Unix())
 	return err
 }
 

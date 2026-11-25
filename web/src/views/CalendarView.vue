@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import type { Birthday, CalendarEvent, Task } from '@/types';
+import type { Birthday, CalendarDayMeta, CalendarEvent, Task } from '@/types';
 import { api, ApiError } from '@/api/client';
 import { useCalendarStore } from '@/stores/calendar';
 import { useFamilyStore } from '@/stores/family';
@@ -47,6 +47,7 @@ const anchor = ref(today);
 const selectedDate = ref(today);
 const loading = ref(false);
 const calendarTasks = ref<Task[]>([]);
+const dayMeta = ref<Record<string, CalendarDayMeta>>({});
 const formOpen = ref(false);
 const editingEvent = ref<CalendarEvent | null>(null);
 const detailOpen = ref(false);
@@ -227,11 +228,15 @@ async function reload(): Promise<void> {
   const r = range.value;
   loading.value = true;
   try {
-    const [, taskRes] = await Promise.all([
+    const [, taskRes, metaRes] = await Promise.all([
       calendar.loadRange(r.from, r.to),
       api.get<{ items: Task[] }>('/tasks', { scope: 'open', from: r.from, to: r.to, limit: 200 }),
+      api
+        .get<{ days: CalendarDayMeta[] }>('/calendar/meta', { from: r.from, to: r.to })
+        .catch(() => ({ days: [] as CalendarDayMeta[] })),
     ]);
     calendarTasks.value = taskRes.items;
+    dayMeta.value = Object.fromEntries(metaRes.days.map((item) => [item.date, item]));
   } catch (err) {
     if (!(err instanceof ApiError)) toast.error('加载日历失败');
   } finally {
@@ -272,6 +277,34 @@ function selectDate(date: string): void {
 
 function cellEntries(date: string): DayEntry[] {
   return entriesByDate.value.get(date) ?? [];
+}
+
+function metaFor(date: string): CalendarDayMeta | undefined {
+  return dayMeta.value[date];
+}
+
+function daySubLabel(date: string): string {
+  const meta = metaFor(date);
+  return meta?.holiday || meta?.festival || meta?.lunar || '';
+}
+
+function dayBadge(date: string): string {
+  const meta = metaFor(date);
+  if (!meta) return '';
+  if (meta.offDay) return '休';
+  if (meta.workday) return '班';
+  return '';
+}
+
+function dayMetaDetail(date: string): string {
+  const meta = metaFor(date);
+  if (!meta) return '';
+  const parts = [`农历${meta.lunar}`];
+  if (meta.holiday) parts.push(meta.holiday);
+  if (meta.festival && meta.festival !== meta.holiday) parts.push(meta.festival);
+  if (meta.offDay) parts.push('休假');
+  else if (meta.workday) parts.push('调休上班');
+  return parts.join(' · ');
 }
 
 function openCreate(date = selectedDate.value, hour = '09:00'): void {
@@ -404,7 +437,11 @@ function pillLabel(entry: DayEntry): string {
           :class="{ 'is-out': !isSameMonth(date, anchor), 'is-today': date === today, 'is-selected': date === selectedDate }"
           @click="selectDate(date)"
         >
-          <span class="cell__num">{{ Number(date.slice(8)) }}</span>
+          <span class="cell__top">
+            <span class="cell__num">{{ Number(date.slice(8)) }}</span>
+            <span v-if="daySubLabel(date)" class="cell__lunar" :class="{ 'is-holiday': !!metaFor(date)?.holiday }">{{ daySubLabel(date) }}</span>
+            <span v-if="dayBadge(date)" class="cell__badge" :class="{ 'is-off': metaFor(date)?.offDay }">{{ dayBadge(date) }}</span>
+          </span>
           <span class="cell__items">
             <span
               v-for="entry in cellEntries(date).slice(0, 2)"
@@ -447,7 +484,10 @@ function pillLabel(entry: DayEntry): string {
 
     <section v-else-if="view === 'day'" class="day at-card">
       <div class="day__head">
-        <h2 class="day__title">{{ dayLabel(anchor) }}</h2>
+        <div>
+          <h2 class="day__title">{{ dayLabel(anchor) }}</h2>
+          <p v-if="dayMetaDetail(anchor)" class="day__meta">{{ dayMetaDetail(anchor) }}</p>
+        </div>
         <div class="day__actions">
           <AppButton v-if="anchor < today" variant="ghost" size="sm" @click="goTimeline">在时光轴中查看</AppButton>
           <AppButton variant="outline" size="sm" @click="openCreate(anchor)"><AppIcon name="plus" :size="14" />添加</AppButton>
@@ -481,6 +521,7 @@ function pillLabel(entry: DayEntry): string {
       <div v-for="day in agendaDays" :key="day.date" class="agenda__group">
         <div class="agenda__head">
           <h2 class="agenda__date">{{ dayLabel(day.date) }}</h2>
+          <span v-if="daySubLabel(day.date)" class="agenda__meta">{{ daySubLabel(day.date) }}</span>
           <span v-if="day.date === today" class="agenda__today">今天</span>
         </div>
         <p v-if="!day.entries.length" class="agenda__empty">今天暂无安排</p>
@@ -509,6 +550,7 @@ function pillLabel(entry: DayEntry): string {
         <div>
           <p class="at-caption-upper">当日安排</p>
           <h2 class="day-panel__title">{{ dayLabel(selectedDate) }}</h2>
+          <p v-if="dayMetaDetail(selectedDate)" class="day-panel__meta">{{ dayMetaDetail(selectedDate) }}</p>
         </div>
         <div class="day-panel__actions">
           <AppButton v-if="isSelectedPast" variant="ghost" size="sm" @click="goTimeline">在时光轴中查看</AppButton>
@@ -729,6 +771,58 @@ function pillLabel(entry: DayEntry): string {
 .cell.is-today .cell__num {
   background: var(--at-color-primary);
   color: var(--at-text-on-primary);
+}
+
+.cell__top {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cell__lunar {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  color: var(--at-color-muted-soft);
+}
+
+.cell__lunar.is-holiday {
+  color: var(--at-color-primary);
+}
+
+.cell__badge {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 4px;
+  font-size: 9px;
+  line-height: 1;
+  background: var(--at-bg-canvas-soft);
+  color: var(--at-color-muted);
+}
+
+.cell__badge.is-off {
+  background: rgba(185, 28, 28, 0.1);
+  color: #b91c1c;
+}
+
+.day__meta,
+.day-panel__meta {
+  margin-top: 2px;
+  font-size: var(--at-text-caption);
+  color: var(--at-color-muted);
+}
+
+.agenda__meta {
+  font-size: var(--at-text-micro);
+  color: var(--at-color-muted);
 }
 
 .cell__items {

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"mymoments/internal/config"
+	"mymoments/internal/holiday"
 	"mymoments/internal/store"
 	"mymoments/internal/weather"
 	"mymoments/internal/webui"
@@ -21,11 +22,12 @@ import (
 
 // Server 持有 API 依赖并注册路由。
 type Server struct {
-	cfg     config.Config
-	store   *store.Store
-	web     fs.FS
-	limiter *loginLimiter
-	weather *weather.Client
+	cfg      config.Config
+	store    *store.Store
+	web      fs.FS
+	limiter  *loginLimiter
+	weather  *weather.Manager
+	holidays *holiday.Service
 }
 
 // New 构造 HTTP 服务。
@@ -34,12 +36,15 @@ func New(cfg config.Config, st *store.Store) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
+	openMeteo := weather.New(cfg.WeatherBaseURL, cfg.WeatherAPIKey, 10*time.Minute)
+	qweather := weather.NewQWeather(cfg.QWeatherBaseURL, cfg.QWeatherKey, 10*time.Minute)
 	return &Server{
-		cfg:     cfg,
-		store:   st,
-		web:     web,
-		limiter: newLoginLimiter(8, 5*time.Minute),
-		weather: weather.New(cfg.WeatherBaseURL, cfg.WeatherAPIKey, 10*time.Minute),
+		cfg:      cfg,
+		store:    st,
+		web:      web,
+		limiter:  newLoginLimiter(8, 5*time.Minute),
+		weather:  weather.NewManager(openMeteo, qweather, cfg.WeatherProvider),
+		holidays: holiday.NewService(cfg.HolidayDir(), cfg.HolidayDataURL),
 	}, nil
 }
 
@@ -140,6 +145,8 @@ func (s *Server) routes(mux *http.ServeMux) {
 	mux.Handle("PUT "+api+"/dashboard/layout", s.requireAuth(http.HandlerFunc(s.handleDashboardLayoutPut)))
 	mux.Handle("PUT "+api+"/household/default-layout", s.requireAdmin(http.HandlerFunc(s.handleHouseholdDefaultLayout)))
 	mux.Handle("GET "+api+"/weather", s.requireAuth(http.HandlerFunc(s.handleWeather)))
+	mux.Handle("GET "+api+"/weather/sources", s.requireAuth(http.HandlerFunc(s.handleWeatherSources)))
+	mux.Handle("GET "+api+"/calendar/meta", s.requireAuth(http.HandlerFunc(s.handleCalendarMeta)))
 	mux.Handle("GET "+api+"/search", s.requireAuth(http.HandlerFunc(s.handleSearch)))
 
 	mux.Handle("GET "+api+"/tokens", s.requireAuth(http.HandlerFunc(s.handleTokensList)))

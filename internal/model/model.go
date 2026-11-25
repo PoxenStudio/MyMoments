@@ -32,6 +32,7 @@ type Household struct {
 	DefaultWeatherCity    *string  `json:"defaultWeatherCity"`
 	DefaultWeatherLat     *float64 `json:"defaultWeatherLat"`
 	DefaultWeatherLon     *float64 `json:"defaultWeatherLon"`
+	DefaultWeatherProvider *string `json:"defaultWeatherProvider"`
 	DefaultReminderOffset int      `json:"defaultReminderOffset"`
 	DefaultDashboard      *string  `json:"defaultDashboard"`
 	Style                 *string  `json:"style"`

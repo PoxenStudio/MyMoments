@@ -744,6 +744,53 @@ paths:
               schema: { $ref: '#/components/schemas/Weather' }
         '400': { description: 尚未设置位置 }
         '503': { description: 天气服务不可用 }
+  /weather/sources:
+    get:
+      tags: [weather]
+      summary: 可选天气信息源列表
+      responses:
+        '200':
+          description: 信息源
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        name: { type: string }
+                        note: { type: string }
+                        available: { type: boolean }
+                        default: { type: boolean }
+  /calendar/meta:
+    get:
+      tags: [calendar]
+      summary: 指定日期范围的农历、节日与休假信息
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: 每日信息
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  days:
+                    type: array
+                    items: { $ref: '#/components/schemas/CalendarDay' }
+        '400': { description: 日期参数无效 }
   /search:
     get:
       tags: [search]
@@ -1031,9 +1078,22 @@ components:
             properties:
               text: { type: string }
               checked: { type: boolean }
+    CalendarDay:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        lunar: { type: string }
+        lunarMonth: { type: integer }
+        lunarDay: { type: integer }
+        lunarLeap: { type: boolean }
+        festival: { type: string }
+        holiday: { type: string }
+        offDay: { type: boolean }
+        workday: { type: boolean }
     Weather:
       type: object
       properties:
+        source: { type: string }
         city: { type: string }
         temperature: { type: number }
         apparent: { type: number, nullable: true }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ApiError } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
@@ -15,6 +15,7 @@ import AppSelect from '@/components/base/AppSelect.vue';
 import AppStatusTag from '@/components/base/AppStatusTag.vue';
 import ApiTokensPanel from '@/components/business/ApiTokensPanel.vue';
 import StyleSettingsPanel from '@/components/business/StyleSettingsPanel.vue';
+import WeatherSettingsDialog from '@/components/business/WeatherSettingsDialog.vue';
 
 const auth = useAuthStore();
 const toast = useToastStore();
@@ -29,6 +30,11 @@ const avatarInput = ref<HTMLInputElement | null>(null);
 const household = reactive({ name: '', timezone: 'Asia/Shanghai', weekStart: '1', dateFormat: '24h', defaultReminderOffset: '0' });
 const householdSaving = ref(false);
 const householdError = ref('');
+const weatherOpen = ref(false);
+
+const weatherSummary = computed(() =>
+  auth.household?.defaultWeatherCity ? `家庭默认城市：${auth.household.defaultWeatherCity}` : '还没有设置家庭默认天气城市',
+);
 
 const timezoneOptions = [
   { value: 'Asia/Shanghai', label: '中国标准时间（Asia/Shanghai）' },
@@ -225,7 +231,19 @@ onMounted(syncFromState);
           </div>
         </form>
       </AppPanel>
+
+      <AppPanel title="天气" subtitle="天气卡片的位置与信息源。">
+        <div class="settings__pref-row">
+          <div>
+            <p class="settings__account-label">{{ weatherSummary }}</p>
+            <p class="settings__account-hint">可设置自己的城市；管理员可切换全家使用的天气信息源。</p>
+          </div>
+          <AppButton variant="outline" size="sm" type="button" @click="weatherOpen = true">天气设置</AppButton>
+        </div>
+      </AppPanel>
     </div>
+
+    <WeatherSettingsDialog v-model="weatherOpen" />
 
     <div class="settings__style">
       <StyleSettingsPanel />

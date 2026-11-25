@@ -127,6 +127,8 @@
 
 /* 页面色调预设：只改氛围，不改品牌墨色与语义色 */
 html[data-theme='warm-sun'] {
+  --at-tone-page-dark: #16120e;
+  --at-tone-surface-dark: #241d15;
   --at-bg-page: #f7efe2;
   --at-bg-canvas-soft: #fdf8ef;
   --at-bg-surface: #fffdf9;
@@ -140,6 +142,8 @@ html[data-theme='warm-sun'] {
 }
 
 html[data-theme='warm-sand'] {
+  --at-tone-page-dark: #15110d;
+  --at-tone-surface-dark: #231c14;
   --at-bg-page: #f1e8db;
   --at-bg-canvas-soft: #faf5ed;
   --at-bg-surface: #fffdf8;
@@ -153,6 +157,8 @@ html[data-theme='warm-sand'] {
 }
 
 html[data-theme='warm-peach'] {
+  --at-tone-page-dark: #16110f;
+  --at-tone-surface-dark: #241c16;
   --at-bg-page: #f9ece2;
   --at-bg-canvas-soft: #fdf6f1;
   --at-bg-surface: #fffdfb;
@@ -166,6 +172,8 @@ html[data-theme='warm-peach'] {
 }
 
 html[data-theme='warm-cream'] {
+  --at-tone-page-dark: #15110e;
+  --at-tone-surface-dark: #231c15;
   --at-bg-page: #f5ece0;
   --at-bg-canvas-soft: #fcf7f0;
   --at-bg-surface: #fffdf9;
@@ -179,6 +187,8 @@ html[data-theme='warm-cream'] {
 }
 
 html[data-theme='warm-rose'] {
+  --at-tone-page-dark: #161012;
+  --at-tone-surface-dark: #241a1d;
   --at-bg-page: #f9e9ec;
   --at-bg-canvas-soft: #fdf5f6;
   --at-bg-surface: #fffdfe;
@@ -192,6 +202,8 @@ html[data-theme='warm-rose'] {
 }
 
 html[data-theme='cartoon-macaron'] {
+  --at-tone-page-dark: #151113;
+  --at-tone-surface-dark: #231b20;
   --at-bg-page: #f6eef2;
   --at-bg-canvas-soft: #fcf7fa;
   --at-bg-surface: #fffdfe;
@@ -205,6 +217,8 @@ html[data-theme='cartoon-macaron'] {
 }
 
 html[data-theme='cartoon-sky'] {
+  --at-tone-page-dark: #101316;
+  --at-tone-surface-dark: #1b2228;
   --at-bg-page: #e9f1f8;
   --at-bg-canvas-soft: #f4f9fd;
   --at-bg-surface: #fdfeff;
@@ -218,6 +232,8 @@ html[data-theme='cartoon-sky'] {
 }
 
 html[data-theme='cartoon-mint'] {
+  --at-tone-page-dark: #101412;
+  --at-tone-surface-dark: #1b2420;
   --at-bg-page: #eaf4ef;
   --at-bg-canvas-soft: #f5fbf8;
   --at-bg-surface: #fdfffe;
@@ -231,6 +247,8 @@ html[data-theme='cartoon-mint'] {
 }
 
 html[data-theme='cartoon-berry'] {
+  --at-tone-page-dark: #151012;
+  --at-tone-surface-dark: #231a1f;
   --at-bg-page: #f7e6ec;
   --at-bg-canvas-soft: #fdf4f7;
   --at-bg-surface: #fffdfe;
@@ -244,6 +262,8 @@ html[data-theme='cartoon-berry'] {
 }
 
 html[data-theme='cartoon-lemon'] {
+  --at-tone-page-dark: #15110d;
+  --at-tone-surface-dark: #231d15;
   --at-bg-page: #f8f2dd;
   --at-bg-canvas-soft: #fdfaee;
   --at-bg-surface: #fffef8;
@@ -258,36 +278,43 @@ html[data-theme='cartoon-lemon'] {
 
 /* 卡片色调：独立于页面色调，只覆盖卡片表面与内衬，不改画布 */
 html[data-card-tone='soft'] {
+  --at-card-surface-dark: #1a1715;
   --at-bg-surface: var(--at-card-soft);
   --at-bg-surface-strong: #f0efed;
 }
 
 html[data-card-tone='sand'] {
+  --at-card-surface-dark: #231c14;
   --at-bg-surface: var(--at-card-sand);
   --at-bg-surface-strong: #ece3d2;
 }
 
 html[data-card-tone='mint'] {
+  --at-card-surface-dark: #1b2420;
   --at-bg-surface: var(--at-card-mint);
   --at-bg-surface-strong: #dcece5;
 }
 
 html[data-card-tone='peach'] {
+  --at-card-surface-dark: #241c16;
   --at-bg-surface: var(--at-card-peach);
   --at-bg-surface-strong: #f2e0d4;
 }
 
 html[data-card-tone='lavender'] {
+  --at-card-surface-dark: #201a26;
   --at-bg-surface: var(--at-card-lavender);
   --at-bg-surface-strong: #e6ddef;
 }
 
 html[data-card-tone='sky'] {
+  --at-card-surface-dark: #1b2228;
   --at-bg-surface: var(--at-card-sky);
   --at-bg-surface-strong: #dbe8f2;
 }
 
 html[data-card-tone='rose'] {
+  --at-card-surface-dark: #241a1d;
   --at-bg-surface: var(--at-card-rose);
   --at-bg-surface-strong: #efdde1;
 }
@@ -296,10 +323,10 @@ html[data-card-tone='rose'] {
 html[data-scheme='dark'] {
   color-scheme: dark;
 
-  --at-bg-page: #14110f;
-  --at-bg-canvas-soft: #1a1715;
-  --at-bg-surface: #211d1a;
-  --at-bg-surface-strong: #2c2723;
+  --at-bg-page: var(--at-tone-page-dark, #14110f);
+  --at-bg-canvas-soft: color-mix(in srgb, var(--at-tone-page-dark, #14110f) 90%, #ffffff 10%);
+  --at-bg-surface: var(--at-card-surface-dark, var(--at-tone-surface-dark, #211d1a));
+  --at-bg-surface-strong: color-mix(in srgb, var(--at-card-surface-dark, var(--at-tone-surface-dark, #211d1a)) 90%, #ffffff 10%);
   --at-bg-dark: #0c0a09;
   --at-bg-dark-elevated: #1c1917;
 

@@ -432,6 +432,7 @@ async function logout(): Promise<void> {
   height: 100vh;
   padding: var(--at-space-3);
   background: var(--at-bg-surface);
+  background: var(--at-bg-chrome);
   border-right: 1px solid var(--at-color-hairline);
   transition: width var(--at-duration-base) var(--at-ease), transform var(--at-duration-base) var(--at-ease);
   z-index: var(--at-z-nav);
@@ -640,6 +641,7 @@ async function logout(): Promise<void> {
   z-index: var(--at-z-nav);
   border-bottom: 1px solid var(--at-color-hairline);
   background: rgba(255, 255, 255, 0.92);
+  background: color-mix(in srgb, var(--at-bg-chrome) 90%, transparent);
   backdrop-filter: saturate(1.1) blur(10px);
 }
 

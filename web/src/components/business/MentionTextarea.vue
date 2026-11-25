@@ -2,18 +2,28 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import AppAvatar from '@/components/base/AppAvatar.vue';
 import { avatarUrl } from '@/utils/avatar';
-import type { User } from '@/types';
+import type { Contact, MentionTarget, User } from '@/types';
+
+interface Candidate {
+  type: 'user' | 'contact';
+  id: number;
+  name: string;
+  avatarKey?: string | null;
+  subtitle: string;
+}
 
 const props = withDefaults(defineProps<{
   modelValue: string;
-  mentionIds: number[];
+  mentions: MentionTarget[];
   members: User[];
+  contacts?: Contact[];
   id?: string;
   placeholder?: string;
   rows?: number;
   maxlength?: number;
   disabled?: boolean;
 }>(), {
+  contacts: () => [],
   id: undefined,
   placeholder: undefined,
   rows: 3,
@@ -23,7 +33,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: string];
-  'update:mentionIds': [value: number[]];
+  'update:mentions': [value: MentionTarget[]];
 }>();
 
 const root = ref<HTMLElement | null>(null);
@@ -32,23 +42,40 @@ const triggerPos = ref<number | null>(null);
 const query = ref<string | null>(null);
 const activeIndex = ref(0);
 
-const candidates = computed(() => {
+const candidates = computed<Candidate[]>(() => {
   if (query.value === null) return [];
   const q = query.value.trim().toLowerCase();
-  return props.members
-    .filter((m) => m.status === 'active')
-    .filter((m) => q === '' || m.displayName.toLowerCase().includes(q))
-    .slice(0, 8);
+  const out: Candidate[] = [];
+  for (const m of props.members) {
+    if (m.status !== 'active') continue;
+    if (q && !m.displayName.toLowerCase().includes(q)) continue;
+    out.push({ type: 'user', id: m.id, name: m.displayName, avatarKey: m.avatarKey, subtitle: '家庭成员' });
+  }
+  for (const c of props.contacts) {
+    if (q && !c.name.toLowerCase().includes(q)) continue;
+    out.push({ type: 'contact', id: c.id, name: c.name, avatarKey: c.avatarKey, subtitle: '联系人' });
+  }
+  return out.slice(0, 8);
 });
+
+function isPicked(candidate: Candidate): boolean {
+  return props.mentions.some((t) => t.type === candidate.type && t.id === candidate.id);
+}
+
+function resolveName(t: MentionTarget): string | undefined {
+  if (t.name) return t.name;
+  if (t.type === 'user') return props.members.find((m) => m.id === t.id)?.displayName;
+  return props.contacts.find((c) => c.id === t.id)?.name;
+}
 
 function onInput(event: Event): void {
   const el = event.target as HTMLTextAreaElement;
   emit('update:modelValue', el.value);
-  const kept = props.mentionIds.filter((id) => {
-    const member = props.members.find((m) => m.id === id);
-    return member ? el.value.includes(`@${member.displayName}`) : false;
+  const kept = props.mentions.filter((t) => {
+    const name = resolveName(t);
+    return name ? el.value.includes(`@${name}`) : false;
   });
-  if (kept.length !== props.mentionIds.length) emit('update:mentionIds', kept);
+  if (kept.length !== props.mentions.length) emit('update:mentions', kept);
   refreshQuery(el);
 }
 
@@ -66,16 +93,19 @@ function refreshQuery(el: HTMLTextAreaElement): void {
   activeIndex.value = 0;
 }
 
-function choose(member: User): void {
+function choose(candidate: Candidate): void {
   const el = area.value;
   if (!el || triggerPos.value === null) return;
   const caret = el.selectionStart ?? props.modelValue.length;
   const before = props.modelValue.slice(0, triggerPos.value);
   const after = props.modelValue.slice(caret);
-  const inserted = `@${member.displayName} `;
+  const inserted = `@${candidate.name} `;
   emit('update:modelValue', before + inserted + after);
-  if (!props.mentionIds.includes(member.id)) {
-    emit('update:mentionIds', [...props.mentionIds, member.id]);
+  if (!isPicked(candidate)) {
+    emit('update:mentions', [
+      ...props.mentions,
+      { type: candidate.type, id: candidate.id, name: candidate.name, avatarKey: candidate.avatarKey ?? null },
+    ]);
   }
   query.value = null;
   triggerPos.value = null;
@@ -134,20 +164,21 @@ defineExpose({
       @keydown="onKeydown"
       @click="refreshQuery($event.target as HTMLTextAreaElement)"
     />
-    <div v-if="query !== null && candidates.length" class="mention__menu" role="listbox" aria-label="选择要提及的成员">
+    <div v-if="query !== null && candidates.length" class="mention__menu" role="listbox" aria-label="选择要提及的成员或联系人">
       <button
-        v-for="(member, index) in candidates"
-        :key="member.id"
+        v-for="(candidate, index) in candidates"
+        :key="`${candidate.type}-${candidate.id}`"
         type="button"
         role="option"
         class="mention__option"
         :class="{ 'is-active': index === activeIndex }"
         :aria-selected="index === activeIndex"
-        @mousedown.prevent="choose(member)"
+        @mousedown.prevent="choose(candidate)"
       >
-        <AppAvatar :name="member.displayName" :size="24" :src="avatarUrl(member.avatarKey)" />
-        <span>{{ member.displayName }}</span>
-        <span v-if="mentionIds.includes(member.id)" class="mention__picked">已选</span>
+        <AppAvatar :name="candidate.name" :size="24" :src="avatarUrl(candidate.avatarKey)" />
+        <span class="mention__name">{{ candidate.name }}</span>
+        <span class="mention__subtitle">{{ candidate.subtitle }}</span>
+        <span v-if="isPicked(candidate)" class="mention__picked">已选</span>
       </button>
     </div>
   </div>
@@ -218,8 +249,23 @@ defineExpose({
   background: var(--at-bg-surface-strong);
 }
 
+.mention__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mention__subtitle {
+  font-size: 11px;
+  color: var(--at-color-muted);
+  padding: 1px 8px;
+  border: 1px solid var(--at-color-hairline);
+  border-radius: var(--at-radius-pill);
+}
+
 .mention__picked {
-  margin-left: auto;
   font-size: 11px;
   color: var(--at-color-muted);
 }

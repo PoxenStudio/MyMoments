@@ -6,41 +6,94 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"mymoments/internal/model"
 	"mymoments/internal/recur"
+	"mymoments/internal/store"
 )
 
-// resolveMentionIDs 合并客户端显式提及与正文中的 @姓名，并校验成员有效。
-func (s *Server) resolveMentionIDs(ctx context.Context, body string, explicit []int64) ([]int64, *APIError) {
+// mentionInput 是客户端提交的提及目标（仅 type/id，姓名由服务端解析）。
+type mentionInput struct {
+	Type string `json:"type"`
+	ID   int64  `json:"id"`
+}
+
+// resolveMentions 合并客户端显式提及与正文中的 @姓名，校验成员/联系人有效。
+// 同名时成员优先；联系人视为特殊成员，仅作关联不作负责人。
+func (s *Server) resolveMentions(ctx context.Context, viewerID int64, body string, explicit []mentionInput) ([]model.MentionTarget, *APIError) {
 	users, err := s.store.ListUsers(ctx)
 	if err != nil {
 		return nil, serverError(err)
 	}
-	active := make(map[int64]string, len(users))
+	userByName := make(map[string]int64, len(users))
+	userByID := make(map[int64]string, len(users))
 	for _, u := range users {
 		if u.Status == "active" {
-			active[u.ID] = u.DisplayName
+			userByName[u.DisplayName] = u.ID
+			userByID[u.ID] = u.DisplayName
 		}
 	}
-	seen := make(map[int64]bool, len(explicit))
-	out := make([]int64, 0, len(explicit))
-	add := func(id int64) {
-		if !seen[id] {
-			seen[id] = true
-			out = append(out, id)
+	contacts, err := s.store.ListContacts(ctx, store.ContactFilter{ViewerID: viewerID})
+	if err != nil {
+		return nil, serverError(err)
+	}
+	contactByName := make(map[string]int64, len(contacts))
+	contactByID := make(map[int64]string, len(contacts))
+	for _, c := range contacts {
+		contactByID[c.ID] = c.Name
+		if _, taken := userByName[c.Name]; !taken {
+			contactByName[c.Name] = c.ID
 		}
 	}
-	for _, id := range explicit {
-		if _, ok := active[id]; !ok {
-			return nil, badRequest("被提及的成员不存在或已停用")
-		}
-		add(id)
+
+	type key struct {
+		typ string
+		id  int64
 	}
-	for id, name := range active {
+	seen := make(map[key]bool, len(explicit))
+	out := make([]model.MentionTarget, 0, len(explicit))
+	add := func(t model.MentionTarget) {
+		k := key{t.Type, t.ID}
+		if !seen[k] {
+			seen[k] = true
+			out = append(out, t)
+		}
+	}
+	for _, t := range explicit {
+		switch t.Type {
+		case "user":
+			name, ok := userByID[t.ID]
+			if !ok {
+				return nil, badRequest("被提及的成员不存在或已停用")
+			}
+			add(model.MentionTarget{Type: "user", ID: t.ID, Name: name})
+		case "contact":
+			name, ok := contactByID[t.ID]
+			if !ok {
+				return nil, badRequest("被提及的联系人不存在")
+			}
+			add(model.MentionTarget{Type: "contact", ID: t.ID, Name: name})
+		default:
+			return nil, badRequest("提及目标类型无效")
+		}
+	}
+	for name, id := range userByName {
 		if bodyMentionsName(body, name) {
-			add(id)
+			add(model.MentionTarget{Type: "user", ID: id, Name: name})
+		}
+	}
+	for name, id := range contactByName {
+		if bodyMentionsName(body, name) {
+			add(model.MentionTarget{Type: "contact", ID: id, Name: name})
 		}
 	}
 	return out, nil
+}
+
+func valueMentions(in *[]mentionInput) []mentionInput {
+	if in == nil {
+		return nil
+	}
+	return *in
 }
 
 // resolveAudienceIDs 校验「指定成员可见」的成员均有效。

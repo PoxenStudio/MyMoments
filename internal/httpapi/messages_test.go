@@ -14,7 +14,7 @@ func TestMessagesMentionsAndVisibility(t *testing.T) {
 	status, body := call(t, admin, http.MethodPost, base+"/messages", map[string]any{
 		"body":           "周末一起做饭 @小李",
 		"occurrenceDate": today,
-		"mentionIds":     []int64{memberID},
+		"mentions":       []map[string]any{{"type": "user", "id": memberID}},
 	})
 	if status != http.StatusCreated {
 		t.Fatalf("create message: %d %v", status, body)
@@ -52,7 +52,7 @@ func TestMessagesMentionsAndVisibility(t *testing.T) {
 	}
 
 	status, body = call(t, member, http.MethodPost, base+"/messages/"+itoa(postID)+"/replies", map[string]any{
-		"body": "好的 @管理员", "mentionIds": []int64{adminID},
+		"body": "好的 @管理员", "mentions": []map[string]any{{"type": "user", "id": adminID}},
 	})
 	if status != http.StatusCreated {
 		t.Fatalf("create reply: %d %v", status, body)
@@ -67,7 +67,7 @@ func TestMessagesMentionsAndVisibility(t *testing.T) {
 	}
 
 	status, body = call(t, admin, http.MethodPost, base+"/messages", map[string]any{
-		"body": "只给自己看 @小李", "visibility": "private", "mentionIds": []int64{memberID},
+		"body": "只给自己看 @小李", "visibility": "private", "mentions": []map[string]any{{"type": "user", "id": memberID}},
 	})
 	if status != http.StatusCreated {
 		t.Fatalf("create private: %d %v", status, body)
@@ -131,7 +131,7 @@ func TestNotesChecklistVisibilityAndMentions(t *testing.T) {
 		"color":      "sand",
 		"category":   "出行",
 		"memoryDate": today,
-		"mentionIds": []int64{memberID},
+		"mentions":    []map[string]any{{"type": "user", "id": memberID}},
 		"items": []map[string]any{
 			{"text": "充电器", "checked": false},
 			{"text": "相机", "checked": true},

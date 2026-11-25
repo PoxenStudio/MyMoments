@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"strconv"
 	"time"
+
+	"mymoments/internal/model"
 )
 
 // mentionSync 描述一次提及通知同步：保留当前 mentions 对应的通知，失效已移除的。
@@ -66,17 +68,20 @@ func syncMentions(ctx context.Context, tx *sql.Tx, m mentionSync) error {
 	return nil
 }
 
-// replaceMentions 重写某内容的提及记录。
-func replaceMentions(ctx context.Context, tx *sql.Tx, contentType string, contentID int64, userIDs []int64) error {
+// replaceMentions 重写某内容的提及记录（多态目标：user / contact）。
+func replaceMentions(ctx context.Context, tx *sql.Tx, contentType string, contentID int64, targets []model.MentionTarget) error {
 	if _, err := tx.ExecContext(ctx,
 		`DELETE FROM mentions WHERE content_type = ? AND content_id = ?`, contentType, contentID); err != nil {
 		return err
 	}
 	now := time.Now().Unix()
-	for _, uid := range userIDs {
+	for _, t := range targets {
+		if t.ID == 0 || (t.Type != "user" && t.Type != "contact") {
+			continue
+		}
 		if _, err := tx.ExecContext(ctx,
-			`INSERT INTO mentions (content_type, content_id, user_id, created_at) VALUES (?, ?, ?, ?)`,
-			contentType, contentID, uid, now); err != nil {
+			`INSERT INTO mentions (content_type, content_id, target_type, target_id, created_at) VALUES (?, ?, ?, ?, ?)`,
+			contentType, contentID, t.Type, t.ID, now); err != nil {
 			return err
 		}
 	}
@@ -122,24 +127,43 @@ func loadAudiences(ctx context.Context, q queryer, contentType string, contentID
 	return out, rows.Err()
 }
 
-// loadMentionIDs 读取指定内容的提及成员 ID。
-func loadMentionIDs(ctx context.Context, q queryer, contentType string, contentID int64) ([]int64, error) {
-	rows, err := q.QueryContext(ctx,
-		`SELECT user_id FROM mentions WHERE content_type = ? AND content_id = ? ORDER BY user_id`,
-		contentType, contentID)
+// loadMentionTargets 读取指定内容的提及目标（含姓名与头像）。
+func loadMentionTargets(ctx context.Context, q queryer, contentType string, contentID int64) ([]model.MentionTarget, error) {
+	rows, err := q.QueryContext(ctx, `SELECT m.target_type, m.target_id,
+		CASE WHEN m.target_type = 'user' THEN COALESCE(u.display_name, '') ELSE COALESCE(c.name, '') END,
+		CASE WHEN m.target_type = 'user' THEN u.avatar_key ELSE c.avatar_key END
+		FROM mentions m
+		LEFT JOIN users u ON m.target_type = 'user' AND u.id = m.target_id
+		LEFT JOIN contacts c ON m.target_type = 'contact' AND c.id = m.target_id
+		WHERE m.content_type = ? AND m.content_id = ? ORDER BY m.id`, contentType, contentID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	out := make([]int64, 0)
+	out := make([]model.MentionTarget, 0)
 	for rows.Next() {
-		var uid int64
-		if err := rows.Scan(&uid); err != nil {
+		var t model.MentionTarget
+		var avatar sql.NullString
+		if err := rows.Scan(&t.Type, &t.ID, &t.Name, &avatar); err != nil {
 			return nil, err
 		}
-		out = append(out, uid)
+		if avatar.Valid {
+			t.AvatarKey = &avatar.String
+		}
+		out = append(out, t)
 	}
 	return out, rows.Err()
+}
+
+// mentionUserIDs 提取多态提及目标中的成员 ID（联系人无账号，不生成通知）。
+func mentionUserIDs(targets []model.MentionTarget) []int64 {
+	out := make([]int64, 0, len(targets))
+	for _, t := range targets {
+		if t.Type == "user" {
+			out = append(out, t.ID)
+		}
+	}
+	return out
 }
 
 // mentionRecipients 按可见范围筛选可接收提及通知的成员。

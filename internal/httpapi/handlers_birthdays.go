@@ -172,8 +172,8 @@ func (s *Server) handleBirthdayDelete(w http.ResponseWriter, r *http.Request) {
 		_ = s.store.DeleteSourceReminders(r.Context(), "event", *b.CalendarEventID)
 	}
 	if b.ContactID != nil {
-		if c, err := s.store.GetContact(r.Context(), *b.ContactID); err == nil && c.BirthdayOn != nil {
-			c.BirthdayOn = nil
+		if c, err := s.store.GetContact(r.Context(), *b.ContactID); err == nil && c.ShowInCalendar {
+			c.ShowInCalendar = false
 			_ = s.store.UpdateContact(r.Context(), c)
 		}
 	}

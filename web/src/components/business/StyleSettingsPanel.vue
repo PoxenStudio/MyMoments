@@ -81,11 +81,11 @@ async function restoreHousehold(): Promise<void> {
         <AppButton variant="ghost" size="sm" :disabled="busy || theme.useDefault" @click="followHousehold">跟随家庭样式</AppButton>
       </div>
       <StyleEditor
+        v-if="!theme.useDefault"
         :model="theme.effective"
-        :disabled="theme.useDefault"
         @change="updatePersonal"
       />
-      <p v-if="theme.useDefault" class="style-settings__note">当前正在跟随家庭样式，关闭上方开关即可自定义。</p>
+      <p v-else class="style-settings__note">当前正在跟随家庭样式，关闭上方开关即可自定义。</p>
     </AppPanel>
 
     <AppPanel

@@ -22,7 +22,7 @@ type noteInput struct {
 	MemoryDate  *string          `json:"memoryDate"`
 	Visibility  *string          `json:"visibility"`
 	AudienceIDs *[]int64         `json:"audienceIds"`
-	MentionIDs  *[]int64         `json:"mentionIds"`
+	Mentions    *[]mentionInput  `json:"mentions"`
 	Pinned      *bool            `json:"pinned"`
 	Items       *[]noteItemInput `json:"items"`
 }
@@ -70,12 +70,12 @@ func (s *Server) handleNoteCreate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, apiErr)
 		return
 	}
-	mentionIDs, apiErr := s.resolveMentionIDs(r.Context(), noteMentionSource(n), valueIDs(in.MentionIDs))
+	mentions, apiErr := s.resolveMentions(r.Context(), u.ID, noteMentionSource(n), valueMentions(in.Mentions))
 	if apiErr != nil {
 		writeError(w, apiErr)
 		return
 	}
-	id, err := s.store.CreateNote(r.Context(), n, mentionIDs)
+	id, err := s.store.CreateNote(r.Context(), n, mentions)
 	if err != nil {
 		writeError(w, serverError(err))
 		return
@@ -115,12 +115,12 @@ func (s *Server) handleNotePatch(w http.ResponseWriter, r *http.Request) {
 		writeError(w, apiErr)
 		return
 	}
-	mentionIDs, apiErr := s.resolveMentionIDs(r.Context(), noteMentionSource(n), valueIDs(in.MentionIDs))
+	mentions, apiErr := s.resolveMentions(r.Context(), u.ID, noteMentionSource(n), valueMentions(in.Mentions))
 	if apiErr != nil {
 		writeError(w, apiErr)
 		return
 	}
-	if err := s.store.UpdateNote(r.Context(), n, mentionIDs); err != nil {
+	if err := s.store.UpdateNote(r.Context(), n, mentions); err != nil {
 		writeError(w, serverError(err))
 		return
 	}

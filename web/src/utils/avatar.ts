@@ -11,3 +11,10 @@ export async function uploadAvatar(file: File, memberId?: number): Promise<strin
   const result = await api.upload<{ avatarKey: string }>(path, form);
   return result.avatarKey;
 }
+
+export async function uploadContactAvatar(file: File): Promise<string> {
+  const form = new FormData();
+  form.append('file', file);
+  const result = await api.upload<{ avatarKey: string }>('/contacts/avatar', form);
+  return result.avatarKey;
+}

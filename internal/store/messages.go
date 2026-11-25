@@ -12,15 +12,15 @@ import (
 )
 
 const messageColumns = `m.id, m.body, m.author_id, au.display_name, m.occurrence_date, m.pinned,
-	m.visibility, m.edited_at, m.created_at, m.updated_at`
+	m.visibility, m.edited_at, m.closed_at, m.created_at, m.updated_at`
 
 func scanMessage(scanner interface{ Scan(...any) error }) (*model.MessagePost, error) {
 	var m model.MessagePost
-	var edited sql.NullInt64
+	var edited, closed sql.NullInt64
 	var occurrenceDate sql.NullString
 	var pinned int
 	if err := scanner.Scan(&m.ID, &m.Body, &m.AuthorID, &m.AuthorName, &occurrenceDate, &pinned,
-		&m.Visibility, &edited, &m.CreatedAt, &m.UpdatedAt); err != nil {
+		&m.Visibility, &edited, &closed, &m.CreatedAt, &m.UpdatedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -31,8 +31,11 @@ func scanMessage(scanner interface{ Scan(...any) error }) (*model.MessagePost, e
 	if edited.Valid {
 		m.EditedAt = &edited.Int64
 	}
+	if closed.Valid {
+		m.ClosedAt = &closed.Int64
+	}
 	m.AudienceIDs = []int64{}
-	m.MentionIDs = []int64{}
+	m.Mentions = []model.MentionTarget{}
 	m.Replies = []model.MessageReply{}
 	return &m, nil
 }
@@ -60,7 +63,7 @@ func (s *Store) ListMessages(ctx context.Context, f MessageFilter) ([]model.Mess
 	}
 	if f.MentionsOnly {
 		where = append(where, `EXISTS (SELECT 1 FROM mentions mn
-			WHERE mn.content_type = 'message' AND mn.content_id = m.id AND mn.user_id = ?)`)
+			WHERE mn.content_type = 'message' AND mn.content_id = m.id AND mn.target_type = 'user' AND mn.target_id = ?)`)
 		args = append(args, f.ViewerID)
 	}
 	if f.MineOnly {
@@ -132,7 +135,7 @@ func (s *Store) loadMessageDetail(ctx context.Context, m *model.MessagePost) err
 	if err != nil {
 		return err
 	}
-	m.MentionIDs, err = loadMentionIDs(ctx, s.DB, "message", m.ID)
+	m.Mentions, err = loadMentionTargets(ctx, s.DB, "message", m.ID)
 	return err
 }
 
@@ -162,7 +165,7 @@ func (s *Store) displayName(ctx context.Context, q queryer, userID int64) (strin
 }
 
 // CreateMessage 创建留言、受众、提及与通知。
-func (s *Store) CreateMessage(ctx context.Context, m *model.MessagePost, mentionIDs []int64) (int64, error) {
+func (s *Store) CreateMessage(ctx context.Context, m *model.MessagePost, mentions []model.MentionTarget) (int64, error) {
 	var id int64
 	err := s.Tx(ctx, func(tx *sql.Tx) error {
 		now := time.Now().Unix()
@@ -179,7 +182,7 @@ func (s *Store) CreateMessage(ctx context.Context, m *model.MessagePost, mention
 		if err := replaceAudiences(ctx, tx, "message", id, m.Visibility, m.AudienceIDs); err != nil {
 			return err
 		}
-		if err := replaceMentions(ctx, tx, "message", id, mentionIDs); err != nil {
+		if err := replaceMentions(ctx, tx, "message", id, mentions); err != nil {
 			return err
 		}
 		name, err := s.displayName(ctx, tx, m.AuthorID)
@@ -192,14 +195,14 @@ func (s *Store) CreateMessage(ctx context.Context, m *model.MessagePost, mention
 			sourceID:   id,
 			actorID:    m.AuthorID,
 			summary:    name + " 在留言中提到了你",
-			userIDs:    mentionRecipients(mentionIDs, m.Visibility, m.AudienceIDs),
+			userIDs:    mentionRecipients(mentionUserIDs(mentions), m.Visibility, m.AudienceIDs),
 		})
 	})
 	return id, err
 }
 
 // UpdateMessage 更新留言内容与可见范围。
-func (s *Store) UpdateMessage(ctx context.Context, m *model.MessagePost, mentionIDs []int64) error {
+func (s *Store) UpdateMessage(ctx context.Context, m *model.MessagePost, mentions []model.MentionTarget) error {
 	return s.Tx(ctx, func(tx *sql.Tx) error {
 		now := time.Now().Unix()
 		if _, err := tx.ExecContext(ctx, `UPDATE message_posts SET body = ?, occurrence_date = ?, pinned = ?,
@@ -210,7 +213,7 @@ func (s *Store) UpdateMessage(ctx context.Context, m *model.MessagePost, mention
 		if err := replaceAudiences(ctx, tx, "message", m.ID, m.Visibility, m.AudienceIDs); err != nil {
 			return err
 		}
-		if err := replaceMentions(ctx, tx, "message", m.ID, mentionIDs); err != nil {
+		if err := replaceMentions(ctx, tx, "message", m.ID, mentions); err != nil {
 			return err
 		}
 		name, err := s.displayName(ctx, tx, m.AuthorID)
@@ -223,7 +226,7 @@ func (s *Store) UpdateMessage(ctx context.Context, m *model.MessagePost, mention
 			sourceID:   m.ID,
 			actorID:    m.AuthorID,
 			summary:    name + " 在留言中提到了你",
-			userIDs:    mentionRecipients(mentionIDs, m.Visibility, m.AudienceIDs),
+			userIDs:    mentionRecipients(mentionUserIDs(mentions), m.Visibility, m.AudienceIDs),
 		})
 	})
 }
@@ -256,7 +259,7 @@ func (s *Store) DeleteMessage(ctx context.Context, id int64) error {
 }
 
 // CreateReply 创建回复并生成提及通知。
-func (s *Store) CreateReply(ctx context.Context, r *model.MessageReply, mentionIDs []int64, visibility string, audienceIDs []int64) error {
+func (s *Store) CreateReply(ctx context.Context, r *model.MessageReply, mentions []model.MentionTarget, visibility string, audienceIDs []int64) error {
 	return s.Tx(ctx, func(tx *sql.Tx) error {
 		now := time.Now().Unix()
 		res, err := tx.ExecContext(ctx,
@@ -269,7 +272,7 @@ func (s *Store) CreateReply(ctx context.Context, r *model.MessageReply, mentionI
 			return err
 		}
 		r.CreatedAt = now
-		if err := replaceMentions(ctx, tx, "message_reply", r.ID, mentionIDs); err != nil {
+		if err := replaceMentions(ctx, tx, "message_reply", r.ID, mentions); err != nil {
 			return err
 		}
 		name, err := s.displayName(ctx, tx, r.AuthorID)
@@ -283,7 +286,7 @@ func (s *Store) CreateReply(ctx context.Context, r *model.MessageReply, mentionI
 			sourceID:   r.PostID,
 			actorID:    r.AuthorID,
 			summary:    name + " 在留言回复中提到了你",
-			userIDs:    mentionRecipients(mentionIDs, visibility, audienceIDs),
+			userIDs:    mentionRecipients(mentionUserIDs(mentions), visibility, audienceIDs),
 		})
 	})
 }

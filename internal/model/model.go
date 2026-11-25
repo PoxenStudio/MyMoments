@@ -92,6 +92,7 @@ type Task struct {
 	Subtasks        []Subtask       `json:"subtasks"`
 	MediaCount      int             `json:"mediaCount"`
 	Completion      *TaskCompletion `json:"completion"`
+	Mentions        []MentionTarget `json:"mentions"`
 }
 
 // Subtask 是任务子项。
@@ -192,29 +193,61 @@ type CalendarEvent struct {
 
 // Contact 是家庭通讯录联系人。
 type Contact struct {
-	ID           int64         `json:"id"`
-	Name         string        `json:"name"`
-	Organization *string       `json:"organization"`
-	Title        *string       `json:"title"`
-	Note         *string       `json:"note"`
-	BirthdayOn   *string       `json:"birthdayOn"`
-	Category     *string       `json:"category"`
-	AvatarKey    *string       `json:"avatarKey"`
-	OwnerScope   string        `json:"ownerScope"`
-	CreatedBy    int64         `json:"createdBy"`
-	Items        []ContactItem `json:"items"`
-	CreatedAt    int64         `json:"createdAt"`
-	UpdatedAt    int64         `json:"updatedAt"`
+	ID             int64             `json:"id"`
+	Name           string            `json:"name"`
+	Organization   *string           `json:"organization"`
+	Title          *string           `json:"title"`
+	Note           *string           `json:"note"`
+	BirthdayMonth  *int              `json:"birthdayMonth"`
+	BirthdayDay    *int              `json:"birthdayDay"`
+	BirthYear      *int              `json:"birthYear"`
+	ShowInCalendar bool              `json:"showInCalendar"`
+	Category       *string           `json:"category"`
+	AvatarKey      *string           `json:"avatarKey"`
+	Wechat         *string           `json:"wechat"`
+	OfficePhone    *string           `json:"officePhone"`
+	OwnerScope     string            `json:"ownerScope"`
+	CreatedBy      int64             `json:"createdBy"`
+	Items          []ContactItem     `json:"items"`
+	Relations      []ContactRelation `json:"relations"`
+	Reminders      []ContactReminder `json:"reminders"`
+	CreatedAt      int64             `json:"createdAt"`
+	UpdatedAt      int64             `json:"updatedAt"`
 }
 
-// ContactItem 是联系人的电话/邮箱/地址。
+// ContactItem 是联系人的电话/邮箱/地址等多项字段。
 type ContactItem struct {
-	ID        int64   `json:"id"`
-	ContactID int64   `json:"contactId,omitempty"`
-	Kind      string  `json:"kind"`
-	Label     *string `json:"label"`
-	Value     string  `json:"value"`
-	Position  int     `json:"position,omitempty"`
+	ID            int64   `json:"id"`
+	ContactID     int64   `json:"contactId,omitempty"`
+	Kind          string  `json:"kind"`
+	Label         *string `json:"label"`
+	Value         string  `json:"value"`
+	Position      int     `json:"position,omitempty"`
+	IsPrimaryCall bool    `json:"isPrimaryCall"`
+	IsPrimarySms  bool    `json:"isPrimarySms"`
+}
+
+// ContactRelation 是联系人与其他联系人的关联（如紧急联络）。
+type ContactRelation struct {
+	ContactID        int64  `json:"contactId,omitempty"`
+	RelatedContactID int64  `json:"relatedContactId"`
+	Relation         string `json:"relation"`
+	RelatedName      string `json:"relatedName,omitempty"`
+}
+
+// ContactReminder 是联系人的问候/提醒偏好。
+type ContactReminder struct {
+	ID             int64   `json:"id"`
+	ContactID      int64   `json:"contactId,omitempty"`
+	Kind           string  `json:"kind"`
+	Title          string  `json:"title"`
+	Frequency      string  `json:"frequency"`
+	DueDate        *string `json:"dueDate"`
+	RecurrenceRule *string `json:"recurrenceRule"`
+	Color          *string `json:"color"`
+	Enabled        bool    `json:"enabled"`
+	CreatedAt      int64   `json:"createdAt"`
+	UpdatedAt      int64   `json:"updatedAt"`
 }
 
 // Birthday 是生日记录；月日必填，年份可未知。
@@ -238,6 +271,14 @@ type Birthday struct {
 	Age             *int    `json:"age,omitempty"`
 }
 
+// MentionTarget 是被 @ 的对象，可为家庭成员（user）或联系人（contact）。
+type MentionTarget struct {
+	Type      string  `json:"type"`
+	ID        int64   `json:"id"`
+	Name      string  `json:"name,omitempty"`
+	AvatarKey *string `json:"avatarKey,omitempty"`
+}
+
 // MessagePost 是留言板主贴，含回复与提及信息。
 type MessagePost struct {
 	ID             int64          `json:"id"`
@@ -248,10 +289,11 @@ type MessagePost struct {
 	Pinned         bool           `json:"pinned"`
 	Visibility     string         `json:"visibility"`
 	EditedAt       *int64         `json:"editedAt"`
+	ClosedAt       *int64         `json:"closedAt"`
 	CreatedAt      int64          `json:"createdAt"`
 	UpdatedAt      int64          `json:"updatedAt"`
 	AudienceIDs    []int64        `json:"audienceIds"`
-	MentionIDs     []int64        `json:"mentionIds"`
+	Mentions       []MentionTarget `json:"mentions"`
 	Replies        []MessageReply `json:"replies"`
 	ReplyCount     int            `json:"replyCount"`
 }
@@ -277,21 +319,22 @@ type NoteItem struct {
 
 // Note 是家庭便签。
 type Note struct {
-	ID          int64      `json:"id"`
-	Title       *string    `json:"title"`
-	Body        *string    `json:"body"`
-	Color       *string    `json:"color"`
-	Pinned      bool       `json:"pinned"`
-	Category    *string    `json:"category"`
-	AuthorID    int64      `json:"authorId"`
-	AuthorName  string     `json:"authorName,omitempty"`
-	MemoryDate  *string    `json:"memoryDate"`
-	Visibility  string     `json:"visibility"`
-	AudienceIDs []int64    `json:"audienceIds"`
-	MentionIDs  []int64    `json:"mentionIds"`
-	Items       []NoteItem `json:"items"`
-	CreatedAt   int64      `json:"createdAt"`
-	UpdatedAt   int64      `json:"updatedAt"`
+	ID          int64           `json:"id"`
+	Title       *string         `json:"title"`
+	Body        *string         `json:"body"`
+	Color       *string         `json:"color"`
+	Pinned      bool            `json:"pinned"`
+	Category    *string         `json:"category"`
+	AuthorID    int64           `json:"authorId"`
+	AuthorName  string          `json:"authorName,omitempty"`
+	MemoryDate  *string         `json:"memoryDate"`
+	Visibility  string          `json:"visibility"`
+	ClosedAt    *int64          `json:"closedAt"`
+	AudienceIDs []int64         `json:"audienceIds"`
+	Mentions    []MentionTarget `json:"mentions"`
+	Items       []NoteItem      `json:"items"`
+	CreatedAt   int64           `json:"createdAt"`
+	UpdatedAt   int64           `json:"updatedAt"`
 }
 
 // Notification 是个人收件箱消息。

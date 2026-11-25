@@ -35,6 +35,8 @@ function toggle(): void {
 
 <template>
   <div class="task" :class="{ 'is-done': completed, 'task--compact': compact }">
+    <span v-if="task.color" class="task__bar" :style="{ background: task.color }" aria-hidden="true" />
+
     <button
       type="button"
       class="task__check"
@@ -47,7 +49,6 @@ function toggle(): void {
 
     <button type="button" class="task__body" @click="emit('open', task)">
       <span class="task__title-row">
-        <span v-if="task.color" class="task__dot" :style="{ background: task.color }" />
         <span class="task__title">{{ task.title }}</span>
         <AppStatusTag v-if="due.tone === 'overdue'" tone="danger">逾期</AppStatusTag>
         <AppStatusTag v-else-if="due.tone === 'today'" tone="warning">今天</AppStatusTag>
@@ -140,11 +141,11 @@ function toggle(): void {
   min-width: 0;
 }
 
-.task__dot {
+.task__bar {
   flex: none;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
+  align-self: stretch;
+  width: 8px;
+  border-radius: 2px;
 }
 
 .task__title {

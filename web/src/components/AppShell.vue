@@ -28,6 +28,7 @@ const navItems: NavItem[] = [
   { name: 'tasks', label: '待办', icon: 'tasks' },
   { name: 'timeline', label: '时光轴', icon: 'timeline' },
   { name: 'family', label: '家庭', icon: 'family' },
+  { name: 'contacts', label: '联系人', icon: 'contacts' },
   { name: 'messages', label: '留言板', icon: 'messages' },
   { name: 'notes', label: '便签', icon: 'notes' },
 ];

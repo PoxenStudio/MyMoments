@@ -54,6 +54,7 @@ func scanTask(scanner interface{ Scan(...any) error }) (*model.Task, error) {
 	t.ReminderOffsets = parseOffsets(offsets.String)
 	t.Assignees = []model.User{}
 	t.Subtasks = []model.Subtask{}
+	t.Mentions = []model.MentionTarget{}
 	return &t, nil
 }
 
@@ -238,7 +239,8 @@ func (s *Store) loadTaskRelations(ctx context.Context, t *model.Task) error {
 		return err
 	}
 	t.Completion = c
-	return nil
+	t.Mentions, err = loadMentionTargets(ctx, s.DB, "task", t.ID)
+	return err
 }
 
 func (s *Store) activeCompletion(ctx context.Context, taskID int64) (*model.TaskCompletion, error) {
@@ -318,7 +320,7 @@ func (s *Store) CreateTask(ctx context.Context, t *model.Task) (int64, error) {
 				return err
 			}
 		}
-		return nil
+		return replaceMentions(ctx, tx, "task", id, t.Mentions)
 	})
 	return id, err
 }
@@ -389,7 +391,7 @@ func (s *Store) UpdateTask(ctx context.Context, t *model.Task) error {
 				return err
 			}
 		}
-		return nil
+		return replaceMentions(ctx, tx, "task", t.ID, t.Mentions)
 	})
 }
 
@@ -418,6 +420,15 @@ func (s *Store) DeleteTask(ctx context.Context, id int64) error {
 		return ErrNotFound
 	}
 	return nil
+}
+
+// DeleteTasksBySeriesPrefix 按 series_id 前缀删除一组待办（用于联系人问候待办重新生成）。
+func (s *Store) DeleteTasksBySeriesPrefix(ctx context.Context, prefix string) error {
+	if prefix == "" {
+		return nil
+	}
+	_, err := s.DB.ExecContext(ctx, `DELETE FROM tasks WHERE series_id LIKE ?`, prefix+"%")
+	return err
 }
 
 func assigneeIDs(users []model.User) []int64 {

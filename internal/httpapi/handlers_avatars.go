@@ -44,55 +44,8 @@ func (s *Server) handleMemberAvatarUpload(w http.ResponseWriter, r *http.Request
 }
 
 func (s *Server) saveAvatar(w http.ResponseWriter, r *http.Request, u *model.User) {
-	limit := s.cfg.MaxImageBytes
-	if r.ContentLength > limit {
-		writeError(w, &APIError{Status: http.StatusRequestEntityTooLarge, Code: "media.too_large", Message: "头像文件超出大小限制"})
-		return
-	}
-	r.Body = http.MaxBytesReader(w, r.Body, limit+1<<20)
-	if err := r.ParseMultipartForm(4 << 20); err != nil {
-		writeError(w, &APIError{Status: http.StatusRequestEntityTooLarge, Code: "media.too_large", Message: "头像文件超出大小限制"})
-		return
-	}
-	file, header, err := r.FormFile("file")
-	if err != nil {
-		writeError(w, badRequest("请选择要上传的头像"))
-		return
-	}
-	defer file.Close()
-	if header.Size <= 0 {
-		writeError(w, badRequest("头像文件为空"))
-		return
-	}
-	mimeType, kind, ok := detectMedia(file, header.Filename)
-	if !ok || kind != "image" {
-		writeError(w, &APIError{Status: http.StatusUnsupportedMediaType, Code: "media.unsupported_type", Message: "头像仅支持图片格式"})
-		return
-	}
-	if header.Size > limit {
-		writeError(w, &APIError{Status: http.StatusRequestEntityTooLarge, Code: "media.too_large", Message: "头像文件超出大小限制"})
-		return
-	}
-	key, err := auth.RandomToken(16)
-	if err != nil {
-		writeError(w, serverError(err))
-		return
-	}
-	key += mediaMIME[mimeType].ext
-	if err := os.MkdirAll(s.avatarDir(), 0o750); err != nil {
-		writeError(w, serverError(err))
-		return
-	}
-	dst, err := os.OpenFile(s.avatarPath(key), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o640)
-	if err != nil {
-		writeError(w, serverError(err))
-		return
-	}
-	written, copyErr := io.Copy(dst, file)
-	closeErr := dst.Close()
-	if copyErr != nil || closeErr != nil || written == 0 {
-		_ = os.Remove(s.avatarPath(key))
-		writeError(w, serverError(copyErr))
+	key, ok := s.storeAvatarFile(w, r)
+	if !ok {
 		return
 	}
 	old := u.AvatarKey
@@ -106,6 +59,77 @@ func (s *Server) saveAvatar(w http.ResponseWriter, r *http.Request, u *model.Use
 		_ = os.Remove(s.avatarPath(*old))
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"avatarKey": key})
+}
+
+// handleContactAvatarUpload 上传联系人头像，返回可引用的 key，不绑定任何用户。
+func (s *Server) handleContactAvatarUpload(w http.ResponseWriter, r *http.Request) {
+	key, ok := s.storeAvatarFile(w, r)
+	if !ok {
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"avatarKey": key})
+}
+
+// storeAvatarFile 读取并保存 multipart 中的头像文件，返回存储 key。
+func (s *Server) storeAvatarFile(w http.ResponseWriter, r *http.Request) (string, bool) {
+	limit := s.cfg.MaxImageBytes
+	if r.ContentLength > limit {
+		writeError(w, &APIError{Status: http.StatusRequestEntityTooLarge, Code: "media.too_large", Message: "头像文件超出大小限制"})
+		return "", false
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, limit+1<<20)
+	if err := r.ParseMultipartForm(4 << 20); err != nil {
+		writeError(w, &APIError{Status: http.StatusRequestEntityTooLarge, Code: "media.too_large", Message: "头像文件超出大小限制"})
+		return "", false
+	}
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, badRequest("请选择要上传的头像"))
+		return "", false
+	}
+	defer file.Close()
+	if header.Size <= 0 {
+		writeError(w, badRequest("头像文件为空"))
+		return "", false
+	}
+	mimeType, kind, ok := detectMedia(file, header.Filename)
+	if !ok || kind != "image" {
+		writeError(w, &APIError{Status: http.StatusUnsupportedMediaType, Code: "media.unsupported_type", Message: "头像仅支持图片格式"})
+		return "", false
+	}
+	if header.Size > limit {
+		writeError(w, &APIError{Status: http.StatusRequestEntityTooLarge, Code: "media.too_large", Message: "头像文件超出大小限制"})
+		return "", false
+	}
+	key, err := auth.RandomToken(16)
+	if err != nil {
+		writeError(w, serverError(err))
+		return "", false
+	}
+	key += mediaMIME[mimeType].ext
+	if err := os.MkdirAll(s.avatarDir(), 0o750); err != nil {
+		writeError(w, serverError(err))
+		return "", false
+	}
+	dst, err := os.OpenFile(s.avatarPath(key), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o640)
+	if err != nil {
+		writeError(w, serverError(err))
+		return "", false
+	}
+	written, copyErr := io.Copy(dst, file)
+	closeErr := dst.Close()
+	if copyErr != nil || closeErr != nil || written == 0 {
+		_ = os.Remove(s.avatarPath(key))
+		if copyErr != nil {
+			writeError(w, serverError(copyErr))
+		} else if closeErr != nil {
+			writeError(w, serverError(closeErr))
+		} else {
+			writeError(w, badRequest("头像文件为空"))
+		}
+		return "", false
+	}
+	return key, true
 }
 
 // handleAvatarGet 读取家庭成员头像。

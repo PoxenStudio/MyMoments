@@ -22,27 +22,23 @@ import AppInput from '@/components/base/AppInput.vue';
 import AppStatusTag from '@/components/base/AppStatusTag.vue';
 import AppTabs from '@/components/base/AppTabs.vue';
 import BirthdayManager from '@/components/business/BirthdayManager.vue';
-import ContactManager from '@/components/business/ContactManager.vue';
 
 const auth = useAuthStore();
 const family = useFamilyStore();
 const toast = useToastStore();
 const route = useRoute();
 
-type FamilyTab = 'members' | 'contacts' | 'birthdays';
+type FamilyTab = 'members' | 'birthdays';
 const tab = ref<FamilyTab>('members');
 const tabs = [
   { key: 'members', label: '成员' },
-  { key: 'contacts', label: '通讯录' },
   { key: 'birthdays', label: '生日' },
 ];
 const pageTitle = computed(() => {
-  if (tab.value === 'contacts') return '通讯录';
   if (tab.value === 'birthdays') return '生日';
   return '家庭成员';
 });
 const pageSubtitle = computed(() => {
-  if (tab.value === 'contacts') return '记下家人常联系的人，电话、邮箱和地址集中在一处。';
   if (tab.value === 'birthdays') return '记录家人和重要的人的生日，按家庭时区提醒。';
   return '每位成员使用独立账号登录，管理员负责邀请与账号安全。';
 });
@@ -290,7 +286,7 @@ function roleLabel(role: string): string {
 
 function applyQueryTab(): void {
   const value = String(route.query.tab ?? '');
-  if (value === 'contacts' || value === 'birthdays' || value === 'members') tab.value = value;
+  if (value === 'birthdays' || value === 'members') tab.value = value;
 }
 
 watch(() => route.query.tab, applyQueryTab);
@@ -357,7 +353,6 @@ onMounted(() => {
       </ul>
     </template>
 
-    <ContactManager v-else-if="tab === 'contacts'" />
     <BirthdayManager v-else :open-id="Number(route.query.open) || 0" />
 
     <AppDialog v-model="createOpen" title="添加家庭成员" size="md">

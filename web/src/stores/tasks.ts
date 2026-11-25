@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { api } from '@/api/client';
-import type { Task, TaskTemplate } from '@/types';
+import type { MentionTarget, Task, TaskTemplate } from '@/types';
 
 export interface TaskCounts {
   open: number;
@@ -42,6 +42,7 @@ export interface TaskPayload {
   assigneeIds?: number[];
   subtasks?: SubtaskPayload[];
   reminderOffsets?: number[];
+  mentions?: MentionTarget[];
   archived?: boolean;
 }
 

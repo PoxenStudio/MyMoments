@@ -12,16 +12,19 @@ import AppIcon from '@/components/base/AppIcon.vue';
 import AppIconButton from '@/components/base/AppIconButton.vue';
 import AppSelect from '@/components/base/AppSelect.vue';
 import AudiencePicker from '@/components/business/AudiencePicker.vue';
+import MentionRenderer from '@/components/business/MentionRenderer.vue';
 import MentionTextarea from '@/components/business/MentionTextarea.vue';
 import { useMessagesStore } from '@/stores/messages';
 import { useAuthStore } from '@/stores/auth';
 import { useFamilyStore } from '@/stores/family';
+import { useContactsStore } from '@/stores/contacts';
 import { useToastStore } from '@/stores/toast';
-import type { MessagePost, Visibility } from '@/types';
+import type { MentionTarget, MessagePost, Visibility } from '@/types';
 import { formatShortDate, formatTimestamp, todayISO } from '@/utils/chrono';
 
 const auth = useAuthStore();
 const family = useFamilyStore();
+const contacts = useContactsStore();
 const store = useMessagesStore();
 const toast = useToastStore();
 const route = useRoute();
@@ -34,7 +37,7 @@ const saving = ref(false);
 const highlightId = ref<number | null>(null);
 const replyFor = ref<number | null>(null);
 const replyBody = ref('');
-const replyMentionIds = ref<number[]>([]);
+const replyMentions = ref<MentionTarget[]>([]);
 const replySaving = ref(false);
 
 const draft = reactive({
@@ -44,7 +47,7 @@ const draft = reactive({
   audienceIds: [] as number[],
   pinned: false,
 });
-const draftMentionIds = ref<number[]>([]);
+const draftMentions = ref<MentionTarget[]>([]);
 
 const editing = ref<MessagePost | null>(null);
 const editForm = reactive({
@@ -54,13 +57,14 @@ const editForm = reactive({
   audienceIds: [] as number[],
   pinned: false,
 });
-const editMentionIds = ref<number[]>([]);
+const editMentions = ref<MentionTarget[]>([]);
 const editSaving = ref(false);
 
 const deleting = ref<MessagePost | null>(null);
 const deleteLoading = ref(false);
 
 const mentionMembers = computed(() => family.activeMembers.filter((m) => m.id !== auth.user?.id));
+const mentionContacts = computed(() => contacts.items);
 const filterTabs = [
   { key: 'all', label: '全部' },
   { key: 'mentions', label: '被提及' },
@@ -105,6 +109,7 @@ watch([filter, search], () => {
 
 onMounted(async () => {
   await family.load();
+  void contacts.load();
   await reload();
   const open = Number(route.query.open);
   if (open) {
@@ -134,7 +139,7 @@ function closeComposer(): void {
   draft.visibility = 'household';
   draft.audienceIds = [];
   draft.pinned = false;
-  draftMentionIds.value = [];
+  draftMentions.value = [];
 }
 
 async function submit(): Promise<void> {
@@ -146,7 +151,7 @@ async function submit(): Promise<void> {
       occurrenceDate: draft.occurrenceDate || null,
       visibility: draft.visibility,
       audienceIds: draft.visibility === 'selected' ? draft.audienceIds : [],
-      mentionIds: draftMentionIds.value,
+      mentions: draftMentions.value,
       pinned: draft.pinned,
     });
     toast.success('留言已发布');
@@ -161,18 +166,18 @@ async function submit(): Promise<void> {
 function startReply(post: MessagePost): void {
   replyFor.value = replyFor.value === post.id ? null : post.id;
   replyBody.value = '';
-  replyMentionIds.value = [];
+  replyMentions.value = [];
 }
 
 async function submitReply(post: MessagePost): Promise<void> {
   if (!replyBody.value.trim()) return;
   replySaving.value = true;
   try {
-    await store.reply(post.id, replyBody.value.trim(), replyMentionIds.value);
+    await store.reply(post.id, replyBody.value.trim(), replyMentions.value);
     toast.success('回复已发送');
     replyFor.value = null;
     replyBody.value = '';
-    replyMentionIds.value = [];
+    replyMentions.value = [];
   } catch {
     toast.error('回复失败，请稍后重试');
   } finally {
@@ -187,7 +192,7 @@ function startEdit(post: MessagePost): void {
   editForm.visibility = post.visibility;
   editForm.audienceIds = [...post.audienceIds];
   editForm.pinned = post.pinned;
-  editMentionIds.value = [...post.mentionIds];
+  editMentions.value = [...post.mentions];
 }
 
 async function submitEdit(): Promise<void> {
@@ -199,7 +204,7 @@ async function submitEdit(): Promise<void> {
       occurrenceDate: editForm.occurrenceDate || null,
       visibility: editForm.visibility,
       audienceIds: editForm.visibility === 'selected' ? editForm.audienceIds : [],
-      mentionIds: editMentionIds.value,
+      mentions: editMentions.value,
       pinned: editForm.pinned,
     });
     toast.success('留言已更新');
@@ -259,9 +264,10 @@ async function confirmDelete(): Promise<void> {
       </div>
       <MentionTextarea
         v-model="draft.body"
-        v-model:mention-ids="draftMentionIds"
+        v-model:mentions="draftMentions"
         :members="mentionMembers"
-        placeholder="分享一件小事，输入 @ 可以提及家人"
+        :contacts="mentionContacts"
+        placeholder="分享一件小事，输入 @ 可以提及家人或联系人"
         :rows="4"
         :maxlength="5000"
       />
@@ -345,6 +351,7 @@ async function confirmDelete(): Promise<void> {
               {{ formatTimestamp(post.createdAt) }}
               <template v-if="post.occurrenceDate"> · 记于 {{ formatShortDate(post.occurrenceDate) }}</template>
               <template v-if="post.editedAt"> · 已编辑</template>
+              <template v-if="post.closedAt"> · 已关闭</template>
             </p>
           </div>
           <div class="post__actions">
@@ -366,7 +373,9 @@ async function confirmDelete(): Promise<void> {
           </div>
         </header>
 
-        <p class="post__body">{{ post.body }}</p>
+        <p class="post__body">
+          <MentionRenderer :text="post.body" :mentions="post.mentions" :contacts="mentionContacts" :members="family.activeMembers" />
+        </p>
 
         <div class="post__footer">
           <button type="button" class="post__reply-btn" @click="startReply(post)">
@@ -391,9 +400,10 @@ async function confirmDelete(): Promise<void> {
         <div v-if="replyFor === post.id" class="reply-box">
           <MentionTextarea
             v-model="replyBody"
-            v-model:mention-ids="replyMentionIds"
+            v-model:mentions="replyMentions"
             :members="mentionMembers"
-            placeholder="写下回复，输入 @ 可以提及家人"
+            :contacts="mentionContacts"
+            placeholder="写下回复，输入 @ 可以提及家人或联系人"
             :rows="2"
             :maxlength="2000"
           />
@@ -416,8 +426,9 @@ async function confirmDelete(): Promise<void> {
       <div class="dialog-form">
         <MentionTextarea
           v-model="editForm.body"
-          v-model:mention-ids="editMentionIds"
+          v-model:mentions="editMentions"
           :members="mentionMembers"
+          :contacts="mentionContacts"
           :rows="5"
           :maxlength="5000"
         />

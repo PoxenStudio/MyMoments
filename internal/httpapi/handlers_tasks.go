@@ -29,6 +29,7 @@ type taskInput struct {
 	Icon            *string         `json:"icon"`
 	Visibility      *string         `json:"visibility"`
 	AssigneeIDs     *[]int64        `json:"assigneeIds"`
+	Mentions        *[]mentionInput `json:"mentions"`
 	Subtasks        *[]subtaskInput `json:"subtasks"`
 	ReminderOffsets *[]int          `json:"reminderOffsets"`
 	Archived        *bool           `json:"archived"`
@@ -98,6 +99,12 @@ func (s *Server) handleTaskCreate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
+	mentions, apiErr := s.resolveMentions(r.Context(), u.ID, taskMentionSource(task), valueMentions(in.Mentions))
+	if apiErr != nil {
+		writeError(w, apiErr)
+		return
+	}
+	task.Mentions = mentions
 	id, err := s.store.CreateTask(r.Context(), task)
 	if err != nil {
 		writeError(w, serverError(err))
@@ -174,6 +181,12 @@ func (s *Server) handleTaskPatch(w http.ResponseWriter, r *http.Request) {
 			task.ArchivedAt = nil
 		}
 	}
+	mentions, apiErr := s.resolveMentions(r.Context(), u.ID, taskMentionSource(task), valueMentions(in.Mentions))
+	if apiErr != nil {
+		writeError(w, apiErr)
+		return
+	}
+	task.Mentions = mentions
 	if err := s.store.UpdateTask(r.Context(), task); err != nil {
 		writeError(w, serverError(err))
 		return
@@ -776,6 +789,16 @@ func (s *Server) reminderSpecs(r *http.Request, task *model.Task) ([]store.Remin
 		}
 	}
 	return specs, nil
+}
+
+// taskMentionSource 合并待办标题与说明，作为 @ 提及的扫描正文。
+func taskMentionSource(t *model.Task) string {
+	parts := make([]string, 0, 2)
+	parts = append(parts, t.Title)
+	if t.Description != nil {
+		parts = append(parts, *t.Description)
+	}
+	return strings.Join(parts, "\n")
 }
 
 func (s *Server) today() string {

@@ -12,14 +12,15 @@ import (
 )
 
 const noteColumns = `n.id, n.title, n.body, n.color, n.pinned, n.category, n.author_id, u.display_name,
-	n.memory_date, n.visibility, n.created_at, n.updated_at`
+	n.memory_date, n.visibility, n.closed_at, n.created_at, n.updated_at`
 
 func scanNote(scanner interface{ Scan(...any) error }) (*model.Note, error) {
 	var n model.Note
 	var title, body, color, category, memory sql.NullString
+	var closed sql.NullInt64
 	var pinned int
 	if err := scanner.Scan(&n.ID, &title, &body, &color, &pinned, &category, &n.AuthorID, &n.AuthorName,
-		&memory, &n.Visibility, &n.CreatedAt, &n.UpdatedAt); err != nil {
+		&memory, &n.Visibility, &closed, &n.CreatedAt, &n.UpdatedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -30,9 +31,12 @@ func scanNote(scanner interface{ Scan(...any) error }) (*model.Note, error) {
 	n.Color = ps(color)
 	n.Category = ps(category)
 	n.MemoryDate = ps(memory)
+	if closed.Valid {
+		n.ClosedAt = &closed.Int64
+	}
 	n.Pinned = pinned != 0
 	n.AudienceIDs = []int64{}
-	n.MentionIDs = []int64{}
+	n.Mentions = []model.MentionTarget{}
 	n.Items = []model.NoteItem{}
 	return &n, nil
 }
@@ -139,12 +143,12 @@ func (s *Store) loadNoteDetail(ctx context.Context, n *model.Note) error {
 	if err != nil {
 		return err
 	}
-	n.MentionIDs, err = loadMentionIDs(ctx, s.DB, "note", n.ID)
+	n.Mentions, err = loadMentionTargets(ctx, s.DB, "note", n.ID)
 	return err
 }
 
 // CreateNote 创建便签。
-func (s *Store) CreateNote(ctx context.Context, n *model.Note, mentionIDs []int64) (int64, error) {
+func (s *Store) CreateNote(ctx context.Context, n *model.Note, mentions []model.MentionTarget) (int64, error) {
 	var id int64
 	err := s.Tx(ctx, func(tx *sql.Tx) error {
 		now := time.Now().Unix()
@@ -165,7 +169,7 @@ func (s *Store) CreateNote(ctx context.Context, n *model.Note, mentionIDs []int6
 		if err := replaceAudiences(ctx, tx, "note", id, n.Visibility, n.AudienceIDs); err != nil {
 			return err
 		}
-		if err := replaceMentions(ctx, tx, "note", id, mentionIDs); err != nil {
+		if err := replaceMentions(ctx, tx, "note", id, mentions); err != nil {
 			return err
 		}
 		name, err := s.displayName(ctx, tx, n.AuthorID)
@@ -178,14 +182,14 @@ func (s *Store) CreateNote(ctx context.Context, n *model.Note, mentionIDs []int6
 			sourceID:   id,
 			actorID:    n.AuthorID,
 			summary:    name + " 在便签中提到了你",
-			userIDs:    mentionRecipients(mentionIDs, n.Visibility, n.AudienceIDs),
+			userIDs:    mentionRecipients(mentionUserIDs(mentions), n.Visibility, n.AudienceIDs),
 		})
 	})
 	return id, err
 }
 
 // UpdateNote 更新便签并替换检查清单。
-func (s *Store) UpdateNote(ctx context.Context, n *model.Note, mentionIDs []int64) error {
+func (s *Store) UpdateNote(ctx context.Context, n *model.Note, mentions []model.MentionTarget) error {
 	return s.Tx(ctx, func(tx *sql.Tx) error {
 		now := time.Now().Unix()
 		if _, err := tx.ExecContext(ctx, `UPDATE notes SET title = ?, body = ?, color = ?, pinned = ?, category = ?,
@@ -203,7 +207,7 @@ func (s *Store) UpdateNote(ctx context.Context, n *model.Note, mentionIDs []int6
 		if err := replaceAudiences(ctx, tx, "note", n.ID, n.Visibility, n.AudienceIDs); err != nil {
 			return err
 		}
-		if err := replaceMentions(ctx, tx, "note", n.ID, mentionIDs); err != nil {
+		if err := replaceMentions(ctx, tx, "note", n.ID, mentions); err != nil {
 			return err
 		}
 		name, err := s.displayName(ctx, tx, n.AuthorID)
@@ -216,7 +220,7 @@ func (s *Store) UpdateNote(ctx context.Context, n *model.Note, mentionIDs []int6
 			sourceID:   n.ID,
 			actorID:    n.AuthorID,
 			summary:    name + " 在便签中提到了你",
-			userIDs:    mentionRecipients(mentionIDs, n.Visibility, n.AudienceIDs),
+			userIDs:    mentionRecipients(mentionUserIDs(mentions), n.Visibility, n.AudienceIDs),
 		})
 	})
 }

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { api } from '@/api/client';
-import type { Note, NoteItem, Visibility } from '@/types';
+import type { MentionTarget, Note, NoteItem, Visibility } from '@/types';
 
 export interface NoteQuery {
   q?: string;
@@ -17,7 +17,7 @@ export interface NotePayload {
   memoryDate?: string | null;
   visibility?: Visibility;
   audienceIds?: number[];
-  mentionIds?: number[];
+  mentions?: MentionTarget[];
   pinned?: boolean;
   items?: Pick<NoteItem, 'text' | 'checked'>[];
 }

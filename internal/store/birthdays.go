@@ -139,6 +139,12 @@ func (s *Store) GetBirthdayByUser(ctx context.Context, userID int64) (*model.Bir
 	return scanBirthday(row)
 }
 
+// GetBirthdayByContact 查找联系人已绑定的生日。
+func (s *Store) GetBirthdayByContact(ctx context.Context, contactID int64) (*model.Birthday, error) {
+	row := s.DB.QueryRowContext(ctx, `SELECT `+birthdayColumns+` FROM birthdays b WHERE b.contact_id = ? LIMIT 1`, contactID)
+	return scanBirthday(row)
+}
+
 func nidInt(v *int) any {
 	if v == nil {
 		return nil

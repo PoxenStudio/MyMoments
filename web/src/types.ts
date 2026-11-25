@@ -112,6 +112,7 @@ export interface Task {
   mediaCount?: number;
   completion?: Completion | null;
   reminderOffsets?: number[];
+  mentions?: MentionTarget[];
 }
 
 export interface Subtask {
@@ -193,6 +194,26 @@ export interface ContactItem {
   kind: 'phone' | 'email' | 'address';
   label: string | null;
   value: string;
+  isPrimaryCall?: boolean;
+  isPrimarySms?: boolean;
+}
+
+export interface ContactRelation {
+  contactId?: number;
+  relatedContactId: number;
+  relation: string;
+  relatedName?: string;
+}
+
+export interface ContactReminder {
+  id?: number;
+  kind: 'spring_festival' | 'traditional' | 'western' | 'custom';
+  title?: string;
+  frequency: '' | 'monthly' | 'weekly' | 'once';
+  dueDate: string | null;
+  recurrenceRule?: string | null;
+  color?: string | null;
+  enabled: boolean;
 }
 
 export interface Contact {
@@ -201,12 +222,19 @@ export interface Contact {
   organization: string | null;
   title: string | null;
   note: string | null;
-  birthdayOn: string | null;
+  birthdayMonth: number | null;
+  birthdayDay: number | null;
+  birthYear: number | null;
+  showInCalendar: boolean;
   category: string | null;
   avatarKey: string | null;
+  wechat: string | null;
+  officePhone: string | null;
   ownerScope: 'household' | 'private';
   createdBy: number;
   items: ContactItem[];
+  relations: ContactRelation[];
+  reminders: ContactReminder[];
   createdAt: number;
   updatedAt: number;
 }
@@ -223,7 +251,8 @@ export interface Note {
   memoryDate: string | null;
   visibility: Visibility;
   audienceIds: number[];
-  mentionIds: number[];
+  mentions: MentionTarget[];
+  closedAt: number | null;
   createdAt: number;
   updatedAt: number;
   items: NoteItem[];
@@ -235,6 +264,13 @@ export interface NoteItem {
   text: string;
   checked: boolean;
   position: number;
+}
+
+export interface MentionTarget {
+  type: 'user' | 'contact';
+  id: number;
+  name?: string;
+  avatarKey?: string | null;
 }
 
 export interface MessageReply {
@@ -255,10 +291,11 @@ export interface MessagePost {
   pinned: boolean;
   visibility: Visibility;
   editedAt: number | null;
+  closedAt: number | null;
   createdAt: number;
   updatedAt: number;
   audienceIds: number[];
-  mentionIds: number[];
+  mentions: MentionTarget[];
   replies: MessageReply[];
   replyCount?: number;
 }

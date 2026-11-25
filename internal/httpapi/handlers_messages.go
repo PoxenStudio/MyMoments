@@ -10,17 +10,17 @@ import (
 )
 
 type messageInput struct {
-	Body           *string  `json:"body"`
-	OccurrenceDate *string  `json:"occurrenceDate"`
-	Visibility     *string  `json:"visibility"`
-	AudienceIDs    *[]int64 `json:"audienceIds"`
-	MentionIDs     *[]int64 `json:"mentionIds"`
-	Pinned         *bool    `json:"pinned"`
+	Body           *string         `json:"body"`
+	OccurrenceDate *string         `json:"occurrenceDate"`
+	Visibility     *string         `json:"visibility"`
+	AudienceIDs    *[]int64        `json:"audienceIds"`
+	Mentions       *[]mentionInput `json:"mentions"`
+	Pinned         *bool           `json:"pinned"`
 }
 
 type replyInput struct {
-	Body       *string  `json:"body"`
-	MentionIDs *[]int64 `json:"mentionIds"`
+	Body     *string         `json:"body"`
+	Mentions *[]mentionInput `json:"mentions"`
 }
 
 func (s *Server) handleMessagesList(w http.ResponseWriter, r *http.Request) {
@@ -68,12 +68,12 @@ func (s *Server) handleMessageCreate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, apiErr)
 		return
 	}
-	mentionIDs, apiErr := s.resolveMentionIDs(r.Context(), m.Body, valueIDs(in.MentionIDs))
+	mentions, apiErr := s.resolveMentions(r.Context(), u.ID, m.Body, valueMentions(in.Mentions))
 	if apiErr != nil {
 		writeError(w, apiErr)
 		return
 	}
-	id, err := s.store.CreateMessage(r.Context(), m, mentionIDs)
+	id, err := s.store.CreateMessage(r.Context(), m, mentions)
 	if err != nil {
 		writeError(w, serverError(err))
 		return
@@ -113,7 +113,7 @@ func (s *Server) handleMessagePatch(w http.ResponseWriter, r *http.Request) {
 		writeError(w, apiErr)
 		return
 	}
-	mentionIDs, apiErr := s.resolveMentionIDs(r.Context(), m.Body, valueIDs(in.MentionIDs))
+	mentions, apiErr := s.resolveMentions(r.Context(), u.ID, m.Body, valueMentions(in.Mentions))
 	if apiErr != nil {
 		writeError(w, apiErr)
 		return
@@ -121,7 +121,7 @@ func (s *Server) handleMessagePatch(w http.ResponseWriter, r *http.Request) {
 	if m.Visibility != "selected" {
 		m.AudienceIDs = []int64{}
 	}
-	if err := s.store.UpdateMessage(r.Context(), m, mentionIDs); err != nil {
+	if err := s.store.UpdateMessage(r.Context(), m, mentions); err != nil {
 		writeError(w, serverError(err))
 		return
 	}
@@ -177,13 +177,13 @@ func (s *Server) handleMessageReply(w http.ResponseWriter, r *http.Request) {
 		writeError(w, badRequest("回复内容需为 1–2000 个字符"))
 		return
 	}
-	mentionIDs, apiErr := s.resolveMentionIDs(r.Context(), body, valueIDs(in.MentionIDs))
+	mentions, apiErr := s.resolveMentions(r.Context(), u.ID, body, valueMentions(in.Mentions))
 	if apiErr != nil {
 		writeError(w, apiErr)
 		return
 	}
 	reply := &model.MessageReply{PostID: m.ID, AuthorID: u.ID, Body: body}
-	if err := s.store.CreateReply(r.Context(), reply, mentionIDs, m.Visibility, m.AudienceIDs); err != nil {
+	if err := s.store.CreateReply(r.Context(), reply, mentions, m.Visibility, m.AudienceIDs); err != nil {
 		writeError(w, serverError(err))
 		return
 	}
@@ -249,9 +249,4 @@ func (s *Server) applyMessageInput(r *http.Request, m *model.MessagePost, in *me
 	return nil
 }
 
-func valueIDs(ids *[]int64) []int64 {
-	if ids == nil {
-		return nil
-	}
-	return *ids
-}
+

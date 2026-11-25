@@ -14,16 +14,19 @@ import AppSelect from '@/components/base/AppSelect.vue';
 import AppSwitch from '@/components/base/AppSwitch.vue';
 import AppAvatar from '@/components/base/AppAvatar.vue';
 import AudiencePicker from '@/components/business/AudiencePicker.vue';
+import MentionRenderer from '@/components/business/MentionRenderer.vue';
 import MentionTextarea from '@/components/business/MentionTextarea.vue';
 import { useNotesStore } from '@/stores/notes';
 import { useAuthStore } from '@/stores/auth';
 import { useFamilyStore } from '@/stores/family';
+import { useContactsStore } from '@/stores/contacts';
 import { useToastStore } from '@/stores/toast';
-import type { Note, Visibility } from '@/types';
+import type { MentionTarget, Note, Visibility } from '@/types';
 import { formatShortDate, formatTimestamp, todayISO } from '@/utils/chrono';
 
 const auth = useAuthStore();
 const family = useFamilyStore();
+const contacts = useContactsStore();
 const store = useNotesStore();
 const toast = useToastStore();
 const route = useRoute();
@@ -36,7 +39,7 @@ const editingId = ref<number | null>(null);
 const saving = ref(false);
 const deleting = ref<Note | null>(null);
 const deleteLoading = ref(false);
-const mentionIds = ref<number[]>([]);
+const mentions = ref<MentionTarget[]>([]);
 
 const form = reactive({
   title: '',
@@ -66,6 +69,7 @@ const visibilityOptions = [
 ];
 
 const mentionMembers = computed(() => family.activeMembers.filter((m) => m.id !== auth.user?.id));
+const mentionContacts = computed(() => contacts.items);
 const categories = computed(() => {
   const set = new Set<string>();
   for (const note of store.items) {
@@ -100,6 +104,7 @@ watch([search, category], () => {
 
 onMounted(async () => {
   await family.load();
+  void contacts.load();
   await reload();
   const open = Number(route.query.open);
   if (open) {
@@ -119,7 +124,7 @@ function resetForm(): void {
   form.audienceIds = [];
   form.pinned = false;
   form.items = [];
-  mentionIds.value = [];
+  mentions.value = [];
 }
 
 function openCreate(): void {
@@ -143,7 +148,7 @@ function openEdit(note: Note): void {
   form.audienceIds = [...note.audienceIds];
   form.pinned = note.pinned;
   form.items = note.items.map((it) => ({ text: it.text, checked: it.checked }));
-  mentionIds.value = [...note.mentionIds];
+  mentions.value = [...note.mentions];
   dialogOpen.value = true;
 }
 
@@ -170,7 +175,7 @@ async function submit(): Promise<void> {
     memoryDate: form.memoryDate || null,
     visibility: form.visibility,
     audienceIds: form.visibility === 'selected' ? form.audienceIds : [],
-    mentionIds: mentionIds.value,
+    mentions: mentions.value,
     pinned: form.pinned,
     items,
   };
@@ -288,7 +293,9 @@ async function confirmDelete(): Promise<void> {
           />
         </div>
         <h3 v-if="note.title" class="note__title">{{ note.title }}</h3>
-        <p v-if="note.body" class="note__body">{{ note.body }}</p>
+        <p v-if="note.body" class="note__body">
+          <MentionRenderer :text="note.body" :mentions="note.mentions" :contacts="mentionContacts" :members="family.activeMembers" />
+        </p>
         <ul v-if="note.items.length" class="note__items">
           <li v-for="item in note.items.slice(0, 5)" :key="item.id" :class="{ 'is-checked': item.checked }">
             <span class="note__box"><AppIcon v-if="item.checked" name="check" :size="11" /></span>
@@ -300,6 +307,7 @@ async function confirmDelete(): Promise<void> {
           <AppAvatar :name="note.authorName ?? ''" :size="22" />
           <span class="note__author">{{ note.authorName }}</span>
           <span class="note__time">{{ formatTimestamp(note.updatedAt, { dateOnly: true }) }}</span>
+          <span v-if="note.closedAt" class="note__closed">已关闭</span>
         </footer>
         <p v-if="note.memoryDate" class="note__memory">
           回忆 · {{ formatShortDate(note.memoryDate) }}
@@ -320,8 +328,9 @@ async function confirmDelete(): Promise<void> {
         <AppField label="正文" hint="输入 @ 可以提及家人，他们会收到通知。">
           <MentionTextarea
             v-model="form.body"
-            v-model:mention-ids="mentionIds"
+            v-model:mentions="mentions"
             :members="mentionMembers"
+            :contacts="mentionContacts"
             placeholder="写点什么…"
             :rows="5"
             :maxlength="10000"
@@ -598,6 +607,15 @@ async function confirmDelete(): Promise<void> {
 
 .note__time {
   margin-left: auto;
+}
+
+.note__closed {
+  flex: none;
+  font-size: 11px;
+  color: var(--at-color-muted);
+  padding: 1px 8px;
+  border: 1px solid var(--at-color-hairline);
+  border-radius: var(--at-radius-pill);
 }
 
 .note__memory {

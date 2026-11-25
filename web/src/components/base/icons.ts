@@ -22,6 +22,7 @@ import {
   mdiClose,
   mdiCloseCircleOutline,
   mdiCogOutline,
+  mdiContactsOutline,
   mdiContentCopy,
   mdiCreationOutline,
   mdiDotsHorizontal,
@@ -71,7 +72,7 @@ import {
 } from '@mdi/js';
 
 export type IconName =
-  | 'home' | 'calendar' | 'tasks' | 'timeline' | 'family' | 'messages' | 'notes' | 'settings'
+  | 'home' | 'calendar' | 'tasks' | 'timeline' | 'family' | 'messages' | 'notes' | 'contacts' | 'settings'
   | 'bell' | 'search' | 'plus' | 'minus' | 'close' | 'check' | 'more' | 'chevron-down' | 'chevron-up'
   | 'chevron-left' | 'chevron-right' | 'arrow-left' | 'arrow-right' | 'clock' | 'map-pin' | 'gift'
   | 'sun' | 'cloud' | 'cloud-rain' | 'cloud-snow' | 'cloud-storm' | 'cloud-fog' | 'moon'
@@ -89,6 +90,7 @@ export const icons: Record<IconName, string> = {
   family: mdiAccountGroupOutline,
   messages: mdiMessageTextOutline,
   notes: mdiNoteTextOutline,
+  contacts: mdiContactsOutline,
   settings: mdiCogOutline,
   bell: mdiBellOutline,
   search: mdiMagnify,

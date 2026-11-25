@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
-import type { Task, TaskTemplate } from '@/types';
+import type { MentionTarget, Task, TaskTemplate } from '@/types';
 import { useFamilyStore } from '@/stores/family';
+import { useContactsStore } from '@/stores/contacts';
 import { useTasksStore, type SubtaskPayload, type TaskPayload } from '@/stores/tasks';
 import { ApiError } from '@/api/client';
 import { parseRecurrence, taskColors, visibilityLabels } from '@/utils/task';
@@ -13,7 +14,7 @@ import AppField from '@/components/base/AppField.vue';
 import AppIcon from '@/components/base/AppIcon.vue';
 import AppInput from '@/components/base/AppInput.vue';
 import AppSelect from '@/components/base/AppSelect.vue';
-import AppTextarea from '@/components/base/AppTextarea.vue';
+import MentionTextarea from '@/components/business/MentionTextarea.vue';
 
 const props = withDefaults(defineProps<{
   modelValue: boolean;
@@ -35,6 +36,7 @@ const emit = defineEmits<{
 
 const tasks = useTasksStore();
 const family = useFamilyStore();
+const contacts = useContactsStore();
 
 interface SubtaskRow {
   id?: number;
@@ -62,6 +64,7 @@ interface FormState {
 }
 
 const form = reactive<FormState>(blankForm());
+const mentions = ref<MentionTarget[]>([]);
 const moreOpen = ref(false);
 const saving = ref(false);
 const error = ref('');
@@ -69,6 +72,8 @@ const error = ref('');
 const isEdit = computed(() => Boolean(props.task));
 const title = computed(() => (isEdit.value ? '编辑待办' : '新建待办'));
 const activeMembers = computed(() => family.members.filter((m) => m.status === 'active'));
+const mentionMembers = computed(() => family.members.filter((m) => m.status === 'active'));
+const mentionContacts = computed(() => contacts.items);
 
 const templateOptions = computed(() => [
   { value: '', label: '不使用模板' },
@@ -155,6 +160,7 @@ function resetFromTask(task: Task | null): void {
     next.assigneeIds = task.assignees.map((a) => a.id);
     next.subtasks = task.subtasks.map((s) => ({ id: s.id, title: s.title, done: s.done }));
     next.templateId = task.templateId ?? null;
+    mentions.value = [...(task.mentions ?? [])];
     const rule = parseRecurrence(task.recurrenceRule);
     if (rule) {
       next.freq = rule.freq;
@@ -167,6 +173,7 @@ function resetFromTask(task: Task | null): void {
     next.reminder = offsets.length ? String(offsets[0]) : '';
   }
   Object.assign(form, next);
+  if (!task) mentions.value = [];
   moreOpen.value = Boolean(task && (task.recurrenceRule || task.visibility !== 'household' || (task.reminderOffsets?.length ?? 0) > 0));
 }
 
@@ -206,6 +213,7 @@ watch(() => props.modelValue, (open) => {
   if (!open) return;
   error.value = '';
   saving.value = false;
+  void contacts.load();
   resetFromTask(props.task);
   if (!props.task && props.initialTemplate) applyTemplate(props.initialTemplate);
   if (!props.task && props.defaultDate && !form.dueDate) form.dueDate = props.defaultDate;
@@ -262,6 +270,7 @@ function buildPayload(): TaskPayload {
     subtasks,
     reminderOffsets: form.reminder === '' ? [] : [Number(form.reminder)],
     recurrenceRule: buildRule(),
+    mentions: mentions.value,
   };
   if (form.templateId) payload.templateId = form.templateId;
   return payload;
@@ -316,7 +325,16 @@ async function submit(): Promise<void> {
       </AppField>
 
       <AppField label="说明" for-id="task-desc">
-        <AppTextarea id="task-desc" v-model="form.description" :rows="3" placeholder="补充细节（可选）" :maxlength="5000" />
+        <MentionTextarea
+          id="task-desc"
+          v-model="form.description"
+          v-model:mentions="mentions"
+          :members="mentionMembers"
+          :contacts="mentionContacts"
+          :rows="3"
+          placeholder="补充细节，输入 @ 可以提及家人或联系人（可选）"
+          :maxlength="5000"
+        />
       </AppField>
 
       <div class="task-form__grid">

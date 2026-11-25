@@ -58,7 +58,7 @@ watch(() => props.modelValue, async (open) => {
     target?.focus();
   } else {
     document.body.style.overflow = '';
-    previousFocus?.focus?.();
+    previousFocus?.focus?.({ preventScroll: true });
     previousFocus = null;
   }
 });

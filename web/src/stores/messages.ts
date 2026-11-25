@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { api } from '@/api/client';
-import type { MessagePost, MessageReply, Visibility } from '@/types';
+import type { MessagePost, MessageReply, MentionTarget, Visibility } from '@/types';
 
 export interface MessageQuery {
   q?: string;
@@ -14,7 +14,7 @@ export interface MessagePayload {
   occurrenceDate?: string | null;
   visibility?: Visibility;
   audienceIds?: number[];
-  mentionIds?: number[];
+  mentions?: MentionTarget[];
   pinned?: boolean;
 }
 
@@ -65,8 +65,8 @@ export const useMessagesStore = defineStore('messages', () => {
     items.value = items.value.filter((m) => m.id !== id);
   }
 
-  async function reply(id: number, body: string, mentionIds: number[]): Promise<MessageReply> {
-    const res = await api.post<{ reply: MessageReply }>(`/messages/${id}/replies`, { body, mentionIds });
+  async function reply(id: number, body: string, mentions: MentionTarget[]): Promise<MessageReply> {
+    const res = await api.post<{ reply: MessageReply }>(`/messages/${id}/replies`, { body, mentions });
     items.value = items.value.map((m) => (m.id === id
       ? { ...m, replies: [...m.replies, res.reply], replyCount: (m.replyCount ?? m.replies.length) + 1 }
       : m));

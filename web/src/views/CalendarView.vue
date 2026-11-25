@@ -730,6 +730,7 @@ function pillLabel(entry: DayEntry): string {
   padding: var(--at-space-2);
   text-align: center;
   font-size: var(--at-text-micro);
+  font-weight: 500;
   color: var(--at-color-muted);
 }
 
@@ -753,30 +754,41 @@ function pillLabel(entry: DayEntry): string {
 
 .cell:nth-child(7n) { border-right: 0; }
 .cell:hover { background: var(--at-bg-canvas-soft); }
-.cell.is-out { background: color-mix(in srgb, var(--at-bg-surface-strong) 55%, transparent); }
-.cell.is-out .cell__num { color: var(--at-color-muted-soft); }
+.cell.is-out {
+  background: var(--at-bg-outside);
+}
 .cell.is-selected { background: var(--at-bg-surface-strong); }
 
 .cell__num {
   display: inline-grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  font-size: var(--at-text-micro);
-  color: var(--at-color-muted);
+  min-width: 26px;
+  height: 26px;
+  padding: 0 4px;
+  border-radius: var(--at-radius-pill);
+  font-size: var(--at-text-body);
+  font-weight: 500;
+  line-height: 1;
+  color: var(--at-color-ink);
   font-variant-numeric: tabular-nums;
+}
+
+.cell.is-out .cell__num {
+  font-size: var(--at-text-caption);
+  font-weight: 400;
+  color: var(--at-color-muted);
 }
 
 .cell.is-today .cell__num {
   background: var(--at-color-primary);
   color: var(--at-text-on-primary);
+  font-weight: 600;
 }
 
 .cell__top {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   min-width: 0;
 }
 
@@ -786,23 +798,27 @@ function pillLabel(entry: DayEntry): string {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 10px;
-  color: var(--at-color-muted-soft);
+  font-size: var(--at-text-micro);
+  color: var(--at-text-secondary);
+}
+
+.cell.is-out .cell__lunar {
+  color: var(--at-color-muted);
 }
 
 .cell__lunar.is-holiday {
-  color: var(--at-color-primary);
+  color: var(--at-color-warm);
 }
 
 .cell__badge {
   flex: none;
   display: inline-grid;
   place-items: center;
-  min-width: 14px;
-  height: 14px;
-  padding: 0 3px;
-  border-radius: 4px;
-  font-size: 9px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 5px;
+  font-size: 10px;
   line-height: 1;
   background: var(--at-bg-canvas-soft);
   color: var(--at-color-muted);

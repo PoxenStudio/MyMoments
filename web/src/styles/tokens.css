@@ -16,6 +16,8 @@
   /* 顶栏 / 侧栏底色：随色调在页面色与卡片色之间过渡 */
   --at-bg-chrome: color-mix(in srgb, var(--at-bg-page) 45%, var(--at-bg-surface));
   --at-bg-surface-strong: #f0efed;
+  /* 非当前周期 / 非本月的次级表面：中性压暗，不随色调偏色 */
+  --at-bg-outside: rgba(12, 10, 9, 0.05);
   --at-bg-dark: #0c0a09;
   --at-bg-dark-elevated: #1c1917;
   --at-text-primary: #0c0a09;
@@ -335,6 +337,7 @@ html[data-scheme='dark'] {
   --at-bg-canvas-soft: color-mix(in srgb, var(--at-tone-page-dark, #14110f) 90%, #ffffff 10%);
   --at-bg-surface: var(--at-card-surface-dark, var(--at-tone-surface-dark, #211d1a));
   --at-bg-surface-strong: color-mix(in srgb, var(--at-card-surface-dark, var(--at-tone-surface-dark, #211d1a)) 90%, #ffffff 10%);
+  --at-bg-outside: rgba(0, 0, 0, 0.3);
   --at-bg-dark: #0c0a09;
   --at-bg-dark-elevated: #1c1917;
 

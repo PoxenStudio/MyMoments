@@ -22,7 +22,7 @@ const route = useRoute();
 
 const today = todayISO();
 const anchor = ref(String(route.query.date ?? today));
-const direction = ref<'past' | 'future'>('past');
+const direction = ref<'past' | 'future'>('future');
 const member = ref('0');
 const search = ref('');
 const allTypes = ['task', 'event', 'birthday', 'message', 'note'] as const;

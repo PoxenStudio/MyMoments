@@ -44,6 +44,7 @@ func callBearer(t *testing.T, client *http.Client, method, url, token string, bo
 
 func TestAPITokenScopes(t *testing.T) {
 	base, admin, _ := setupHousehold(t)
+	tokenClient := &http.Client{}
 	status, body := call(t, admin, http.MethodPost, base+"/tasks", map[string]any{"title": "交水电费"})
 	if status != http.StatusCreated {
 		t.Fatalf("create task: %d %v", status, body)
@@ -68,23 +69,23 @@ func TestAPITokenScopes(t *testing.T) {
 		t.Fatalf("unexpected scopes: %v", scopes)
 	}
 
-	status, body = callBearer(t, admin, http.MethodGet, base+"/tasks", raw, nil)
+	status, body = callBearer(t, tokenClient, http.MethodGet, base+"/tasks", raw, nil)
 	if status != http.StatusOK {
 		t.Fatalf("token read tasks: %d %v", status, body)
 	}
-	status, _ = callBearer(t, admin, http.MethodPost, base+"/tasks", raw, map[string]any{"title": "无权创建"})
+	status, _ = callBearer(t, tokenClient, http.MethodPost, base+"/tasks", raw, map[string]any{"title": "无权创建"})
 	if status != http.StatusForbidden {
 		t.Fatalf("token write tasks should be forbidden, got %d", status)
 	}
-	status, _ = callBearer(t, admin, http.MethodGet, base+"/household", raw, nil)
+	status, _ = callBearer(t, tokenClient, http.MethodGet, base+"/household", raw, nil)
 	if status != http.StatusOK {
 		t.Fatalf("token read family: %d", status)
 	}
-	status, _ = callBearer(t, admin, http.MethodPatch, base+"/household", raw, map[string]any{"name": "改名"})
+	status, _ = callBearer(t, tokenClient, http.MethodPatch, base+"/household", raw, map[string]any{"name": "改名"})
 	if status != http.StatusForbidden {
 		t.Fatalf("token write family should be forbidden, got %d", status)
 	}
-	status, _ = callBearer(t, admin, http.MethodGet, base+"/tokens", raw, nil)
+	status, _ = callBearer(t, tokenClient, http.MethodGet, base+"/tokens", raw, nil)
 	if status != http.StatusForbidden {
 		t.Fatalf("token should not manage tokens, got %d", status)
 	}
@@ -98,7 +99,7 @@ func TestAPITokenScopes(t *testing.T) {
 		t.Fatalf("create delete token: %d %v", status, body)
 	}
 	deleteRaw := body["token"].(string)
-	status, _ = callBearer(t, admin, http.MethodDelete, base+"/tasks/"+formatID(int64(taskID)), deleteRaw, nil)
+	status, _ = callBearer(t, tokenClient, http.MethodDelete, base+"/tasks/"+formatID(int64(taskID)), deleteRaw, nil)
 	if status != http.StatusNoContent {
 		t.Fatalf("token delete task: %d", status)
 	}
@@ -122,7 +123,7 @@ func TestAPITokenScopes(t *testing.T) {
 	if status != http.StatusNoContent {
 		t.Fatalf("revoke token: %d", status)
 	}
-	status, _ = callBearer(t, admin, http.MethodGet, base+"/tasks", raw, nil)
+	status, _ = callBearer(t, tokenClient, http.MethodGet, base+"/tasks", raw, nil)
 	if status != http.StatusUnauthorized {
 		t.Fatalf("revoked token should be rejected, got %d", status)
 	}
@@ -163,5 +164,44 @@ func TestSearch(t *testing.T) {
 	status, body = call(t, admin, http.MethodGet, base+"/search?q=", nil)
 	if status != http.StatusOK || len(body["items"].([]any)) != 0 {
 		t.Fatalf("empty search: %d %v", status, body)
+	}
+}
+
+func TestAPITokenSearchScopes(t *testing.T) {
+	base, admin, _ := setupHousehold(t)
+	call(t, admin, http.MethodPost, base+"/tasks", map[string]any{"title": "买生日蛋糕"})
+	call(t, admin, http.MethodPost, base+"/messages", map[string]any{"body": "记得订生日蛋糕"})
+
+	createToken := func(scopes map[string][]string) string {
+		t.Helper()
+		status, body := call(t, admin, http.MethodPost, base+"/tokens", map[string]any{"name": "AI 搜索", "scopes": scopes})
+		if status != http.StatusCreated {
+			t.Fatalf("create token: %d %v", status, body)
+		}
+		return body["token"].(string)
+	}
+
+	// 没有任何可搜索模块的读权限时拒绝搜索。
+	tokenClient := &http.Client{}
+	familyOnly := createToken(map[string][]string{"family": {"read"}})
+	status, _ := callBearer(t, tokenClient, http.MethodGet, base+"/search?q=%E8%9B%8B%E7%B3%95", familyOnly, nil)
+	if status != http.StatusForbidden {
+		t.Fatalf("search without content scope should be forbidden, got %d", status)
+	}
+
+	// 只授予 tasks 读权限时，只返回待办结果。
+	tasksOnly := createToken(map[string][]string{"tasks": {"read"}})
+	status, body := callBearer(t, tokenClient, http.MethodGet, base+"/search?q=%E8%9B%8B%E7%B3%95", tasksOnly, nil)
+	if status != http.StatusOK {
+		t.Fatalf("token search: %d %v", status, body)
+	}
+	items := body["items"].([]any)
+	if len(items) == 0 {
+		t.Fatalf("expected task search results, got %v", body)
+	}
+	for _, raw := range items {
+		if raw.(map[string]any)["type"] != "task" {
+			t.Fatalf("unexpected result outside tasks scope: %v", raw)
+		}
 	}
 }

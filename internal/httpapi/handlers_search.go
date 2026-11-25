@@ -29,82 +29,101 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 	}
 	items := make([]searchResult, 0, 25)
 
-	tasks, err := s.store.ListTasks(r.Context(), store.TaskFilter{ViewerID: u.ID, Scope: "all", Query: q, Limit: 5})
-	if err != nil {
-		writeError(w, serverError(err))
-		return
-	}
-	for _, t := range tasks {
-		items = append(items, searchResult{Type: "task", ID: t.ID, Title: t.Title, Summary: t.Description, Date: t.DueDate})
+	if canSearchModule(r, "tasks") {
+		tasks, err := s.store.ListTasks(r.Context(), store.TaskFilter{ViewerID: u.ID, Scope: "all", Query: q, Limit: 5})
+		if err != nil {
+			writeError(w, serverError(err))
+			return
+		}
+		for _, t := range tasks {
+			items = append(items, searchResult{Type: "task", ID: t.ID, Title: t.Title, Summary: t.Description, Date: t.DueDate})
+		}
 	}
 
-	today := s.today()
-	events, err := s.store.ListEvents(r.Context(), u.ID, datePlusDays(today, -365), datePlusDays(today, 365), false)
-	if err != nil {
-		writeError(w, serverError(err))
-		return
-	}
-	lower := strings.ToLower(q)
-	matched := 0
-	for _, ev := range events {
-		if matched >= 5 {
-			break
+	if canSearchModule(r, "calendar") {
+		today := s.today()
+		events, err := s.store.ListEvents(r.Context(), u.ID, datePlusDays(today, -365), datePlusDays(today, 365), false)
+		if err != nil {
+			writeError(w, serverError(err))
+			return
 		}
-		haystack := strings.ToLower(ev.Title + " " + strPtr(ev.Description) + " " + strPtr(ev.Location))
-		if !strings.Contains(haystack, lower) {
-			continue
+		lower := strings.ToLower(q)
+		matched := 0
+		for _, ev := range events {
+			if matched >= 5 {
+				break
+			}
+			haystack := strings.ToLower(ev.Title + " " + strPtr(ev.Description) + " " + strPtr(ev.Location))
+			if !strings.Contains(haystack, lower) {
+				continue
+			}
+			date := ev.StartLocal
+			if len(date) > 10 {
+				date = date[:10]
+			}
+			summary := ev.Location
+			if summary == nil {
+				summary = ev.Description
+			}
+			items = append(items, searchResult{Type: "event", ID: ev.ID, Title: ev.Title, Summary: summary, Date: &date})
+			matched++
 		}
-		date := ev.StartLocal
-		if len(date) > 10 {
-			date = date[:10]
-		}
-		summary := ev.Location
-		if summary == nil {
-			summary = ev.Description
-		}
-		items = append(items, searchResult{Type: "event", ID: ev.ID, Title: ev.Title, Summary: summary, Date: &date})
-		matched++
 	}
 
-	contacts, err := s.store.ListContacts(r.Context(), store.ContactFilter{ViewerID: u.ID, Query: q})
-	if err != nil {
-		writeError(w, serverError(err))
-		return
-	}
-	for i, c := range contacts {
-		if i >= 5 {
-			break
+	if canSearchModule(r, "contacts") {
+		contacts, err := s.store.ListContacts(r.Context(), store.ContactFilter{ViewerID: u.ID, Query: q})
+		if err != nil {
+			writeError(w, serverError(err))
+			return
 		}
-		items = append(items, searchResult{Type: "contact", ID: c.ID, Title: c.Name, Summary: c.Organization})
+		for i, c := range contacts {
+			if i >= 5 {
+				break
+			}
+			items = append(items, searchResult{Type: "contact", ID: c.ID, Title: c.Name, Summary: c.Organization})
+		}
 	}
 
-	messages, err := s.store.ListMessages(r.Context(), store.MessageFilter{ViewerID: u.ID, Query: q, Limit: 5})
-	if err != nil {
-		writeError(w, serverError(err))
-		return
-	}
-	for _, m := range messages {
-		title := truncate(strings.TrimSpace(m.Body), 80)
-		summary := m.AuthorName
-		date := m.OccurrenceDate
-		items = append(items, searchResult{Type: "message", ID: m.ID, Title: title, Summary: &summary, Date: date})
+	if canSearchModule(r, "messages") {
+		messages, err := s.store.ListMessages(r.Context(), store.MessageFilter{ViewerID: u.ID, Query: q, Limit: 5})
+		if err != nil {
+			writeError(w, serverError(err))
+			return
+		}
+		for _, m := range messages {
+			title := truncate(strings.TrimSpace(m.Body), 80)
+			summary := m.AuthorName
+			date := m.OccurrenceDate
+			items = append(items, searchResult{Type: "message", ID: m.ID, Title: title, Summary: &summary, Date: date})
+		}
 	}
 
-	notes, err := s.store.ListNotes(r.Context(), store.NoteFilter{ViewerID: u.ID, Query: q, Limit: 5})
-	if err != nil {
-		writeError(w, serverError(err))
-		return
-	}
-	for i := range notes {
-		note := notes[i]
-		title := "无标题便签"
-		if note.Title != nil && strings.TrimSpace(*note.Title) != "" {
-			title = *note.Title
+	if canSearchModule(r, "notes") {
+		notes, err := s.store.ListNotes(r.Context(), store.NoteFilter{ViewerID: u.ID, Query: q, Limit: 5})
+		if err != nil {
+			writeError(w, serverError(err))
+			return
 		}
-		items = append(items, searchResult{Type: "note", ID: note.ID, Title: title, Summary: note.Body})
+		for i := range notes {
+			note := notes[i]
+			title := "无标题便签"
+			if note.Title != nil && strings.TrimSpace(*note.Title) != "" {
+				title = *note.Title
+			}
+			items = append(items, searchResult{Type: "note", ID: note.ID, Title: title, Summary: note.Body})
+		}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{"items": items})
+}
+
+// canSearchModule 判断当前请求是否可搜索指定模块；Cookie 会话默认可搜索全部模块。
+func canSearchModule(r *http.Request, module string) bool {
+	token, viaToken := currentToken(r)
+	if !viaToken {
+		return true
+	}
+	return tokenAllows(token, module, "read")
 }
 
 func strPtr(v *string) string {

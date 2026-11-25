@@ -69,6 +69,9 @@ var tokenReadOnlyModules = map[string]bool{
 	"family": true, "timeline": true, "reminders": true, "weather": true,
 }
 
+// searchTokenModules 是跨模块搜索涉及的内容模块。
+var searchTokenModules = []string{"tasks", "calendar", "contacts", "messages", "notes"}
+
 // tokenAccessRule 把请求映射到 Token scope 的模块与操作。
 func tokenAccessRule(r *http.Request) (string, string, bool) {
 	path := strings.TrimPrefix(r.URL.Path, "/api/v1/")
@@ -98,6 +101,8 @@ func tokenAccessRule(r *http.Request) (string, string, bool) {
 		module = "reminders"
 	case "weather":
 		module = "weather"
+	case "search":
+		module = "search"
 	default:
 		return "", "", false
 	}
@@ -119,6 +124,9 @@ func tokenAllows(token *model.APIToken, module, action string) bool {
 	if token == nil || module == "" {
 		return false
 	}
+	if module == "search" {
+		return action == "read" && tokenAllowsSearch(token)
+	}
 	if tokenReadOnlyModules[module] && action != "read" {
 		return false
 	}
@@ -128,6 +136,16 @@ func tokenAllows(token *model.APIToken, module, action string) bool {
 	}
 	for _, allowed := range scopes[module] {
 		if allowed == action {
+			return true
+		}
+	}
+	return false
+}
+
+// tokenAllowsSearch 在 Token 至少拥有一个可搜索模块的读权限时放行搜索。
+func tokenAllowsSearch(token *model.APIToken) bool {
+	for _, module := range searchTokenModules {
+		if tokenAllows(token, module, "read") {
 			return true
 		}
 	}

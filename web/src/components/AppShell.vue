@@ -429,7 +429,7 @@ async function toggleScheme(): Promise<void> {
   z-index: var(--at-z-dialog);
   padding: var(--at-space-2) var(--at-space-4);
   background: var(--at-bg-dark);
-  color: #fff;
+  color: var(--at-text-on-dark);
   border-radius: var(--at-radius-md);
   transition: top var(--at-duration-fast) var(--at-ease);
 }
@@ -656,7 +656,7 @@ async function toggleScheme(): Promise<void> {
   top: 0;
   z-index: var(--at-z-nav);
   border-bottom: 1px solid var(--at-color-hairline);
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--at-bg-chrome);
   background: color-mix(in srgb, var(--at-bg-chrome) 90%, transparent);
   backdrop-filter: saturate(1.1) blur(10px);
 }
@@ -713,7 +713,7 @@ async function toggleScheme(): Promise<void> {
   padding: 0 4px;
   border-radius: var(--at-radius-pill);
   background: var(--at-color-brand);
-  color: #fff;
+  color: var(--at-text-on-primary);
   font-size: 10px;
   font-weight: 600;
   line-height: 16px;

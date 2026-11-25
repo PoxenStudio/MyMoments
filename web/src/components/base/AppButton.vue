@@ -104,11 +104,11 @@ const classes = computed(() => [
 
 .at-btn--danger {
   background: var(--at-color-danger);
-  color: #fff;
+  color: var(--at-text-on-primary);
 }
 
 .at-btn--danger:hover:not(:disabled) {
-  background: #b91c1c;
+  background: var(--at-color-danger-active);
 }
 
 .at-btn--sm {

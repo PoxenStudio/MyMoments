@@ -26,6 +26,7 @@
   --at-border: #e7e5e4;
   --at-color-success: #16a34a;
   --at-color-danger: #dc2626;
+  --at-color-danger-active: #b91c1c;
   --at-color-warning: #8a5a00;
   --at-color-danger-soft: #fef2f2;
   --at-color-success-soft: #f0fdf4;
@@ -83,6 +84,10 @@
   --at-shadow-card-hover: 0 2px 4px rgba(12, 10, 9, 0.06), 0 8px 18px -6px rgba(12, 10, 9, 0.12), 0 22px 44px -20px rgba(12, 10, 9, 0.26);
   --at-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.04);
   --at-shadow-dialog: 0 12px 32px rgba(0, 0, 0, 0.12);
+
+  /* 表面内高光与骨架屏高光 */
+  --at-card-highlight: rgba(255, 255, 255, 0.72);
+  --at-shimmer-highlight: #f7f6f5;
 
   /* 字体 */
   --at-font-display: 'EB Garamond', 'Songti SC', 'STSong', 'Noto Serif SC', 'Times New Roman', serif;
@@ -350,6 +355,7 @@ html[data-scheme='dark'] {
 
   --at-color-success: #34d399;
   --at-color-danger: #f87171;
+  --at-color-danger-active: #fca5a5;
   --at-color-warning: #fbbf24;
   --at-color-danger-soft: rgba(248, 113, 113, 0.14);
   --at-color-success-soft: rgba(52, 211, 153, 0.14);
@@ -357,6 +363,9 @@ html[data-scheme='dark'] {
   --at-color-warm: #e8b4a6;
   --at-color-warm-soft: rgba(232, 180, 166, 0.16);
   --at-color-scrim: rgba(0, 0, 0, 0.62);
+
+  --at-card-highlight: rgba(255, 255, 255, 0.06);
+  --at-shimmer-highlight: #332e29;
 
   --at-color-brand: #7fb7cb;
   --at-color-brand-soft: rgba(127, 183, 203, 0.16);
@@ -369,15 +378,6 @@ html[data-scheme='dark'] {
   --at-card-lavender: #241f2b;
   --at-card-sky: #1c252b;
   --at-card-rose: #291f22;
-}
-
-html[data-scheme='dark'] .at-card {
-  box-shadow: var(--at-shadow-card), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-
-html[data-scheme='dark'] .at-card--hover:hover,
-html[data-scheme='dark'] .at-card--hover:focus-visible {
-  box-shadow: var(--at-shadow-card-hover), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 @media (max-width: 639px) {

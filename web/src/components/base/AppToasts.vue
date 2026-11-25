@@ -91,7 +91,7 @@ const toasts = useToastStore();
 
 .at-toast__action {
   flex: none;
-  color: #fff;
+  color: var(--at-text-on-dark);
   font-weight: 600;
   font-size: 13px;
   text-decoration: underline;

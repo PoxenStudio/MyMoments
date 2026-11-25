@@ -254,7 +254,7 @@ async function submit(): Promise<void> {
   align-items: flex-start;
   gap: 6px;
   padding: 10px var(--at-space-3);
-  border: 1px solid #fecaca;
+  border: 1px solid color-mix(in srgb, var(--at-color-danger) 32%, transparent);
   border-radius: var(--at-radius-md);
   background: var(--at-color-danger-soft);
   color: var(--at-color-danger);

@@ -334,7 +334,7 @@ function setCornerOpacity(value: number): void {
   height: 18px;
   flex: none;
   border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--at-color-hairline-strong);
 }
 
 .tone-swatch__label {

@@ -125,7 +125,7 @@ const birthdayEntries = computed<DayEntry[]>(() => {
         title: `${birthday.name}的生日`,
         time: '全天',
         allDay: true,
-        color: '#a16207',
+        color: 'var(--at-color-warning)',
         birthday,
       });
     }
@@ -151,7 +151,7 @@ const entriesByDate = computed(() => {
         title: event.title,
         time,
         allDay: event.allDay,
-        color: event.color || '#292524',
+        color: event.color || 'var(--at-color-ink)',
         event,
       });
     }
@@ -166,7 +166,7 @@ const entriesByDate = computed(() => {
         title: task.title,
         time: task.dueTime || '待办',
         allDay: !task.dueTime,
-        color: task.color || '#0f766e',
+        color: task.color || 'var(--at-color-brand)',
         task,
       });
     }
@@ -703,9 +703,9 @@ function pillLabel(entry: DayEntry): string {
   background: currentColor;
 }
 
-.layer__dot.is-event { color: #292524; }
-.layer__dot.is-task { color: #0f766e; }
-.layer__dot.is-birthday { color: #a16207; }
+.layer__dot.is-event { color: var(--at-color-ink); }
+.layer__dot.is-task { color: var(--at-color-brand); }
+.layer__dot.is-birthday { color: var(--at-color-warning); }
 
 .layer__count {
   font-size: 11px;
@@ -753,7 +753,7 @@ function pillLabel(entry: DayEntry): string {
 
 .cell:nth-child(7n) { border-right: 0; }
 .cell:hover { background: var(--at-bg-canvas-soft); }
-.cell.is-out { background: rgba(250, 250, 250, 0.6); }
+.cell.is-out { background: color-mix(in srgb, var(--at-bg-surface-strong) 55%, transparent); }
 .cell.is-out .cell__num { color: var(--at-color-muted-soft); }
 .cell.is-selected { background: var(--at-bg-surface-strong); }
 
@@ -809,8 +809,8 @@ function pillLabel(entry: DayEntry): string {
 }
 
 .cell__badge.is-off {
-  background: rgba(185, 28, 28, 0.1);
-  color: #b91c1c;
+  background: var(--at-color-danger-soft);
+  color: var(--at-color-danger);
 }
 
 .day__meta,

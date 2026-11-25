@@ -610,7 +610,7 @@ async function confirmDelete(): Promise<void> {
 
 .post.is-highlight {
   border-color: var(--at-color-ink);
-  box-shadow: var(--at-shadow-card-hover), inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  box-shadow: var(--at-shadow-card-hover), inset 0 1px 0 var(--at-card-highlight);
 }
 
 .post__head {

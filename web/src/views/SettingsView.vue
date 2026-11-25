@@ -295,7 +295,7 @@ onMounted(syncFromState);
   height: 20px;
   border-radius: 50%;
   background: var(--at-color-ink);
-  color: #fff;
+  color: var(--at-text-on-primary);
   border: 2px solid var(--at-bg-surface);
 }
 

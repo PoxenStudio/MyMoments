@@ -219,7 +219,7 @@ canvas {
   background: var(--at-bg-surface);
   border: 1px solid var(--at-color-hairline);
   border-radius: var(--at-radius-card, var(--at-radius-lg));
-  box-shadow: var(--at-shadow-card), inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  box-shadow: var(--at-shadow-card), inset 0 1px 0 var(--at-card-highlight);
 }
 
 .at-card::after {
@@ -249,7 +249,7 @@ canvas {
 .at-card--hover:focus-visible {
   transform: translateY(-2px);
   border-color: var(--at-color-hairline-strong);
-  box-shadow: var(--at-shadow-card-hover), inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  box-shadow: var(--at-shadow-card-hover), inset 0 1px 0 var(--at-card-highlight);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -25,7 +25,7 @@ withDefaults(defineProps<{
 .at-loading__line {
   height: 12px;
   border-radius: var(--at-radius-pill);
-  background: linear-gradient(90deg, var(--at-bg-surface-strong) 25%, #f7f6f5 37%, var(--at-bg-surface-strong) 63%);
+  background: linear-gradient(90deg, var(--at-bg-surface-strong) 25%, var(--at-shimmer-highlight) 37%, var(--at-bg-surface-strong) 63%);
   background-size: 400% 100%;
   animation: at-shimmer 1.4s ease infinite;
 }

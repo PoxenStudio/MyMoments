@@ -646,7 +646,7 @@ async function confirmDelete(): Promise<void> {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  border: 1px solid rgba(12, 10, 9, 0.12);
+  border: 1px solid var(--at-color-hairline-strong);
   transition: transform var(--at-duration-fast) var(--at-ease), box-shadow var(--at-duration-fast) var(--at-ease);
 }
 

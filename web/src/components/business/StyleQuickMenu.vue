@@ -209,7 +209,7 @@ async function restore(): Promise<void> {
   position: relative;
   aspect-ratio: 1;
   border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--at-color-hairline-strong);
   cursor: pointer;
 }
 

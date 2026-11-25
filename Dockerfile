@@ -1,11 +1,11 @@
-FROM node:22-alpine AS web
+FROM docker.1ms.run/node:22-alpine AS web
 WORKDIR /app/web
 COPY web/package*.json ./
 RUN npm ci
 COPY web/ ./
 RUN npm run build
 
-FROM golang:1.23-alpine AS build
+FROM docker.1ms.run/golang:1.23-alpine AS build
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
@@ -13,7 +13,7 @@ COPY . .
 COPY --from=web /app/web/dist ./internal/webui/static
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/server ./cmd/server
 
-FROM alpine:3.20
+FROM docker.1ms.run/alpine:3.20
 RUN addgroup -S app && adduser -S -G app app \
     && apk add --no-cache ca-certificates tzdata wget \
     && mkdir -p /data && chown app:app /data

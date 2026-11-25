@@ -1,10 +1,17 @@
-.PHONY: help dev dev-up dev-down dev-status dev-logs api api-up api-down api-restart api-status api-logs web web-build build test fmt lint check docker clean
+.PHONY: help dev dev-up dev-down dev-status dev-logs api api-up api-down api-restart api-status api-logs web web-build build test fmt lint check docker docker-build setup-multiarch build-multiarch-local clean
 
 GO ?= go
 NPM ?= npm
 
+IMAGE_NAME := mymoments
+GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
+# Docker tag 不允许出现 "/"，分支名里的斜杠（如 feature/xxx）换成 "-"
+IMAGE_TAG := $(subst /,-,$(GIT_BRANCH))
+IMAGE := $(IMAGE_NAME):$(IMAGE_TAG)
+BUILDER := shukubuilder
+
 help: ## 列出可用目标
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-24s\033[0m %s\n", $$1, $$2}'
 
 dev: dev-up
 
@@ -64,6 +71,20 @@ check: fmt lint test
 
 docker:
 	docker build -t mymoments:latest .
+
+docker-build: ## 构建 Docker 镜像（按当前分支打 tag）
+	docker build -t $(IMAGE) .
+
+# 初始化多架构构建环境（本机/打包机只需运行一次），不要使用 snap 安装的 docker
+setup-multiarch: ## 初始化 docker buildx 多架构构建环境
+	docker run --privileged --rm tonistiigi/binfmt --install all
+	docker buildx create --use --name $(BUILDER) || docker buildx use $(BUILDER)
+	docker buildx inspect $(BUILDER) --bootstrap
+
+build-multiarch-local: ## 构建 amd64/arm64 多架构镜像到本地缓存（不推送）
+	docker buildx build --pull --platform=linux/amd64,linux/arm64 \
+		--builder $(BUILDER) \
+		-t $(IMAGE) --load .
 
 clean:
 	rm -rf build web/dist internal/webui/static

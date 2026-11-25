@@ -228,7 +228,7 @@ function onPointerUp(event: PointerEvent): void {
       ? { ...item, x: preview.x, y: preview.y, w: preview.w, h: preview.h }
       : { ...item },
   );
-  void persist(resolveOverlaps(next, state.id));
+  void persist(next, state.id);
 }
 
 function removeDragListeners(): void {
@@ -241,27 +241,48 @@ function overlaps(a: DashboardLayoutItem, b: DashboardLayoutItem): boolean {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 }
 
-/** 保持当前拖拽卡片位置，其余冲突卡片依次下移。 */
-function resolveOverlaps(items: DashboardLayoutItem[], activeId: string): DashboardLayoutItem[] {
+function byPosition(a: DashboardLayoutItem, b: DashboardLayoutItem): number {
+  return a.y - b.y || a.x - b.x;
+}
+
+/**
+ * 可见卡片保留用户摆放的位置（拖拽卡片优先）；
+ * 隐藏卡片统一紧贴在可见区域之后，避免占住首屏位置。
+ */
+function reflowLayout(items: DashboardLayoutItem[], activeId?: string): DashboardLayoutItem[] {
   const result = items.map((item) => ({ ...item }));
-  const active = result.find((item) => item.id === activeId) ?? result[0];
-  if (!active) return result;
-  const placed: DashboardLayoutItem[] = [active];
-  const others = result
-    .filter((item) => item.id !== active.id)
-    .sort((a, b) => a.y - b.y || a.x - b.x);
-  for (const item of others) {
-    while (placed.some((entry) => overlaps(item, entry))) {
+  const visible = result.filter((item) => item.visible);
+  const hidden = result.filter((item) => !item.visible).sort(byPosition);
+  const active = activeId ? visible.find((item) => item.id === activeId) : undefined;
+  const order = active
+    ? [active, ...visible.filter((item) => item.id !== active.id).sort(byPosition)]
+    : [...visible].sort(byPosition);
+
+  const placedVisible: DashboardLayoutItem[] = [];
+  for (const item of order) {
+    item.y = Math.max(0, item.y);
+    while (placedVisible.some((entry) => overlaps(item, entry))) item.y += 1;
+    placedVisible.push(item);
+  }
+
+  const visibleBottom = placedVisible.reduce((max, item) => Math.max(max, item.y + item.h), 0);
+  const placedHidden: DashboardLayoutItem[] = [];
+  for (const item of hidden) {
+    item.y = visibleBottom;
+    while (
+      placedVisible.some((entry) => overlaps(item, entry)) ||
+      placedHidden.some((entry) => overlaps(item, entry))
+    ) {
       item.y += 1;
     }
-    placed.push(item);
+    placedHidden.push(item);
   }
   return result;
 }
 
 /** 串行保存，避免连续拖拽时请求乱序覆盖。 */
-function persist(next: DashboardLayoutItem[]): Promise<void> {
-  const snapshot = next.map((item) => ({ ...item }));
+function persist(next: DashboardLayoutItem[], activeId?: string): Promise<void> {
+  const snapshot = reflowLayout(next, activeId);
   dashboard.layout = snapshot.map((item) => ({ ...item }));
   saveQueue = saveQueue.then(async () => {
     try {
@@ -743,6 +764,35 @@ onBeforeUnmount(() => {
   min-height: 0;
   overflow: auto;
   overscroll-behavior: contain;
+  /* 预留滚动条槽位但默认透明，悬停时再显示滑块，避免出现时内容跳动 */
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.dash :deep(.at-panel__body)::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+  background: transparent;
+}
+
+.dash :deep(.at-panel__body)::-webkit-scrollbar-thumb {
+  background: transparent;
+  border: 0;
+  border-radius: var(--at-radius-pill);
+}
+
+.dash :deep(.at-panel__body)::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dash:hover :deep(.at-panel__body),
+.dash:focus-within :deep(.at-panel__body) {
+  scrollbar-color: var(--at-color-hairline-strong) transparent;
+}
+
+.dash:hover :deep(.at-panel__body)::-webkit-scrollbar-thumb,
+.dash:focus-within :deep(.at-panel__body)::-webkit-scrollbar-thumb {
+  background: var(--at-color-hairline-strong);
 }
 
 .dash.is-editing :deep(.at-panel__body) {

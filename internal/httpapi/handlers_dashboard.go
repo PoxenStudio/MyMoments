@@ -172,26 +172,76 @@ func layoutItemsOverlap(a, b dashboardLayoutItem) bool {
 	return a.X < b.X+b.W && a.X+a.W > b.X && a.Y < b.Y+b.H && a.Y+a.H > b.Y
 }
 
-// resolveLayoutOverlaps 保持数组顺序优先级，将冲突卡片依次下移，避免任意两卡重叠。
-func resolveLayoutOverlaps(items []dashboardLayoutItem) {
-	placed := make([]dashboardLayoutItem, 0, len(items))
-	for i := range items {
-		item := items[i]
-		for {
-			conflict := false
-			for _, other := range placed {
-				if layoutItemsOverlap(item, other) {
-					conflict = true
-					break
-				}
-			}
-			if !conflict {
-				break
-			}
+func overlapsAny(item dashboardLayoutItem, list []dashboardLayoutItem) bool {
+	for _, other := range list {
+		if layoutItemsOverlap(item, other) {
+			return true
+		}
+	}
+	return false
+}
+
+func sortLayoutByPosition(items []dashboardLayoutItem) {
+	sort.SliceStable(items, func(i, j int) bool {
+		if items[i].Y == items[j].Y {
+			return items[i].X < items[j].X
+		}
+		return items[i].Y < items[j].Y
+	})
+}
+
+// reflowDashboardLayout 保留可见卡片位置并解决重叠，把隐藏卡片统一排到可见区域之后。
+func reflowDashboardLayout(items []dashboardLayoutItem) {
+	visible := make([]dashboardLayoutItem, 0, len(items))
+	hidden := make([]dashboardLayoutItem, 0, len(items))
+	for _, item := range items {
+		if item.Visible {
+			visible = append(visible, item)
+		} else {
+			hidden = append(hidden, item)
+		}
+	}
+	sortLayoutByPosition(visible)
+	sortLayoutByPosition(hidden)
+
+	placedVisible := make([]dashboardLayoutItem, 0, len(visible))
+	for _, item := range visible {
+		if item.Y < 0 {
+			item.Y = 0
+		}
+		for overlapsAny(item, placedVisible) {
 			item.Y++
 		}
-		items[i] = item
-		placed = append(placed, item)
+		placedVisible = append(placedVisible, item)
+	}
+
+	visibleBottom := 0
+	for _, item := range placedVisible {
+		if end := item.Y + item.H; end > visibleBottom {
+			visibleBottom = end
+		}
+	}
+
+	placedHidden := make([]dashboardLayoutItem, 0, len(hidden))
+	for _, item := range hidden {
+		item.Y = visibleBottom
+		for overlapsAny(item, placedVisible) || overlapsAny(item, placedHidden) {
+			item.Y++
+		}
+		placedHidden = append(placedHidden, item)
+	}
+
+	positions := make(map[string]dashboardLayoutItem, len(items))
+	for _, item := range placedVisible {
+		positions[item.ID] = item
+	}
+	for _, item := range placedHidden {
+		positions[item.ID] = item
+	}
+	for i := range items {
+		if item, ok := positions[items[i].ID]; ok {
+			items[i] = item
+		}
 	}
 }
 
@@ -311,7 +361,7 @@ func normalizeLayout(in []dashboardLayoutItem) ([]dashboardLayoutItem, error) {
 	}
 
 	normalizeRects(out)
-	resolveLayoutOverlaps(out)
+	reflowDashboardLayout(out)
 	// 今日概览始终可见。
 	for i := range out {
 		if out[i].ID == "overview" {

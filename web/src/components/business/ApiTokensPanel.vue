@@ -181,7 +181,6 @@ onMounted(() => {
         </p>
         <div class="api__links">
           <a href="/skill.md" download class="api__link">下载 AI Skill<AppIcon name="arrow-right" :size="14" /></a>
-          <a href="/openapi.yaml" target="_blank" rel="noopener" class="api__link">查看 OpenAPI 文档<AppIcon name="external" :size="14" /></a>
         </div>
       </div>
 

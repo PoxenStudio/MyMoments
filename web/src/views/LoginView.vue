@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { ApiError } from '@/api/client';
 import AppButton from '@/components/base/AppButton.vue';
+import AppCheckbox from '@/components/base/AppCheckbox.vue';
 import AppField from '@/components/base/AppField.vue';
 import AppInput from '@/components/base/AppInput.vue';
 import AppIcon from '@/components/base/AppIcon.vue';
 import { useToastStore } from '@/stores/toast';
+
+const LAST_USERNAME_KEY = 'mm.auth.lastUsername';
 
 const auth = useAuthStore();
 const toast = useToastStore();
@@ -16,9 +19,18 @@ const router = useRouter();
 
 const username = ref('');
 const password = ref('');
+const remember = ref(true);
+const lastUsername = ref('');
 const showPassword = ref(false);
 const loading = ref(false);
 const error = ref('');
+
+onMounted(() => {
+  const saved = localStorage.getItem(LAST_USERNAME_KEY);
+  if (!saved) return;
+  lastUsername.value = saved;
+  username.value = saved;
+});
 
 watch([username, password], () => {
   if (error.value) error.value = '';
@@ -31,8 +43,10 @@ async function submit(): Promise<void> {
   }
   loading.value = true;
   error.value = '';
+  const name = username.value.trim();
   try {
-    const user = await auth.login(username.value.trim(), password.value);
+    const user = await auth.login(name, password.value, remember.value);
+    localStorage.setItem(LAST_USERNAME_KEY, name);
     toast.success(`欢迎回来，${user.displayName}`);
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/';
     await router.replace(redirect);
@@ -61,6 +75,7 @@ async function submit(): Promise<void> {
         <p class="at-caption-upper">登录</p>
         <h1 class="auth__title at-display">回到家里</h1>
         <p class="auth__sub">使用家庭管理员为你创建的账号登录。</p>
+        <p v-if="lastUsername" class="auth__last">上次登录账号：{{ lastUsername }}</p>
         <form class="at-stack" @submit.prevent="submit">
           <AppField label="用户名" for-id="login-username">
             <AppInput id="login-username" v-model="username" autocomplete="username" placeholder="例如：xiaoming" />
@@ -87,6 +102,12 @@ async function submit(): Promise<void> {
               </button>
             </div>
           </AppField>
+          <AppCheckbox
+            id="login-remember"
+            v-model="remember"
+            label="记住登录"
+            description="7 天内免登录"
+          />
           <p v-if="error" class="auth__error" role="alert" aria-live="polite">
             <AppIcon name="alert" :size="16" />{{ error }}
           </p>
@@ -194,6 +215,12 @@ async function submit(): Promise<void> {
   font-size: var(--at-text-caption);
   margin-top: calc(var(--at-space-2) * -1);
   margin-bottom: var(--at-space-2);
+}
+
+.auth__last {
+  color: var(--at-color-muted);
+  font-size: 13px;
+  margin-top: calc(var(--at-space-2) * -1);
 }
 
 .auth__password {

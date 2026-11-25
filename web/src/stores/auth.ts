@@ -42,8 +42,8 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function login(username: string, password: string): Promise<User> {
-    const res = await api.post<{ user: User }>('/auth/login', { username, password });
+  async function login(username: string, password: string, remember = false): Promise<User> {
+    const res = await api.post<{ user: User }>('/auth/login', { username, password, remember });
     user.value = res.user;
     needsSetup.value = false;
     loaded.value = true;

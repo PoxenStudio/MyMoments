@@ -135,6 +135,7 @@ var errSetupConflict = &APIError{Status: http.StatusConflict, Code: "setup.confl
 type loginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+	Remember bool   `json:"remember"`
 }
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
@@ -166,7 +167,11 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.limiter.success(key)
-	if err := s.startSession(w, r, user.ID); err != nil {
+	ttl := s.cfg.SessionTTL
+	if req.Remember {
+		ttl = rememberSessionTTL
+	}
+	if err := s.startSessionWith(w, r, user.ID, ttl, req.Remember); err != nil {
 		writeError(w, serverError(err))
 		return
 	}

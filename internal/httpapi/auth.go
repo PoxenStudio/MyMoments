@@ -13,6 +13,9 @@ import (
 
 const sessionCookie = "mymoments_session"
 
+// rememberSessionTTL 是「记住登录」选项对应的免登时长。
+const rememberSessionTTL = 7 * 24 * time.Hour
+
 func currentUser(r *http.Request) (*model.User, bool) {
 	u, ok := r.Context().Value(ctxUser).(*model.User)
 	return u, ok
@@ -227,6 +230,11 @@ func requestIsSecure(r *http.Request) bool {
 }
 
 func (s *Server) startSession(w http.ResponseWriter, r *http.Request, userID int64) error {
+	return s.startSessionWith(w, r, userID, s.cfg.SessionTTL, true)
+}
+
+// startSessionWith 创建服务端会话；persistent 为 false 时只下发浏览器会话级 Cookie。
+func (s *Server) startSessionWith(w http.ResponseWriter, r *http.Request, userID int64, ttl time.Duration, persistent bool) error {
 	raw, err := auth.RandomToken(32)
 	if err != nil {
 		return err
@@ -235,7 +243,7 @@ func (s *Server) startSession(w http.ResponseWriter, r *http.Request, userID int
 	sess := model.Session{
 		ID:         auth.HashToken(raw),
 		UserID:     userID,
-		ExpiresAt:  now.Add(s.cfg.SessionTTL).Unix(),
+		ExpiresAt:  now.Add(ttl).Unix(),
 		CreatedAt:  now.Unix(),
 		LastSeenAt: now.Unix(),
 		UserAgent:  truncate(r.UserAgent(), 255),
@@ -244,7 +252,11 @@ func (s *Server) startSession(w http.ResponseWriter, r *http.Request, userID int
 	if err := s.store.CreateSession(r.Context(), &sess); err != nil {
 		return err
 	}
-	s.setSessionCookie(w, r, raw, s.cfg.SessionTTL)
+	if persistent {
+		s.setSessionCookie(w, r, raw, ttl)
+	} else {
+		s.setSessionCookie(w, r, raw, 0)
+	}
 	return nil
 }
 

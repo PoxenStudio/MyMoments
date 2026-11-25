@@ -71,6 +71,7 @@ paths:
               properties:
                 username: { type: string }
                 password: { type: string }
+                remember: { type: boolean, description: 记住登录，7 天内免登录 }
       responses:
         '200': { description: 登录成功 }
         '401': { $ref: '#/components/responses/Unauthorized' }

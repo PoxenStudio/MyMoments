@@ -68,6 +68,7 @@ volumes:
 ```ini
 MYMOMENTS_ADDR=:8080
 MYMOMENTS_DATA_DIR=/data
+MYMOMENTS_LOG_DIR=                    # 可选，默认 $MYMOMENTS_DATA_DIR/logs
 MYMOMENTS_SESSION_SECRET=            # 必填，启动时若缺失且非初始化则报错
 MYMOMENTS_DEFAULT_TZ=Asia/Shanghai
 MYMOMENTS_WEATHER_PROVIDER=
@@ -85,8 +86,9 @@ MYMOMENTS_WEATHER_API_KEY=
 
 ## 5. 数据持久化与备份
 
-- `/data` 含 `app.db`（SQLite）+ `media/`（媒体）；两者必须同一卷、同一备份点（PRD §18.3）。
-- **备份**：`sqlite3 app.db ".backup backup.db"` + 同步复制 `media/`；或停容器后整体复制卷。
+- `/data` 含 `db/moments.db`（SQLite，WAL 模式）+ `media/`（媒体）+ `logs/`（运行日志）；同一卷、同一备份点（PRD §18.3）。
+- **备份**：`sqlite3 /data/db/moments.db ".backup backup.db"` + 同步复制 `media/`；或停容器后整体复制卷。
+- **日志**：默认写入 `/data/logs/moments.log`，单文件 5MB，保留 7 个文件（当前 + 6 个归档 `moments.N.log`），可用 `MYMOMENTS_LOG_DIR` 覆盖目录。
 - **恢复**：停止容器 → 替换卷内容 → 启动；迁移在启动时自动前向执行。
 - 文档明确说明备份/恢复/迁移步骤（PRD §18.3、§19.6）。
 

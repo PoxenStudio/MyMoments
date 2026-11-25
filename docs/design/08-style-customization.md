@@ -102,13 +102,13 @@ function resolveTheme(personal: ThemeConfig | null, household: ThemeConfig | nul
 
 ## 5. 数据模型与迁移
 
-### 5.1 迁移 `migrations/0005_style_settings.sql`
+### 5.1 迁移 `migrations/0001_init.sql`
 
-仅追加两列（向前迁移，遵循 CodingStandards §9）：
+样式字段已并入初始架构（历史增量迁移已合并）：
 
 ```sql
-ALTER TABLE household_settings ADD COLUMN style TEXT;   -- 家庭默认样式 JSON，可空
-ALTER TABLE user_preferences ADD COLUMN style TEXT;      -- 个人样式 JSON，可空
+-- household_settings 与 user_preferences 中的样式列
+style TEXT   -- 家庭默认样式 / 个人样式 JSON，可空
 ```
 
 无需独立表：样式是低基数、单值、可整体覆盖的 JSON，沿用现有 `default_dashboard` 的存储范式。预设资产（色调/背景图/角图）为前端静态资源，不落库、不建媒体记录。

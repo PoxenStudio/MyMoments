@@ -16,6 +16,7 @@ import (
 type Config struct {
 	Addr               string
 	DataDir            string
+	LogDir             string
 	DefaultTZ          string
 	SessionSecret      []byte
 	SessionTTL         time.Duration
@@ -60,6 +61,10 @@ func Load() (Config, error) {
 	if err := os.MkdirAll(c.DataDir, 0o750); err != nil {
 		return Config{}, fmt.Errorf("create data dir: %w", err)
 	}
+	c.LogDir = env("MYMOMENTS_LOG_DIR", filepath.Join(c.DataDir, "logs"))
+	if err := os.MkdirAll(filepath.Dir(c.DBPath()), 0o750); err != nil {
+		return Config{}, fmt.Errorf("create db dir: %w", err)
+	}
 	secret, err := loadSecret(c.DataDir)
 	if err != nil {
 		return Config{}, err
@@ -68,10 +73,14 @@ func Load() (Config, error) {
 	return c, nil
 }
 
+// DBPath 返回 SQLite 数据库文件路径，位于 data/db/moments.db。
+func (c Config) DBPath() string {
+	return filepath.Join(c.DataDir, "db", "moments.db")
+}
+
 // DSN 返回 SQLite 连接串，开启外键、WAL 与忙等待。
 func (c Config) DSN() string {
-	path := filepath.Join(c.DataDir, "app.db")
-	return "file:" + path + "?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=synchronous(NORMAL)"
+	return "file:" + c.DBPath() + "?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=synchronous(NORMAL)"
 }
 
 // MediaDir 是受控媒体目录。

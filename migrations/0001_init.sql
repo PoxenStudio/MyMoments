@@ -1,15 +1,20 @@
+-- 初始架构：家时光（MyMoments）完整基线。
+-- 项目尚未正式部署，历史增量迁移已合并为此文件。
+
 CREATE TABLE household_settings (
-  id                     INTEGER PRIMARY KEY,
-  name                   TEXT    NOT NULL DEFAULT '我的家',
-  timezone               TEXT    NOT NULL DEFAULT 'Asia/Shanghai',
-  week_start             INTEGER NOT NULL DEFAULT 1,
-  default_weather_city   TEXT,
-  default_weather_lat    REAL,
-  default_weather_lon    REAL,
+  id                      INTEGER PRIMARY KEY,
+  name                    TEXT    NOT NULL DEFAULT '我的家',
+  timezone                TEXT    NOT NULL DEFAULT 'Asia/Shanghai',
+  week_start              INTEGER NOT NULL DEFAULT 1,
+  default_weather_city    TEXT,
+  default_weather_lat     REAL,
+  default_weather_lon     REAL,
   default_reminder_offset INTEGER NOT NULL DEFAULT 0,
-  default_dashboard      TEXT,
-  created_at             INTEGER NOT NULL,
-  updated_at             INTEGER NOT NULL
+  default_dashboard       TEXT,
+  style                   TEXT,
+  date_format             TEXT    NOT NULL DEFAULT '24h',
+  created_at              INTEGER NOT NULL,
+  updated_at              INTEGER NOT NULL
 );
 
 CREATE TABLE users (
@@ -37,6 +42,7 @@ CREATE TABLE user_preferences (
   weather_lon        REAL,
   weather_auto       INTEGER NOT NULL DEFAULT 0,
   notification_prefs TEXT,
+  style              TEXT,
   updated_at         INTEGER NOT NULL
 );
 
@@ -73,26 +79,27 @@ CREATE TABLE task_templates (
 );
 
 CREATE TABLE tasks (
-  id              INTEGER PRIMARY KEY,
-  title           TEXT    NOT NULL,
-  description     TEXT,
-  status          TEXT    NOT NULL DEFAULT 'todo',
-  priority        TEXT    NOT NULL DEFAULT 'normal',
-  start_date      TEXT,
-  due_date        TEXT,
-  due_time        TEXT,
-  template_id     INTEGER REFERENCES task_templates(id) ON DELETE SET NULL,
-  recurrence_rule TEXT,
-  series_id       TEXT,
-  occurrence_date TEXT,
-  color           TEXT,
-  icon            TEXT,
-  visibility      TEXT    NOT NULL DEFAULT 'household',
-  completed_at    INTEGER,
-  archived_at     INTEGER,
-  created_by      INTEGER NOT NULL REFERENCES users(id),
-  created_at      INTEGER NOT NULL,
-  updated_at      INTEGER NOT NULL
+  id               INTEGER PRIMARY KEY,
+  title            TEXT    NOT NULL,
+  description      TEXT,
+  status           TEXT    NOT NULL DEFAULT 'todo',
+  priority         TEXT    NOT NULL DEFAULT 'normal',
+  start_date       TEXT,
+  due_date         TEXT,
+  due_time         TEXT,
+  template_id      INTEGER REFERENCES task_templates(id) ON DELETE SET NULL,
+  recurrence_rule  TEXT,
+  series_id        TEXT,
+  occurrence_date  TEXT,
+  color            TEXT,
+  icon             TEXT,
+  visibility       TEXT    NOT NULL DEFAULT 'household',
+  completed_at     INTEGER,
+  archived_at      INTEGER,
+  reminder_offsets TEXT,
+  created_by       INTEGER NOT NULL REFERENCES users(id),
+  created_at       INTEGER NOT NULL,
+  updated_at       INTEGER NOT NULL
 );
 CREATE INDEX idx_tasks_status ON tasks (status, archived_at);
 CREATE INDEX idx_tasks_due ON tasks (due_date);
@@ -121,7 +128,8 @@ CREATE TABLE task_completions (
   done_by_user_id INTEGER REFERENCES users(id),
   actual_user_id  INTEGER REFERENCES users(id),
   completed_at    INTEGER NOT NULL,
-  undone_at       INTEGER
+  undone_at       INTEGER,
+  next_task_id    INTEGER
 );
 CREATE INDEX idx_task_completions_task ON task_completions (task_id, occurrence_date);
 
@@ -148,23 +156,24 @@ CREATE TABLE task_comments (
 );
 
 CREATE TABLE calendar_events (
-  id              INTEGER PRIMARY KEY,
-  title           TEXT    NOT NULL,
-  description     TEXT,
-  start_local     TEXT    NOT NULL,
-  end_local       TEXT,
-  all_day         INTEGER NOT NULL DEFAULT 0,
-  location        TEXT,
-  color           TEXT,
-  icon            TEXT,
-  recurrence_rule TEXT,
-  series_id       TEXT,
-  visibility      TEXT    NOT NULL DEFAULT 'household',
-  source          TEXT    NOT NULL DEFAULT 'manual',
-  source_ref      TEXT,
-  created_by      INTEGER NOT NULL REFERENCES users(id),
-  created_at      INTEGER NOT NULL,
-  updated_at      INTEGER NOT NULL
+  id               INTEGER PRIMARY KEY,
+  title            TEXT    NOT NULL,
+  description      TEXT,
+  start_local      TEXT    NOT NULL,
+  end_local        TEXT,
+  all_day          INTEGER NOT NULL DEFAULT 0,
+  location         TEXT,
+  color            TEXT,
+  icon             TEXT,
+  recurrence_rule  TEXT,
+  series_id        TEXT,
+  visibility       TEXT    NOT NULL DEFAULT 'household',
+  source           TEXT    NOT NULL DEFAULT 'manual',
+  source_ref       TEXT,
+  reminder_offsets TEXT,
+  created_by       INTEGER NOT NULL REFERENCES users(id),
+  created_at       INTEGER NOT NULL,
+  updated_at       INTEGER NOT NULL
 );
 CREATE INDEX idx_events_start ON calendar_events (start_local);
 CREATE INDEX idx_events_series ON calendar_events (series_id);
@@ -201,27 +210,35 @@ CREATE INDEX idx_reminders_due ON reminders (remind_at, status);
 CREATE INDEX idx_reminders_user ON reminders (user_id, status);
 
 CREATE TABLE contacts (
-  id           INTEGER PRIMARY KEY,
-  name         TEXT    NOT NULL,
-  organization TEXT,
-  title        TEXT,
-  note         TEXT,
-  birthday_on  TEXT,
-  category     TEXT,
-  avatar_key   TEXT,
-  owner_scope  TEXT    NOT NULL DEFAULT 'household',
-  created_by   INTEGER NOT NULL REFERENCES users(id),
-  created_at   INTEGER NOT NULL,
-  updated_at   INTEGER NOT NULL
+  id               INTEGER PRIMARY KEY,
+  name             TEXT    NOT NULL,
+  organization     TEXT,
+  title            TEXT,
+  note             TEXT,
+  birthday_on      TEXT,
+  category         TEXT,
+  avatar_key       TEXT,
+  owner_scope      TEXT    NOT NULL DEFAULT 'household',
+  birthday_month   INTEGER,
+  birthday_day     INTEGER,
+  birth_year       INTEGER,
+  show_in_calendar INTEGER NOT NULL DEFAULT 0,
+  wechat           TEXT,
+  office_phone     TEXT,
+  created_by       INTEGER NOT NULL REFERENCES users(id),
+  created_at       INTEGER NOT NULL,
+  updated_at       INTEGER NOT NULL
 );
 
 CREATE TABLE contact_items (
-  id         INTEGER PRIMARY KEY,
-  contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
-  kind       TEXT    NOT NULL,
-  label      TEXT,
-  value      TEXT    NOT NULL,
-  position   INTEGER NOT NULL DEFAULT 0
+  id               INTEGER PRIMARY KEY,
+  contact_id       INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+  kind             TEXT    NOT NULL,
+  label            TEXT,
+  value            TEXT    NOT NULL,
+  position         INTEGER NOT NULL DEFAULT 0,
+  is_primary_call  INTEGER NOT NULL DEFAULT 0,
+  is_primary_sms   INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE birthdays (
@@ -242,6 +259,28 @@ CREATE TABLE birthdays (
   updated_at        INTEGER NOT NULL
 );
 
+CREATE TABLE contact_relations (
+  contact_id         INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+  related_contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+  relation           TEXT    NOT NULL DEFAULT 'emergency',
+  PRIMARY KEY (contact_id, related_contact_id)
+);
+
+CREATE TABLE contact_reminders (
+  id              INTEGER PRIMARY KEY,
+  contact_id      INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+  kind            TEXT    NOT NULL,
+  title           TEXT    NOT NULL DEFAULT '',
+  frequency       TEXT    NOT NULL DEFAULT '',
+  due_date        TEXT,
+  recurrence_rule TEXT,
+  color           TEXT,
+  enabled         INTEGER NOT NULL DEFAULT 1,
+  created_at      INTEGER NOT NULL,
+  updated_at      INTEGER NOT NULL
+);
+CREATE INDEX idx_contact_reminders_contact ON contact_reminders (contact_id);
+
 CREATE TABLE message_posts (
   id              INTEGER PRIMARY KEY,
   body            TEXT    NOT NULL,
@@ -250,6 +289,7 @@ CREATE TABLE message_posts (
   pinned          INTEGER NOT NULL DEFAULT 0,
   visibility      TEXT    NOT NULL DEFAULT 'household',
   edited_at       INTEGER,
+  closed_at       INTEGER,
   created_at      INTEGER NOT NULL,
   updated_at      INTEGER NOT NULL
 );
@@ -273,6 +313,7 @@ CREATE TABLE notes (
   author_id   INTEGER NOT NULL REFERENCES users(id),
   memory_date TEXT,
   visibility  TEXT    NOT NULL DEFAULT 'household',
+  closed_at   INTEGER,
   created_at  INTEGER NOT NULL,
   updated_at  INTEGER NOT NULL
 );
@@ -286,16 +327,6 @@ CREATE TABLE note_items (
   position   INTEGER NOT NULL DEFAULT 0,
   updated_at INTEGER NOT NULL
 );
-
-CREATE TABLE mentions (
-  id             INTEGER PRIMARY KEY,
-  content_type   TEXT    NOT NULL,
-  content_id     INTEGER NOT NULL,
-  user_id        INTEGER NOT NULL REFERENCES users(id),
-  position_range TEXT,
-  created_at     INTEGER NOT NULL
-);
-CREATE INDEX idx_mentions_content ON mentions (content_type, content_id);
 
 CREATE TABLE inbox_notifications (
   id              INTEGER PRIMARY KEY,
@@ -347,3 +378,23 @@ CREATE TABLE search_index_meta (
   key   TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
+
+CREATE TABLE content_audiences (
+  content_type TEXT    NOT NULL,
+  content_id   INTEGER NOT NULL,
+  user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  PRIMARY KEY (content_type, content_id, user_id)
+);
+CREATE INDEX idx_content_audiences_user ON content_audiences (user_id, content_type);
+
+CREATE TABLE mentions (
+  id             INTEGER PRIMARY KEY,
+  content_type   TEXT    NOT NULL,
+  content_id     INTEGER NOT NULL,
+  target_type    TEXT    NOT NULL,
+  target_id      INTEGER NOT NULL,
+  position_range TEXT,
+  created_at     INTEGER NOT NULL
+);
+CREATE INDEX idx_mentions_content ON mentions (content_type, content_id);
+CREATE INDEX idx_mentions_target ON mentions (target_type, target_id);

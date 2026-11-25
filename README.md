@@ -138,4 +138,4 @@ make check   # gofmt、go vet、Go 测试与前端测试、lint
 3. 在「设置 → 家庭设置」选择时区与家庭默认城市，天气卡片即可自动获取。
 4. 在首页「整理首页」中调整卡片，管理员可发布为家庭默认布局。
 
-> 建议通过 HTTPS 反向代理对外提供服务，并定期备份 `mymoments-data` 卷（或你绑定的宿主机目录）中的 `app.db` 与附件目录。
+> 建议通过 HTTPS 反向代理对外提供服务，并定期备份 `mymoments-data` 卷（或你绑定的宿主机目录）中的 `db/moments.db`、`media/` 与 `logs/`。

@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import { ApiError } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { useToastStore } from '@/stores/toast';
+import { avatarUrl, uploadAvatar } from '@/utils/avatar';
 import AppAvatar from '@/components/base/AppAvatar.vue';
 import AppButton from '@/components/base/AppButton.vue';
 import AppField from '@/components/base/AppField.vue';
@@ -13,6 +14,7 @@ import AppPanel from '@/components/base/AppPanel.vue';
 import AppSelect from '@/components/base/AppSelect.vue';
 import AppStatusTag from '@/components/base/AppStatusTag.vue';
 import ApiTokensPanel from '@/components/business/ApiTokensPanel.vue';
+import StyleSettingsPanel from '@/components/business/StyleSettingsPanel.vue';
 
 const auth = useAuthStore();
 const toast = useToastStore();
@@ -21,6 +23,8 @@ const router = useRouter();
 const profile = reactive({ displayName: '', relation: '' });
 const profileSaving = ref(false);
 const profileError = ref('');
+const avatarUploading = ref(false);
+const avatarInput = ref<HTMLInputElement | null>(null);
 
 const household = reactive({ name: '', timezone: 'Asia/Shanghai', weekStart: '1', defaultReminderOffset: '0' });
 const householdSaving = ref(false);
@@ -69,6 +73,31 @@ async function saveProfile(): Promise<void> {
   } finally {
     profileSaving.value = false;
   }
+}
+
+function chooseAvatar(): void {
+  avatarInput.value?.click();
+}
+
+async function onAvatarChange(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file) return;
+  avatarUploading.value = true;
+  try {
+    const key = await uploadAvatar(file);
+    await auth.updateProfile({ avatarKey: key });
+    toast.success('头像已更新');
+  } catch (err) {
+    toast.error(err instanceof ApiError ? err.message : '头像上传失败');
+  } finally {
+    avatarUploading.value = false;
+  }
+}
+
+function customizeCards(): void {
+  void router.push({ name: 'home', query: { customize: '1' } });
 }
 
 async function saveHousehold(): Promise<void> {
@@ -145,10 +174,19 @@ onMounted(async () => {
       <AppPanel title="个人资料" subtitle="其他成员在成员列表与内容中看到的信息。">
         <form class="at-stack" @submit.prevent="saveProfile">
           <div class="settings__identity">
-            <AppAvatar :name="profile.displayName || auth.user?.displayName || '?'" :size="52" />
+            <button type="button" class="settings__avatar-btn" :disabled="avatarUploading" title="更换头像" @click="chooseAvatar">
+              <AppAvatar
+                :name="profile.displayName || auth.user?.displayName || '?'"
+                :size="52"
+                :src="avatarUrl(auth.user?.avatarKey)"
+              />
+              <span class="settings__avatar-edit"><AppIcon name="camera" :size="14" /></span>
+            </button>
+            <input ref="avatarInput" type="file" accept="image/*" class="visually-hidden" @change="onAvatarChange" />
             <div>
               <p class="settings__name">{{ auth.user?.displayName }}</p>
               <p class="settings__handle">@{{ auth.user?.username }}</p>
+              <p class="settings__avatar-hint">{{ avatarUploading ? '正在上传…' : '点击头像更换' }}</p>
             </div>
             <AppStatusTag :tone="auth.isAdmin ? 'warning' : 'neutral'">{{ auth.isAdmin ? '管理员' : '成员' }}</AppStatusTag>
           </div>
@@ -159,6 +197,13 @@ onMounted(async () => {
             <AppField label="家庭关系" for-id="profile-relation" hint="选填，如爸爸、女儿">
               <AppInput id="profile-relation" v-model="profile.relation" placeholder="例如：爸爸" />
             </AppField>
+          </div>
+          <div class="settings__pref-row">
+            <div>
+              <p class="settings__account-label">显示的卡片</p>
+              <p class="settings__account-hint">决定首页显示哪些卡片，可随时调整。</p>
+            </div>
+            <AppButton variant="outline" size="sm" type="button" @click="customizeCards">整理首页卡片</AppButton>
           </div>
           <p v-if="profileError" class="settings__error" role="alert"><AppIcon name="alert" :size="16" />{{ profileError }}</p>
           <div class="settings__actions">
@@ -221,6 +266,10 @@ onMounted(async () => {
       </AppPanel>
     </div>
 
+    <div class="settings__style">
+      <StyleSettingsPanel />
+    </div>
+
     <div class="settings__api">
       <ApiTokensPanel />
     </div>
@@ -237,6 +286,63 @@ onMounted(async () => {
 
 .settings__api {
   margin-top: var(--at-space-4);
+}
+
+.settings__style {
+  margin-top: var(--at-space-4);
+}
+
+.settings__avatar-btn {
+  position: relative;
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 50%;
+}
+
+.settings__avatar-edit {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--at-color-ink);
+  color: #fff;
+  border: 2px solid var(--at-bg-surface);
+}
+
+.settings__avatar-hint {
+  margin-top: 2px;
+  font-size: var(--at-text-micro);
+  color: var(--at-color-muted-soft);
+}
+
+.settings__pref-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--at-space-3);
+  padding: var(--at-space-3);
+  border: 1px solid var(--at-color-hairline);
+  border-radius: var(--at-radius-md);
+  background: var(--at-bg-canvas-soft);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .settings__identity {

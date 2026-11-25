@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { RouterLink } from 'vue-router';
+import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { greeting, todayISO } from '@/utils/chrono';
 import { useAuthStore } from '@/stores/auth';
 import { useDashboardStore } from '@/stores/dashboard';
@@ -21,6 +21,8 @@ import WeatherSettingsDialog from '@/components/business/WeatherSettingsDialog.v
 
 const auth = useAuthStore();
 const dashboard = useDashboardStore();
+const route = useRoute();
+const router = useRouter();
 const toast = useToastStore();
 
 const formOpen = ref(false);
@@ -170,6 +172,10 @@ watch(collapseKey, () => loadCollapsed());
 
 onMounted(async () => {
   loadCollapsed();
+  if (route.query.customize === '1') {
+    customizerOpen.value = true;
+    void router.replace({ query: {} });
+  }
   await load();
   timer = window.setInterval(() => {
     if (document.hidden) return;

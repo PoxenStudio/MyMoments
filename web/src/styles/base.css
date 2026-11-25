@@ -214,10 +214,28 @@ canvas {
 }
 
 .at-card {
+  position: relative;
+  isolation: isolate;
   background: var(--at-bg-surface);
   border: 1px solid var(--at-color-hairline);
-  border-radius: var(--at-radius-lg);
+  border-radius: var(--at-radius-card, var(--at-radius-lg));
   box-shadow: var(--at-shadow-card), inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.at-card::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: clamp(72px, 32%, 132px);
+  aspect-ratio: 1;
+  background-image: var(--at-card-corner-image, none);
+  background-repeat: no-repeat;
+  background-position: bottom right;
+  background-size: contain;
+  opacity: var(--at-card-corner-opacity, 0.12);
+  pointer-events: none;
+  z-index: -1;
 }
 
 .at-card--hover {

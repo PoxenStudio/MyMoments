@@ -8,6 +8,7 @@ import { useToastStore } from '@/stores/toast';
 import { ApiError, api } from '@/api/client';
 import { dueLabel, priorityLabels, recurrenceSummary, statusLabels, visibilityLabels } from '@/utils/task';
 import AppAvatar from '@/components/base/AppAvatar.vue';
+import { avatarUrl } from '@/utils/avatar';
 import AppButton from '@/components/base/AppButton.vue';
 import AppConfirmDialog from '@/components/base/AppConfirmDialog.vue';
 import AppDialog from '@/components/base/AppDialog.vue';
@@ -226,7 +227,7 @@ function requestDelete(): void {
           <dd class="detail__people">
             <template v-if="task.assignees.length">
               <span v-for="person in task.assignees" :key="person.id" class="detail__person">
-                <AppAvatar :name="person.displayName" :size="22" />{{ person.displayName }}
+                <AppAvatar :name="person.displayName" :size="22" :src="avatarUrl(person.avatarKey)" />{{ person.displayName }}
               </span>
             </template>
             <span v-else class="muted">未指派</span>

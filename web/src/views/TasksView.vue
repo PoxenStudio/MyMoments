@@ -9,6 +9,7 @@ import { ApiError } from '@/api/client';
 import { todayISO } from '@/utils/chrono';
 import { dueLabel } from '@/utils/task';
 import AppAvatar from '@/components/base/AppAvatar.vue';
+import { avatarUrl } from '@/utils/avatar';
 import AppButton from '@/components/base/AppButton.vue';
 import AppConfirmDialog from '@/components/base/AppConfirmDialog.vue';
 import AppEmptyState from '@/components/base/AppEmptyState.vue';
@@ -353,7 +354,7 @@ function memberNames(task: Task): string {
               </button>
               <div class="bcard__foot">
                 <span class="bcard__avatars">
-                  <AppAvatar v-for="person in task.assignees.slice(0, 3)" :key="person.id" :name="person.displayName" :size="22" />
+                  <AppAvatar v-for="person in task.assignees.slice(0, 3)" :key="person.id" :name="person.displayName" :size="22" :src="avatarUrl(person.avatarKey)" />
                 </span>
                 <button
                   v-if="task.status !== 'completed'"

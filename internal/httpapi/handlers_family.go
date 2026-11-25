@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"database/sql"
+	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
@@ -283,6 +284,7 @@ type householdPatchRequest struct {
 	DefaultWeatherLat     *float64 `json:"defaultWeatherLat"`
 	DefaultWeatherLon     *float64 `json:"defaultWeatherLon"`
 	DefaultDashboard      *string  `json:"defaultDashboard"`
+	Style                 *string  `json:"style"`
 }
 
 func (s *Server) handleHousehold(w http.ResponseWriter, r *http.Request) {
@@ -355,9 +357,102 @@ func (s *Server) handleHouseholdPatch(w http.ResponseWriter, r *http.Request) {
 		}
 		h.DefaultDashboard = req.DefaultDashboard
 	}
+	if req.Style != nil {
+		style := strings.TrimSpace(*req.Style)
+		if style == "" {
+			h.Style = nil
+		} else {
+			if err := validateJSONField(style); err != nil {
+				writeError(w, badRequest("样式格式不正确"))
+				return
+			}
+			h.Style = &style
+		}
+	}
 	if err := s.store.UpdateHousehold(r.Context(), h); err != nil {
 		writeError(w, serverError(err))
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"household": h})
+}
+
+type memberStyleRequest struct {
+	Dashboard *string `json:"dashboard"`
+}
+
+// handleMemberStyleGet 返回指定成员当前的首页卡片布局，供管理员调整。
+func (s *Server) handleMemberStyleGet(w http.ResponseWriter, r *http.Request) {
+	id, err := parseID(r, "id")
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	if _, err := s.store.GetUserByID(r.Context(), id); err != nil {
+		writeError(w, notFound("成员不存在"))
+		return
+	}
+	layout, source, err := s.dashboardLayoutFor(r.Context(), id)
+	if err != nil {
+		writeError(w, serverError(err))
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"layout": layout, "layoutSource": source})
+}
+
+// handleMemberStylePatch 管理员为成员设定显示的卡片。
+func (s *Server) handleMemberStylePatch(w http.ResponseWriter, r *http.Request) {
+	id, err := parseID(r, "id")
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	if _, err := s.store.GetUserByID(r.Context(), id); err != nil {
+		writeError(w, notFound("成员不存在"))
+		return
+	}
+	var req memberStyleRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, err)
+		return
+	}
+	if req.Dashboard == nil {
+		writeError(w, badRequest("请提供卡片布局"))
+		return
+	}
+	prefs, err := s.store.GetPreferences(r.Context(), id)
+	if err != nil {
+		writeError(w, serverError(err))
+		return
+	}
+	raw := strings.TrimSpace(*req.Dashboard)
+	if raw == "" {
+		prefs.Dashboard = nil
+	} else {
+		var items []dashboardLayoutItem
+		if err := json.Unmarshal([]byte(raw), &items); err != nil {
+			writeError(w, badRequest("卡片布局格式不正确"))
+			return
+		}
+		normalized, err := normalizeLayout(items)
+		if err != nil {
+			writeError(w, badRequest(err.Error()))
+			return
+		}
+		encoded, err := encodeLayout(normalized)
+		if err != nil {
+			writeError(w, serverError(err))
+			return
+		}
+		prefs.Dashboard = &encoded
+	}
+	if err := s.store.UpdatePreferences(r.Context(), prefs); err != nil {
+		writeError(w, serverError(err))
+		return
+	}
+	layout, source, err := s.dashboardLayoutFor(r.Context(), id)
+	if err != nil {
+		writeError(w, serverError(err))
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"layout": layout, "layoutSource": source})
 }

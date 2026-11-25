@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import AppAvatar from '@/components/base/AppAvatar.vue';
+import { avatarUrl } from '@/utils/avatar';
 import AppButton from '@/components/base/AppButton.vue';
 import AppEmptyState from '@/components/base/AppEmptyState.vue';
 import AppErrorState from '@/components/base/AppErrorState.vue';
@@ -251,7 +252,7 @@ function mediaURL(id: number): string {
                 <span v-if="entry.sourceType === 'event' && entry.occurredAt">{{ formatTime(new Date(entry.occurredAt * 1000).toISOString()) }}</span>
                 <span v-if="entry.sourceType === 'note' && entry.detailTarget.date">{{ formatShortDate(entry.detailTarget.date) }}</span>
                 <span v-for="m in entry.members.slice(0, 4)" :key="m.id" class="entry__member">
-                  <AppAvatar :name="m.displayName" :size="20" />
+                  <AppAvatar :name="m.displayName" :size="20" :src="avatarUrl(m.avatarKey)" />
                   <span>{{ m.displayName }}</span>
                 </span>
               </div>

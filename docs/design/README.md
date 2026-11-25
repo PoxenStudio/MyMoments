@@ -13,6 +13,7 @@
 | [05-pwa.md](05-pwa.md) | PWA 清单、Service Worker、离线策略、安装与更新、通知 |
 | [06-security.md](06-security.md) | 认证、会话、密码、权限执行、安全头、媒体访问控制 |
 | [07-deployment.md](07-deployment.md) | Docker、Compose、健康检查、备份恢复、迁移与升级 |
+| [08-style-customization.md](08-style-customization.md) | 样式自定义：三层级主题继承、色调/圆角/背景图/卡片角图、头像昵称、快速恢复默认 |
 
 ## 技术栈总览
 

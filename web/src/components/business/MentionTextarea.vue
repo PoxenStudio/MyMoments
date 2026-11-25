@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import AppAvatar from '@/components/base/AppAvatar.vue';
+import { avatarUrl } from '@/utils/avatar';
 import type { User } from '@/types';
 
 const props = withDefaults(defineProps<{
@@ -144,7 +145,7 @@ defineExpose({
         :aria-selected="index === activeIndex"
         @mousedown.prevent="choose(member)"
       >
-        <AppAvatar :name="member.displayName" :size="24" />
+        <AppAvatar :name="member.displayName" :size="24" :src="avatarUrl(member.avatarKey)" />
         <span>{{ member.displayName }}</span>
         <span v-if="mentionIds.includes(member.id)" class="mention__picked">已选</span>
       </button>

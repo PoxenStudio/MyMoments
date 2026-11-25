@@ -47,7 +47,7 @@ const hasFooter = computed(() => !!slots.footer);
 
 <style scoped>
 .at-panel {
-  border-radius: var(--at-radius-xl);
+  border-radius: var(--at-radius-card, var(--at-radius-xl));
   overflow: hidden;
 }
 

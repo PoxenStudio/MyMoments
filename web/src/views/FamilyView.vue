@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { ApiError } from '@/api/client';
+import { ApiError, api } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { useFamilyStore } from '@/stores/family';
 import { useToastStore } from '@/stores/toast';
-import type { User } from '@/types';
+import type { DashboardLayoutItem, User } from '@/types';
+import { cardDefs } from '@/cards/registry';
+import { avatarUrl, uploadAvatar } from '@/utils/avatar';
 import AppAvatar from '@/components/base/AppAvatar.vue';
 import AppButton from '@/components/base/AppButton.vue';
+import AppCheckbox from '@/components/base/AppCheckbox.vue';
 import AppConfirmDialog from '@/components/base/AppConfirmDialog.vue';
 import AppDialog from '@/components/base/AppDialog.vue';
 import AppEmptyState from '@/components/base/AppEmptyState.vue';
@@ -59,6 +62,12 @@ const editTarget = ref<User | null>(null);
 const editSaving = ref(false);
 const editError = ref('');
 const editForm = reactive({ displayName: '', relation: '', role: 'member', status: 'active' });
+const editAvatarSaving = ref(false);
+const editAvatarInput = ref<HTMLInputElement | null>(null);
+const memberCards = reactive<Record<string, boolean>>({});
+const memberLayout = ref<DashboardLayoutItem[]>([]);
+const memberCardsLoading = ref(false);
+const editableCards = cardDefs.filter((def) => def.id !== 'overview');
 
 const resetTarget = ref<User | null>(null);
 const resetOpen = ref(false);
@@ -132,18 +141,59 @@ function openEdit(member: User): void {
   editForm.role = member.role;
   editForm.status = member.status;
   editError.value = '';
+  memberLayout.value = [];
+  for (const def of editableCards) memberCards[def.id] = def.defaultVisible;
+  if (auth.isAdmin) void loadMemberCards(member.id);
+}
+
+async function loadMemberCards(id: number): Promise<void> {
+  memberCardsLoading.value = true;
+  try {
+    const res = await api.get<{ layout: DashboardLayoutItem[] }>(`/family/members/${id}/style`);
+    memberLayout.value = res.layout ?? [];
+    for (const def of editableCards) {
+      const item = memberLayout.value.find((entry) => entry.id === def.id);
+      memberCards[def.id] = item ? item.visible : def.defaultVisible;
+    }
+  } catch {
+    for (const def of editableCards) memberCards[def.id] = def.defaultVisible;
+  } finally {
+    memberCardsLoading.value = false;
+  }
+}
+
+function chooseEditAvatar(): void {
+  editAvatarInput.value?.click();
+}
+
+async function onEditAvatarChange(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file || !editTarget.value) return;
+  editAvatarSaving.value = true;
+  try {
+    const key = await uploadAvatar(file, editTarget.value.id);
+    editTarget.value = { ...editTarget.value, avatarKey: key };
+    toast.success('头像已更新');
+  } catch (err) {
+    toast.error(err instanceof ApiError ? err.message : '头像上传失败');
+  } finally {
+    editAvatarSaving.value = false;
+  }
 }
 
 async function submitEdit(): Promise<void> {
   if (!editTarget.value) return;
   editError.value = '';
   const target = editTarget.value;
-  const payload: Partial<Pick<User, 'displayName' | 'relation' | 'role' | 'status'>> = {
+  const payload: Partial<Pick<User, 'displayName' | 'relation' | 'role' | 'status' | 'avatarKey'>> = {
     displayName: editForm.displayName.trim(),
     relation: editForm.relation.trim(),
   };
   if (auth.isAdmin) {
     payload.role = editForm.role === 'admin' ? 'admin' : 'member';
+    payload.avatarKey = target.avatarKey;
     if (target.id !== auth.user?.id) payload.status = editForm.status === 'active' ? 'active' : 'inactive';
   }
   if (!payload.displayName) {
@@ -153,6 +203,19 @@ async function submitEdit(): Promise<void> {
   editSaving.value = true;
   try {
     const updated = await family.updateMember(target.id, payload);
+    if (auth.isAdmin && target.id !== auth.user?.id) {
+      const byId = new Map(memberLayout.value.map((item) => [item.id, item]));
+      const nextLayout: DashboardLayoutItem[] = cardDefs.map((def) => {
+        const existing = byId.get(def.id);
+        return {
+          id: def.id,
+          visible: def.id === 'overview' ? true : (memberCards[def.id] ?? existing?.visible ?? def.defaultVisible),
+          size: existing?.size ?? 'standard',
+          background: existing?.background ?? 'default',
+        };
+      });
+      await api.patch(`/family/members/${target.id}/style`, { dashboard: JSON.stringify(nextLayout) });
+    }
     if (updated.id === auth.user?.id) {
       auth.user = { ...updated };
     }
@@ -251,47 +314,47 @@ onMounted(() => {
       </div>
     </header>
 
-    <AppTabs v-model="tab" :tabs="tabs" ariaLabel="家庭内容" class="family__tabs" />
+    <AppTabs v-model="tab" :tabs="tabs" aria-label="家庭内容" class="family__tabs" />
 
     <template v-if="tab === 'members'">
-    <AppErrorState v-if="loadError" title="成员加载失败" :description="loadError" @retry="load" />
-    <div v-else-if="loading" class="family__loading">正在加载成员…</div>
+      <AppErrorState v-if="loadError" title="成员加载失败" :description="loadError" @retry="load" />
+      <div v-else-if="loading" class="family__loading">正在加载成员…</div>
 
-    <AppEmptyState
-      v-else-if="sortedMembers.length === 0"
-      icon="family"
-      title="还没有家庭成员"
-      description="管理员可以添加家庭成员账号。"
-    >
-      <AppButton v-if="auth.isAdmin" @click="openCreate">添加第一位成员</AppButton>
-    </AppEmptyState>
+      <AppEmptyState
+        v-else-if="sortedMembers.length === 0"
+        icon="family"
+        title="还没有家庭成员"
+        description="管理员可以添加家庭成员账号。"
+      >
+        <AppButton v-if="auth.isAdmin" @click="openCreate">添加第一位成员</AppButton>
+      </AppEmptyState>
 
-    <ul v-else class="family__list">
-      <li v-for="member in sortedMembers" :key="member.id" class="family__member at-card" :class="{ 'is-inactive': member.status !== 'active' }">
-        <AppAvatar :name="member.displayName" :size="44" />
-        <div class="family__info">
-          <div class="family__name-row">
-            <span class="family__name">{{ member.displayName }}</span>
-            <AppStatusTag v-if="member.relation" tone="brand">{{ member.relation }}</AppStatusTag>
-            <AppStatusTag :tone="member.role === 'admin' ? 'warning' : 'neutral'">{{ roleLabel(member.role) }}</AppStatusTag>
-            <AppStatusTag v-if="member.status !== 'active'" tone="danger">已停用</AppStatusTag>
-            <AppStatusTag v-else-if="member.mustChangePassword" tone="warning">待改密码</AppStatusTag>
+      <ul v-else class="family__list">
+        <li v-for="member in sortedMembers" :key="member.id" class="family__member at-card" :class="{ 'is-inactive': member.status !== 'active' }">
+          <AppAvatar :name="member.displayName" :size="44" :src="avatarUrl(member.avatarKey)" />
+          <div class="family__info">
+            <div class="family__name-row">
+              <span class="family__name">{{ member.displayName }}</span>
+              <AppStatusTag v-if="member.relation" tone="brand">{{ member.relation }}</AppStatusTag>
+              <AppStatusTag :tone="member.role === 'admin' ? 'warning' : 'neutral'">{{ roleLabel(member.role) }}</AppStatusTag>
+              <AppStatusTag v-if="member.status !== 'active'" tone="danger">已停用</AppStatusTag>
+              <AppStatusTag v-else-if="member.mustChangePassword" tone="warning">待改密码</AppStatusTag>
+            </div>
+            <p class="family__meta">@{{ member.username }}<span v-if="member.id === auth.user?.id"> · 这是你</span></p>
           </div>
-          <p class="family__meta">@{{ member.username }}<span v-if="member.id === auth.user?.id"> · 这是你</span></p>
-        </div>
-        <div class="family__actions">
-          <AppIconButton icon="edit" label="编辑成员" size="sm" @click="openEdit(member)" />
-          <AppIconButton v-if="auth.isAdmin" icon="key" label="重置密码" size="sm" @click="openReset(member)" />
-          <AppIconButton
-            v-if="auth.isAdmin && member.id !== auth.user?.id"
-            :icon="member.status === 'active' ? 'x-circle' : 'check-circle'"
-            :label="member.status === 'active' ? '停用账号' : '恢复账号'"
-            size="sm"
-            @click="statusTarget = member"
-          />
-        </div>
-      </li>
-    </ul>
+          <div class="family__actions">
+            <AppIconButton icon="edit" label="编辑成员" size="sm" @click="openEdit(member)" />
+            <AppIconButton v-if="auth.isAdmin" icon="key" label="重置密码" size="sm" @click="openReset(member)" />
+            <AppIconButton
+              v-if="auth.isAdmin && member.id !== auth.user?.id"
+              :icon="member.status === 'active' ? 'x-circle' : 'check-circle'"
+              :label="member.status === 'active' ? '停用账号' : '恢复账号'"
+              size="sm"
+              @click="statusTarget = member"
+            />
+          </div>
+        </li>
+      </ul>
     </template>
 
     <ContactManager v-else-if="tab === 'contacts'" />
@@ -374,6 +437,21 @@ onMounted(() => {
 
     <AppDialog :model-value="editTarget !== null" title="编辑成员" size="md" @update:model-value="editTarget = null">
       <form class="at-stack" @submit.prevent="submitEdit">
+        <div v-if="auth.isAdmin" class="family__avatar-edit">
+          <button type="button" class="family__avatar-btn" :disabled="editAvatarSaving" title="更换头像" @click="chooseEditAvatar">
+            <AppAvatar
+              :name="editTarget?.displayName ?? '?'"
+              :size="52"
+              :src="avatarUrl(editTarget?.avatarKey)"
+            />
+            <span class="family__avatar-badge"><AppIcon name="camera" :size="14" /></span>
+          </button>
+          <div class="family__avatar-meta">
+            <p class="family__avatar-title">{{ editTarget?.displayName }}</p>
+            <p class="family__avatar-hint">{{ editAvatarSaving ? '正在上传…' : '点击头像为该成员更换头像' }}</p>
+          </div>
+          <input ref="editAvatarInput" type="file" accept="image/*" class="visually-hidden" @change="onEditAvatarChange" />
+        </div>
         <AppField label="称呼" for-id="edit-display">
           <AppInput id="edit-display" v-model="editForm.displayName" />
         </AppField>
@@ -394,6 +472,22 @@ onMounted(() => {
             </select>
           </AppField>
         </div>
+        <AppField
+          v-if="auth.isAdmin && editTarget && editTarget.id !== auth.user?.id"
+          label="显示的卡片"
+          hint="决定该成员首页显示哪些卡片，保存后立即生效"
+        >
+          <div class="family__cards" :class="{ 'is-loading': memberCardsLoading }">
+            <AppCheckbox
+              v-for="def in editableCards"
+              :key="def.id"
+              v-model="memberCards[def.id]"
+              :label="def.title"
+              :description="def.description"
+              :disabled="memberCardsLoading"
+            />
+          </div>
+        </AppField>
         <p v-if="editError" class="family__error" role="alert"><AppIcon name="alert" :size="16" />{{ editError }}</p>
       </form>
       <template #footer>
@@ -516,6 +610,77 @@ onMounted(() => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--at-space-3);
+}
+
+.family__avatar-edit {
+  display: flex;
+  align-items: center;
+  gap: var(--at-space-3);
+  padding-bottom: var(--at-space-3);
+  border-bottom: 1px solid var(--at-color-hairline);
+}
+
+.family__avatar-btn {
+  position: relative;
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.family__avatar-badge {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--at-color-ink);
+  color: #fff;
+  border: 2px solid var(--at-bg-surface);
+}
+
+.family__avatar-title {
+  margin: 0;
+  font-size: var(--at-text-body-sm);
+  font-weight: 500;
+}
+
+.family__avatar-hint {
+  margin: 2px 0 0;
+  font-size: var(--at-text-micro);
+  color: var(--at-color-muted);
+}
+
+.family__cards {
+  display: grid;
+  gap: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: var(--at-space-2);
+  border: 1px solid var(--at-color-hairline);
+  border-radius: var(--at-radius-md);
+  background: var(--at-bg-canvas-soft);
+}
+
+.family__cards.is-loading {
+  opacity: 0.6;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .family__select {

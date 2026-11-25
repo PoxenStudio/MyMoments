@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import AppAvatar from '@/components/base/AppAvatar.vue';
+import { avatarUrl } from '@/utils/avatar';
 import AppButton from '@/components/base/AppButton.vue';
 import AppConfirmDialog from '@/components/base/AppConfirmDialog.vue';
 import AppDialog from '@/components/base/AppDialog.vue';
@@ -250,7 +251,7 @@ async function confirmDelete(): Promise<void> {
 
     <section v-if="composing" class="composer at-card">
       <div class="composer__head">
-        <AppAvatar :name="auth.user?.displayName ?? ''" :size="34" />
+        <AppAvatar :name="auth.user?.displayName ?? ''" :size="34" :src="avatarUrl(auth.user?.avatarKey)" />
         <div>
           <strong>{{ auth.user?.displayName }}</strong>
           <p class="at-faint">写点什么给家里人</p>

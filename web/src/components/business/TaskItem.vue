@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import type { Task } from '@/types';
 import { dueLabel, priorityLabels, recurrenceSummary, visibilityLabels } from '@/utils/task';
 import AppAvatar from '@/components/base/AppAvatar.vue';
+import { avatarUrl } from '@/utils/avatar';
 import AppIcon from '@/components/base/AppIcon.vue';
 import AppStatusTag from '@/components/base/AppStatusTag.vue';
 
@@ -72,7 +73,7 @@ function toggle(): void {
     </button>
 
     <div class="task__people">
-      <AppAvatar v-for="person in task.assignees.slice(0, 3)" :key="person.id" :name="person.displayName" :size="24" />
+      <AppAvatar v-for="person in task.assignees.slice(0, 3)" :key="person.id" :name="person.displayName" :size="24" :src="avatarUrl(person.avatarKey)" />
       <span v-if="task.assignees.length > 3" class="task__more">+{{ task.assignees.length - 3 }}</span>
     </div>
   </div>

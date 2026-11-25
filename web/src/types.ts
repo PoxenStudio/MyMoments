@@ -25,7 +25,40 @@ export interface Household {
   defaultWeatherLon: number | null;
   defaultReminderOffset: number;
   defaultDashboard: string | null;
+  style: string | null;
 }
+
+export type ThemeTone =
+  | 'default'
+  | 'warm-sun' | 'warm-sand' | 'warm-peach' | 'warm-cream' | 'warm-rose'
+  | 'cartoon-macaron' | 'cartoon-sky' | 'cartoon-mint' | 'cartoon-berry' | 'cartoon-lemon';
+
+export type CardRadius = 'sm' | 'md' | 'lg' | 'xl';
+
+export interface ThemeBackground {
+  kind: 'color' | 'image';
+  color?: string;
+  image?: string;
+  blur?: number;
+}
+
+export interface ThemeCorner {
+  image: string | null;
+  opacity: number;
+}
+
+export interface ThemeConfig {
+  useDefault?: boolean;
+  tone: ThemeTone;
+  cardRadius: CardRadius;
+  pageBackground: ThemeBackground;
+  cardCorner: ThemeCorner;
+}
+
+export type ThemePatch = Partial<Omit<ThemeConfig, 'pageBackground' | 'cardCorner'>> & {
+  pageBackground?: Partial<ThemeBackground>;
+  cardCorner?: Partial<ThemeCorner>;
+};
 
 export interface Preferences {
   locale: string;
@@ -36,6 +69,7 @@ export interface Preferences {
   weatherLon: number | null;
   weatherAuto: boolean;
   notificationPrefs: string | null;
+  style: string | null;
   updatedAt: number;
 }
 

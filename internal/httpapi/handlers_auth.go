@@ -315,6 +315,7 @@ type preferencesPatch struct {
 	WeatherLon        *float64 `json:"weatherLon"`
 	WeatherAuto       *bool    `json:"weatherAuto"`
 	NotificationPrefs *string  `json:"notificationPrefs"`
+	Style             *string  `json:"style"`
 }
 
 func (s *Server) handlePreferencesPatch(w http.ResponseWriter, r *http.Request) {
@@ -369,6 +370,18 @@ func (s *Server) handlePreferencesPatch(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		prefs.NotificationPrefs = req.NotificationPrefs
+	}
+	if req.Style != nil {
+		style := strings.TrimSpace(*req.Style)
+		if style == "" {
+			prefs.Style = nil
+		} else {
+			if err := validateJSONField(style); err != nil {
+				writeError(w, badRequest("样式格式不正确"))
+				return
+			}
+			prefs.Style = &style
+		}
 	}
 	if err := s.store.UpdatePreferences(r.Context(), prefs); err != nil {
 		writeError(w, serverError(err))

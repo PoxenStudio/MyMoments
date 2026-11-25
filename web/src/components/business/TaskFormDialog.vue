@@ -6,6 +6,7 @@ import { useTasksStore, type SubtaskPayload, type TaskPayload } from '@/stores/t
 import { ApiError } from '@/api/client';
 import { parseRecurrence, taskColors, visibilityLabels } from '@/utils/task';
 import AppAvatar from '@/components/base/AppAvatar.vue';
+import { avatarUrl } from '@/utils/avatar';
 import AppButton from '@/components/base/AppButton.vue';
 import AppDialog from '@/components/base/AppDialog.vue';
 import AppField from '@/components/base/AppField.vue';
@@ -346,7 +347,7 @@ async function submit(): Promise<void> {
             :class="{ 'is-active': form.assigneeIds.includes(member.id) }"
             @click="toggleAssignee(member.id)"
           >
-            <AppAvatar :name="member.displayName" :size="20" />
+            <AppAvatar :name="member.displayName" :size="20" :src="avatarUrl(member.avatarKey)" />
             {{ member.displayName }}
           </button>
           <span v-if="!activeMembers.length" class="muted">暂无家庭成员</span>

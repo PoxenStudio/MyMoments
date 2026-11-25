@@ -17,12 +17,12 @@ var ErrNotFound = errors.New("not found")
 // GetHousehold 返回家庭设置；未初始化时返回 ErrNotFound。
 func (s *Store) GetHousehold(ctx context.Context) (*model.Household, error) {
 	row := s.DB.QueryRowContext(ctx, `SELECT id, name, timezone, week_start, default_weather_city, default_weather_lat,
-		default_weather_lon, default_reminder_offset, default_dashboard, created_at, updated_at FROM household_settings WHERE id = 1`)
+		default_weather_lon, default_reminder_offset, default_dashboard, style, created_at, updated_at FROM household_settings WHERE id = 1`)
 	var h model.Household
-	var city, dashboard sql.NullString
+	var city, dashboard, style sql.NullString
 	var lat, lon sql.NullFloat64
 	if err := row.Scan(&h.ID, &h.Name, &h.Timezone, &h.WeekStart, &city, &lat, &lon, &h.DefaultReminderOffset,
-		&dashboard, &h.CreatedAt, &h.UpdatedAt); err != nil {
+		&dashboard, &style, &h.CreatedAt, &h.UpdatedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -39,6 +39,9 @@ func (s *Store) GetHousehold(ctx context.Context) (*model.Household, error) {
 	}
 	if dashboard.Valid {
 		h.DefaultDashboard = &dashboard.String
+	}
+	if style.Valid {
+		h.Style = &style.String
 	}
 	return &h, nil
 }
@@ -63,9 +66,9 @@ func CreateHouseholdIfAbsent(ctx context.Context, tx *sql.Tx, name, timezone str
 func (s *Store) UpdateHousehold(ctx context.Context, h *model.Household) error {
 	_, err := s.DB.ExecContext(ctx, `UPDATE household_settings SET name=?, timezone=?, week_start=?,
 		default_weather_city=?, default_weather_lat=?, default_weather_lon=?, default_reminder_offset=?,
-		default_dashboard=?, updated_at=? WHERE id = 1`,
+		default_dashboard=?, style=?, updated_at=? WHERE id = 1`,
 		h.Name, h.Timezone, h.WeekStart, ns(h.DefaultWeatherCity), nf(h.DefaultWeatherLat), nf(h.DefaultWeatherLon),
-		h.DefaultReminderOffset, ns(h.DefaultDashboard), time.Now().Unix())
+		h.DefaultReminderOffset, ns(h.DefaultDashboard), ns(h.Style), time.Now().Unix())
 	return err
 }
 
@@ -177,11 +180,11 @@ func (s *Store) UpdatePassword(ctx context.Context, userID int64, hash string, m
 // GetPreferences 返回个人偏好，缺失时创建默认值。
 func (s *Store) GetPreferences(ctx context.Context, userID int64) (*model.Preferences, error) {
 	row := s.DB.QueryRowContext(ctx, `SELECT user_id, locale, date_format, dashboard, weather_city, weather_lat,
-		weather_lon, weather_auto, notification_prefs, updated_at FROM user_preferences WHERE user_id = ?`, userID)
+		weather_lon, weather_auto, notification_prefs, style, updated_at FROM user_preferences WHERE user_id = ?`, userID)
 	var p model.Preferences
-	var dashboard, city, notif sql.NullString
+	var dashboard, city, notif, style sql.NullString
 	var lat, lon sql.NullFloat64
-	err := row.Scan(&p.UserID, &p.Locale, &p.DateFormat, &dashboard, &city, &lat, &lon, &p.WeatherAuto, &notif, &p.UpdatedAt)
+	err := row.Scan(&p.UserID, &p.Locale, &p.DateFormat, &dashboard, &city, &lat, &lon, &p.WeatherAuto, &notif, &style, &p.UpdatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		now := time.Now().Unix()
 		if _, err := s.DB.ExecContext(ctx, `INSERT INTO user_preferences (user_id, locale, date_format, updated_at) VALUES (?, 'zh-CN', '24h', ?) ON CONFLICT(user_id) DO NOTHING`, userID, now); err != nil {
@@ -208,15 +211,18 @@ func (s *Store) GetPreferences(ctx context.Context, userID int64) (*model.Prefer
 	if notif.Valid {
 		p.NotificationPrefs = &notif.String
 	}
+	if style.Valid {
+		p.Style = &style.String
+	}
 	return &p, nil
 }
 
 // UpdatePreferences 更新个人偏好。
 func (s *Store) UpdatePreferences(ctx context.Context, p *model.Preferences) error {
 	_, err := s.DB.ExecContext(ctx, `UPDATE user_preferences SET locale=?, date_format=?, dashboard=?, weather_city=?,
-		weather_lat=?, weather_lon=?, weather_auto=?, notification_prefs=?, updated_at=? WHERE user_id=?`,
+		weather_lat=?, weather_lon=?, weather_auto=?, notification_prefs=?, style=?, updated_at=? WHERE user_id=?`,
 		p.Locale, p.DateFormat, ns(p.Dashboard), ns(p.WeatherCity), nf(p.WeatherLat), nf(p.WeatherLon),
-		p.WeatherAuto, ns(p.NotificationPrefs), time.Now().Unix(), p.UserID)
+		p.WeatherAuto, ns(p.NotificationPrefs), ns(p.Style), time.Now().Unix(), p.UserID)
 	return err
 }
 

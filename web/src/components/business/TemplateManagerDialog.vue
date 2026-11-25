@@ -7,6 +7,7 @@ import { useToastStore } from '@/stores/toast';
 import { ApiError } from '@/api/client';
 import { parseRecurrence, priorityLabels } from '@/utils/task';
 import AppAvatar from '@/components/base/AppAvatar.vue';
+import { avatarUrl } from '@/utils/avatar';
 import AppButton from '@/components/base/AppButton.vue';
 import AppConfirmDialog from '@/components/base/AppConfirmDialog.vue';
 import AppDialog from '@/components/base/AppDialog.vue';
@@ -235,7 +236,7 @@ async function confirmDelete(): Promise<void> {
             :class="{ 'is-active': form.assignees.includes(member.id) }"
             @click="toggleAssignee(member.id)"
           >
-            <AppAvatar :name="member.displayName" :size="20" />{{ member.displayName }}
+            <AppAvatar :name="member.displayName" :size="20" :src="avatarUrl(member.avatarKey)" />{{ member.displayName }}
           </button>
         </div>
       </AppField>

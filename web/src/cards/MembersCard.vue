@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
 import { asData, type MembersData } from '@/cards/types';
 import AppAvatar from '@/components/base/AppAvatar.vue';
+import { avatarUrl } from '@/utils/avatar';
 import AppEmptyState from '@/components/base/AppEmptyState.vue';
 
 const props = defineProps<{ data: unknown }>();
@@ -17,7 +18,7 @@ const items = computed(() => d.value?.items ?? []);
   <ul v-else class="members">
     <li v-for="member in items" :key="member.id" class="members__row">
       <RouterLink :to="{ name: 'family' }" class="members__link">
-        <AppAvatar :name="member.displayName" :size="34" />
+        <AppAvatar :name="member.displayName" :size="34" :src="avatarUrl(member.avatarKey)" />
         <span class="members__body">
           <span class="members__name">{{ member.displayName }}</span>
           <span class="members__relation">{{ member.relation || (member.role === 'admin' ? '管理员' : '家庭成员') }}</span>

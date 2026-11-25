@@ -48,6 +48,7 @@ import {
   mdiNoteTextOutline,
   mdiOpenInNew,
   mdiPause,
+  mdiPaletteOutline,
   mdiPencilOutline,
   mdiPinOutline,
   mdiPlay,
@@ -78,7 +79,7 @@ export type IconName =
   | 'lock' | 'key' | 'sparkles' | 'shield' | 'user' | 'user-plus' | 'menu' | 'grid' | 'list'
   | 'filter' | 'alert' | 'info' | 'check-circle' | 'x-circle' | 'eye' | 'eye-off' | 'logout'
   | 'wifi-off' | 'link' | 'copy' | 'external' | 'camera' | 'volume' | 'file' | 'archive' | 'undo'
-  | 'sidebar-collapse' | 'sidebar-expand';
+  | 'sidebar-collapse' | 'sidebar-expand' | 'palette';
 
 export const icons: Record<IconName, string> = {
   home: mdiHomeOutline,
@@ -115,6 +116,7 @@ export const icons: Record<IconName, string> = {
   edit: mdiPencilOutline,
   trash: mdiTrashCanOutline,
   pin: mdiPinOutline,
+  palette: mdiPaletteOutline,
   image: mdiImageOutline,
   play: mdiPlay,
   pause: mdiPause,

@@ -4,6 +4,7 @@ import type { CalendarEvent } from '@/types';
 import { recurrenceSummary } from '@/utils/task';
 import { dayLabel, timeOf } from '@/utils/calendar';
 import AppAvatar from '@/components/base/AppAvatar.vue';
+import { avatarUrl } from '@/utils/avatar';
 import AppButton from '@/components/base/AppButton.vue';
 import AppDialog from '@/components/base/AppDialog.vue';
 import AppIcon from '@/components/base/AppIcon.vue';
@@ -61,7 +62,7 @@ const mapURL = computed(() => {
           <dt><AppIcon name="user" :size="15" />参与</dt>
           <dd class="event-detail__people">
             <span v-for="person in event.assignees" :key="person.id" class="event-detail__person">
-              <AppAvatar :name="person.displayName" :size="22" />{{ person.displayName }}
+              <AppAvatar :name="person.displayName" :size="22" :src="avatarUrl(person.avatarKey)" />{{ person.displayName }}
             </span>
           </dd>
         </div>

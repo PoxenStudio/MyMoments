@@ -3,15 +3,18 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useFamilyStore, useNotificationStore } from '@/stores/family';
+import { useThemeStore } from '@/stores/theme';
 import { useToastStore } from '@/stores/toast';
 import AppAvatar from './base/AppAvatar.vue';
 import AppDialog from './base/AppDialog.vue';
 import AppIcon from './base/AppIcon.vue';
 import AppIconButton from './base/AppIconButton.vue';
+import StyleQuickMenu from './business/StyleQuickMenu.vue';
 import SearchDialog from './SearchDialog.vue';
 import NotificationPanel from './NotificationPanel.vue';
 import type { IconName } from './base/icons';
 import { todayISO } from '@/utils/chrono';
+import { avatarUrl } from '@/utils/avatar';
 
 interface NavItem {
   name: string;
@@ -39,14 +42,17 @@ const auth = useAuthStore();
 const family = useFamilyStore();
 const notifications = useNotificationStore();
 const toast = useToastStore();
+const theme = useThemeStore();
 
 const searchOpen = ref(false);
 const notifOpen = ref(false);
 const createOpen = ref(false);
 const menuOpen = ref(false);
 const drawerOpen = ref(false);
+const styleOpen = ref(false);
 const online = ref(typeof navigator === 'undefined' ? true : navigator.onLine);
 const avatarWrap = ref<HTMLElement | null>(null);
+const styleWrap = ref<HTMLElement | null>(null);
 const menuButton = ref<HTMLButtonElement | null>(null);
 
 const STORAGE_KEY = 'mymoments:sidebar-collapsed';
@@ -97,7 +103,7 @@ function writePreference(value: boolean): void {
 
 async function bootstrapData(): Promise<void> {
   if (!auth.user) return;
-  await Promise.allSettled([family.load(), notifications.load()]);
+  await Promise.allSettled([family.load(), notifications.load(), theme.load()]);
 }
 
 function syncViewport(): void {
@@ -129,10 +135,12 @@ function onOffline(): void {
 }
 function onDocumentClick(event: MouseEvent): void {
   if (avatarWrap.value && !avatarWrap.value.contains(event.target as Node)) menuOpen.value = false;
+  if (styleWrap.value && !styleWrap.value.contains(event.target as Node)) styleOpen.value = false;
 }
 function onKeydown(event: KeyboardEvent): void {
   if (event.key === 'Escape') {
     menuOpen.value = false;
+    styleOpen.value = false;
     closeDrawer();
   }
 }
@@ -172,11 +180,13 @@ onBeforeUnmount(() => {
 
 watch(() => auth.user?.id, () => {
   if (auth.user) void bootstrapData();
+  else theme.reset();
 });
 
 watch(() => route.fullPath, () => {
   drawerOpen.value = false;
   menuOpen.value = false;
+  styleOpen.value = false;
 });
 
 watch(drawerOpen, (open) => {
@@ -205,6 +215,14 @@ async function logout(): Promise<void> {
 
 <template>
   <div class="shell" :class="{ 'is-collapsed': collapsed, 'is-drawer-open': drawerOpen }">
+    <div
+      class="shell__canvas"
+      aria-hidden="true"
+      :style="{
+        backgroundImage: theme.pageImage ? `url('${theme.pageImage}')` : undefined,
+        filter: theme.pageImage ? `blur(${theme.pageBlur}px)` : undefined,
+      }"
+    />
     <a class="shell__skip" href="#main">跳到主要内容</a>
 
     <aside id="app-sidebar" class="sidebar" aria-label="主导航">
@@ -257,7 +275,7 @@ async function logout(): Promise<void> {
         </RouterLink>
 
         <div class="sidebar__user">
-          <AppAvatar :name="initials" :size="32" />
+          <AppAvatar :name="initials" :size="32" :src="avatarUrl(auth.user?.avatarKey)" />
           <span class="sidebar__user-meta">
             <span class="sidebar__user-name">{{ auth.user?.displayName }}</span>
             <span class="sidebar__user-role">{{ roleLabel }}</span>
@@ -288,6 +306,17 @@ async function logout(): Promise<void> {
           <p class="topbar__title at-display">{{ title }}</p>
 
           <div class="topbar__actions">
+            <div ref="styleWrap" class="style-menu">
+              <AppIconButton
+                icon="palette"
+                label="样式"
+                :aria-expanded="styleOpen"
+                @click.stop="styleOpen = !styleOpen"
+              />
+              <Transition name="menu">
+                <StyleQuickMenu v-if="styleOpen" />
+              </Transition>
+            </div>
             <AppIconButton icon="search" label="搜索" @click="searchOpen = true" />
             <div class="bell">
               <AppIconButton icon="bell" label="消息通知" @click="notifOpen = true" />
@@ -301,7 +330,7 @@ async function logout(): Promise<void> {
                 :aria-expanded="menuOpen"
                 @click.stop="menuOpen = !menuOpen"
               >
-                <AppAvatar :name="initials" :size="32" />
+                <AppAvatar :name="initials" :size="32" :src="avatarUrl(auth.user?.avatarKey)" />
               </button>
               <Transition name="menu">
                 <div v-if="menuOpen" class="avatar-menu__panel" role="menu">
@@ -357,8 +386,20 @@ async function logout(): Promise<void> {
 <style scoped>
 .shell {
   --sidebar-w: var(--at-sidebar-width);
+  position: relative;
   min-height: 100vh;
   display: flex;
+  isolation: isolate;
+}
+
+.shell__canvas {
+  position: fixed;
+  inset: -40px;
+  z-index: -1;
+  background-size: cover;
+  background-position: center;
+  pointer-events: none;
+  opacity: 0.72;
 }
 
 .shell.is-collapsed {
@@ -638,6 +679,10 @@ async function logout(): Promise<void> {
 }
 
 .bell {
+  position: relative;
+}
+
+.style-menu {
   position: relative;
 }
 

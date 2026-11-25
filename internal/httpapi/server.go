@@ -69,10 +69,15 @@ func (s *Server) routes(mux *http.ServeMux) {
 	mux.Handle("PATCH "+api+"/me", s.requireAuth(http.HandlerFunc(s.handleMePatch)))
 	mux.Handle("GET "+api+"/me/preferences", s.requireAuth(http.HandlerFunc(s.handlePreferences)))
 	mux.Handle("PATCH "+api+"/me/preferences", s.requireAuth(http.HandlerFunc(s.handlePreferencesPatch)))
+	mux.Handle("POST "+api+"/me/avatar", s.requireAuth(http.HandlerFunc(s.handleAvatarUpload)))
+	mux.Handle("GET "+api+"/avatars/{key}", s.requireAuth(http.HandlerFunc(s.handleAvatarGet)))
 
 	mux.Handle("GET "+api+"/family/members", s.requireAuth(http.HandlerFunc(s.handleMembers)))
 	mux.Handle("POST "+api+"/family/members", s.requireAdmin(http.HandlerFunc(s.handleMemberCreate)))
 	mux.Handle("PATCH "+api+"/family/members/{id}", s.requireAuth(http.HandlerFunc(s.handleMemberPatch)))
+	mux.Handle("GET "+api+"/family/members/{id}/style", s.requireAdmin(http.HandlerFunc(s.handleMemberStyleGet)))
+	mux.Handle("PATCH "+api+"/family/members/{id}/style", s.requireAdmin(http.HandlerFunc(s.handleMemberStylePatch)))
+	mux.Handle("POST "+api+"/family/members/{id}/avatar", s.requireAdmin(http.HandlerFunc(s.handleMemberAvatarUpload)))
 	mux.Handle("POST "+api+"/family/members/{id}/reset-password", s.requireAdmin(http.HandlerFunc(s.handleMemberResetPassword)))
 
 	mux.Handle("GET "+api+"/household", s.requireAuth(http.HandlerFunc(s.handleHousehold)))

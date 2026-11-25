@@ -33,6 +33,7 @@ type Household struct {
 	DefaultWeatherLon     *float64 `json:"defaultWeatherLon"`
 	DefaultReminderOffset int      `json:"defaultReminderOffset"`
 	DefaultDashboard      *string  `json:"defaultDashboard"`
+	Style                 *string  `json:"style"`
 	CreatedAt             int64    `json:"-"`
 	UpdatedAt             int64    `json:"-"`
 }
@@ -48,6 +49,7 @@ type Preferences struct {
 	WeatherLon        *float64 `json:"weatherLon"`
 	WeatherAuto       bool     `json:"weatherAuto"`
 	NotificationPrefs *string  `json:"notificationPrefs"`
+	Style             *string  `json:"style"`
 	UpdatedAt         int64    `json:"updatedAt"`
 }
 

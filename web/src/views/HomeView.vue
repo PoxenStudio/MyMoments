@@ -54,6 +54,8 @@ const resetOpen = ref(false);
 const editing = ref(false);
 const selectedId = ref('');
 const gridRef = ref<HTMLElement | null>(null);
+const homeRef = ref<HTMLElement | null>(null);
+const isFullscreen = ref(false);
 const drag = ref<DragState | null>(null);
 let timer: number | undefined;
 let saveQueue: Promise<void> = Promise.resolve();
@@ -228,7 +230,7 @@ function onPointerUp(event: PointerEvent): void {
       ? { ...item, x: preview.x, y: preview.y, w: preview.w, h: preview.h }
       : { ...item },
   );
-  void persist(next, state.id);
+  void persist(next);
 }
 
 function removeDragListeners(): void {
@@ -246,21 +248,17 @@ function byPosition(a: DashboardLayoutItem, b: DashboardLayoutItem): number {
 }
 
 /**
- * 可见卡片保留用户摆放的位置（拖拽卡片优先）；
+ * 可见卡片按原顺序向上紧凑排布，消除大的垂直空白；
  * 隐藏卡片统一紧贴在可见区域之后，避免占住首屏位置。
  */
-function reflowLayout(items: DashboardLayoutItem[], activeId?: string): DashboardLayoutItem[] {
+function reflowLayout(items: DashboardLayoutItem[]): DashboardLayoutItem[] {
   const result = items.map((item) => ({ ...item }));
-  const visible = result.filter((item) => item.visible);
+  const visible = result.filter((item) => item.visible).sort(byPosition);
   const hidden = result.filter((item) => !item.visible).sort(byPosition);
-  const active = activeId ? visible.find((item) => item.id === activeId) : undefined;
-  const order = active
-    ? [active, ...visible.filter((item) => item.id !== active.id).sort(byPosition)]
-    : [...visible].sort(byPosition);
 
   const placedVisible: DashboardLayoutItem[] = [];
-  for (const item of order) {
-    item.y = Math.max(0, item.y);
+  for (const item of visible) {
+    item.y = 0;
     while (placedVisible.some((entry) => overlaps(item, entry))) item.y += 1;
     placedVisible.push(item);
   }
@@ -281,8 +279,8 @@ function reflowLayout(items: DashboardLayoutItem[], activeId?: string): Dashboar
 }
 
 /** 串行保存，避免连续拖拽时请求乱序覆盖。 */
-function persist(next: DashboardLayoutItem[], activeId?: string): Promise<void> {
-  const snapshot = reflowLayout(next, activeId);
+function persist(next: DashboardLayoutItem[]): Promise<void> {
+  const snapshot = reflowLayout(next);
   dashboard.layout = snapshot.map((item) => ({ ...item }));
   saveQueue = saveQueue.then(async () => {
     try {
@@ -334,6 +332,33 @@ async function refresh(): Promise<void> {
   await load(true);
 }
 
+function fullscreenTarget(): HTMLElement | null {
+  return homeRef.value?.closest('main') ?? null;
+}
+
+async function toggleFullscreen(): Promise<void> {
+  if (!document.fullscreenEnabled) {
+    toast.error('当前环境不支持全屏');
+    return;
+  }
+  try {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+      return;
+    }
+    const target = fullscreenTarget();
+    if (!target) return;
+    await target.requestFullscreen();
+  } catch {
+    toast.error('切换全屏失败');
+  }
+}
+
+function onFullscreenChange(): void {
+  isFullscreen.value =
+    document.fullscreenElement !== null && document.fullscreenElement === fullscreenTarget();
+}
+
 async function resetLayout(): Promise<void> {
   resetOpen.value = false;
   try {
@@ -373,6 +398,7 @@ onMounted(async () => {
   }
   await load();
   if (editing.value) selectedId.value = displayItems.value[0]?.id ?? '';
+  document.addEventListener('fullscreenchange', onFullscreenChange);
   timer = window.setInterval(() => {
     if (document.hidden || editing.value) return;
     void load(todayISO() !== dashboard.today ? false : true);
@@ -381,12 +407,14 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   if (timer) window.clearInterval(timer);
+  document.removeEventListener('fullscreenchange', onFullscreenChange);
+  if (isFullscreen.value) void document.exitFullscreen().catch(() => undefined);
   removeDragListeners();
 });
 </script>
 
 <template>
-  <div class="home" :class="{ 'home--editing': editing }">
+  <div ref="homeRef" class="home" :class="{ 'home--editing': editing }">
     <header class="hero">
       <div class="hero__text">
         <p class="at-caption-upper hero__date">{{ dateText }}</p>
@@ -421,6 +449,12 @@ onBeforeUnmount(() => {
             label="刷新首页"
             :active="dashboard.refreshing"
             @click="refresh"
+          />
+          <AppIconButton
+            :icon="isFullscreen ? 'fullscreen-exit' : 'fullscreen'"
+            :label="isFullscreen ? '退出全屏' : '全屏显示首页'"
+            :active="isFullscreen"
+            @click="toggleFullscreen"
           />
         </template>
       </div>

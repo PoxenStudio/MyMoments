@@ -33,6 +33,8 @@ import {
   mdiFilterVariant,
   mdiFormatListBulleted,
   mdiFormatListChecks,
+  mdiFullscreen,
+  mdiFullscreenExit,
   mdiGiftOutline,
   mdiHomeOutline,
   mdiImageOutline,
@@ -81,7 +83,7 @@ export type IconName =
   | 'lock' | 'key' | 'sparkles' | 'shield' | 'user' | 'user-plus' | 'menu' | 'grid' | 'list'
   | 'filter' | 'alert' | 'info' | 'check-circle' | 'x-circle' | 'eye' | 'eye-off' | 'logout'
   | 'wifi-off' | 'link' | 'copy' | 'external' | 'camera' | 'volume' | 'file' | 'archive' | 'undo'
-  | 'sidebar-collapse' | 'sidebar-expand' | 'palette';
+  | 'sidebar-collapse' | 'sidebar-expand' | 'palette' | 'fullscreen' | 'fullscreen-exit';
 
 export const icons: Record<IconName, string> = {
   home: mdiHomeOutline,
@@ -155,4 +157,6 @@ export const icons: Record<IconName, string> = {
   undo: mdiUndo,
   'sidebar-collapse': mdiChevronDoubleLeft,
   'sidebar-expand': mdiChevronDoubleRight,
+  fullscreen: mdiFullscreen,
+  'fullscreen-exit': mdiFullscreenExit,
 };

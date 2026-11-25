@@ -206,9 +206,8 @@ func reflowDashboardLayout(items []dashboardLayoutItem) {
 
 	placedVisible := make([]dashboardLayoutItem, 0, len(visible))
 	for _, item := range visible {
-		if item.Y < 0 {
-			item.Y = 0
-		}
+		// 可见卡片向上紧凑排列，避免留下大块垂直空白。
+		item.Y = 0
 		for overlapsAny(item, placedVisible) {
 			item.Y++
 		}

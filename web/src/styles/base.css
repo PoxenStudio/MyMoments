@@ -104,6 +104,18 @@ canvas {
   min-height: 100vh;
 }
 
+main:fullscreen {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background: var(--at-bg-page);
+}
+
+/* 内容不足一屏时垂直居中；超过一屏时自动回到顶部并可滚动 */
+main:fullscreen > .home {
+  margin-block: auto;
+}
+
 .at-display {
   font-family: var(--at-font-display);
   font-weight: 300;

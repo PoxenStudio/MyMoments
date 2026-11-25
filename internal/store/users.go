@@ -16,12 +16,12 @@ var ErrNotFound = errors.New("not found")
 
 // GetHousehold 返回家庭设置；未初始化时返回 ErrNotFound。
 func (s *Store) GetHousehold(ctx context.Context) (*model.Household, error) {
-	row := s.DB.QueryRowContext(ctx, `SELECT id, name, timezone, week_start, default_weather_city, default_weather_lat,
+	row := s.DB.QueryRowContext(ctx, `SELECT id, name, timezone, week_start, date_format, default_weather_city, default_weather_lat,
 		default_weather_lon, default_reminder_offset, default_dashboard, style, created_at, updated_at FROM household_settings WHERE id = 1`)
 	var h model.Household
 	var city, dashboard, style sql.NullString
 	var lat, lon sql.NullFloat64
-	if err := row.Scan(&h.ID, &h.Name, &h.Timezone, &h.WeekStart, &city, &lat, &lon, &h.DefaultReminderOffset,
+	if err := row.Scan(&h.ID, &h.Name, &h.Timezone, &h.WeekStart, &h.DateFormat, &city, &lat, &lon, &h.DefaultReminderOffset,
 		&dashboard, &style, &h.CreatedAt, &h.UpdatedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
@@ -64,10 +64,10 @@ func CreateHouseholdIfAbsent(ctx context.Context, tx *sql.Tx, name, timezone str
 
 // UpdateHousehold 更新家庭设置。
 func (s *Store) UpdateHousehold(ctx context.Context, h *model.Household) error {
-	_, err := s.DB.ExecContext(ctx, `UPDATE household_settings SET name=?, timezone=?, week_start=?,
+	_, err := s.DB.ExecContext(ctx, `UPDATE household_settings SET name=?, timezone=?, week_start=?, date_format=?,
 		default_weather_city=?, default_weather_lat=?, default_weather_lon=?, default_reminder_offset=?,
 		default_dashboard=?, style=?, updated_at=? WHERE id = 1`,
-		h.Name, h.Timezone, h.WeekStart, ns(h.DefaultWeatherCity), nf(h.DefaultWeatherLat), nf(h.DefaultWeatherLon),
+		h.Name, h.Timezone, h.WeekStart, h.DateFormat, ns(h.DefaultWeatherCity), nf(h.DefaultWeatherLat), nf(h.DefaultWeatherLon),
 		h.DefaultReminderOffset, ns(h.DefaultDashboard), ns(h.Style), time.Now().Unix())
 	return err
 }

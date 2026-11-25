@@ -26,12 +26,9 @@ const profileError = ref('');
 const avatarUploading = ref(false);
 const avatarInput = ref<HTMLInputElement | null>(null);
 
-const household = reactive({ name: '', timezone: 'Asia/Shanghai', weekStart: '1', defaultReminderOffset: '0' });
+const household = reactive({ name: '', timezone: 'Asia/Shanghai', weekStart: '1', dateFormat: '24h', defaultReminderOffset: '0' });
 const householdSaving = ref(false);
 const householdError = ref('');
-
-const prefs = reactive({ dateFormat: '24h' });
-const prefsSaving = ref(false);
 
 const timezoneOptions = [
   { value: 'Asia/Shanghai', label: '中国标准时间（Asia/Shanghai）' },
@@ -53,6 +50,11 @@ const weekStartOptions = [
 const dateFormatOptions = [
   { value: '24h', label: '24 小时制（18:30）' },
   { value: '12h', label: '12 小时制（下午 6:30）' },
+];
+
+const relationOptions = [
+  '爸爸', '妈妈', '女儿', '儿子', '爷爷', '奶奶', '外公',
+  '外婆', '姥姥', '姥爷', '叔叔', '姑姑', '姨', '舅',
 ];
 
 async function saveProfile(): Promise<void> {
@@ -112,6 +114,7 @@ async function saveHousehold(): Promise<void> {
       name: household.name.trim(),
       timezone: household.timezone,
       weekStart: Number(household.weekStart),
+      dateFormat: household.dateFormat as '24h' | '12h',
       defaultReminderOffset: Number(household.defaultReminderOffset) || 0,
     });
     toast.success('家庭设置已保存');
@@ -122,42 +125,17 @@ async function saveHousehold(): Promise<void> {
   }
 }
 
-async function savePrefs(): Promise<void> {
-  prefsSaving.value = true;
-  try {
-    await auth.savePreferences({ dateFormat: prefs.dateFormat as '24h' | '12h' });
-    toast.success('偏好已保存');
-  } catch (err) {
-    toast.error(err instanceof ApiError ? err.message : '保存失败');
-  } finally {
-    prefsSaving.value = false;
-  }
-}
-
-async function logout(): Promise<void> {
-  await auth.logout();
-  toast.push('已退出登录');
-  await router.replace({ name: 'login' });
-}
-
 function syncFromState(): void {
   profile.displayName = auth.user?.displayName ?? '';
   profile.relation = auth.user?.relation ?? '';
   household.name = auth.household?.name ?? '';
   household.timezone = auth.household?.timezone ?? 'Asia/Shanghai';
   household.weekStart = String(auth.household?.weekStart ?? 1);
+  household.dateFormat = auth.household?.dateFormat ?? '24h';
   household.defaultReminderOffset = String(auth.household?.defaultReminderOffset ?? 0);
 }
 
-onMounted(async () => {
-  syncFromState();
-  try {
-    const loaded = await auth.loadPreferences();
-    prefs.dateFormat = loaded.dateFormat;
-  } catch {
-    prefs.dateFormat = '24h';
-  }
-});
+onMounted(syncFromState);
 </script>
 
 <template>
@@ -166,12 +144,16 @@ onMounted(async () => {
       <div>
         <p class="at-caption-upper">设置</p>
         <h1 class="at-page__title">账号与家庭</h1>
-        <p class="at-page__subtitle">管理你的个人资料、家庭信息与显示偏好。</p>
+        <p class="at-page__subtitle">管理你的个人资料、账号安全与家庭设置。</p>
       </div>
     </header>
 
     <div class="settings__grid">
-      <AppPanel title="个人资料" subtitle="其他成员在成员列表与内容中看到的信息。">
+      <AppPanel
+        title="个人资料"
+        subtitle="其他成员在成员列表与内容中看到的信息。"
+        :class="auth.isAdmin ? undefined : 'settings__card--full'"
+      >
         <form class="at-stack" @submit.prevent="saveProfile">
           <div class="settings__identity">
             <button type="button" class="settings__avatar-btn" :disabled="avatarUploading" title="更换头像" @click="chooseAvatar">
@@ -189,13 +171,17 @@ onMounted(async () => {
               <p class="settings__avatar-hint">{{ avatarUploading ? '正在上传…' : '点击头像更换' }}</p>
             </div>
             <AppStatusTag :tone="auth.isAdmin ? 'warning' : 'neutral'">{{ auth.isAdmin ? '管理员' : '成员' }}</AppStatusTag>
+            <AppButton variant="outline" size="sm" type="button" @click="router.push('/change-password')">修改密码</AppButton>
           </div>
           <div class="settings__row-2">
             <AppField label="称呼" for-id="profile-name">
               <AppInput id="profile-name" v-model="profile.displayName" placeholder="例如：小明" />
             </AppField>
-            <AppField label="家庭关系" for-id="profile-relation" hint="选填，如爸爸、女儿">
-              <AppInput id="profile-relation" v-model="profile.relation" placeholder="例如：爸爸" />
+            <AppField label="家庭关系" for-id="profile-relation" hint="可选择或直接输入，如爸爸、女儿">
+              <AppInput id="profile-relation" v-model="profile.relation" list="relation-options" placeholder="例如：爸爸" />
+              <datalist id="relation-options">
+                <option v-for="item in relationOptions" :key="item" :value="item" />
+              </datalist>
             </AppField>
           </div>
           <div class="settings__pref-row">
@@ -218,6 +204,14 @@ onMounted(async () => {
             <AppInput id="hh-name" v-model="household.name" placeholder="我的家" />
           </AppField>
           <div class="settings__row-2">
+            <AppField label="时间格式" for-id="hh-date" hint="全家统一的时间显示格式">
+              <AppSelect id="hh-date" v-model="household.dateFormat" :options="dateFormatOptions" />
+            </AppField>
+            <AppField label="默认提醒提前量" for-id="hh-reminder" hint="单位：分钟，0 表示不提前">
+              <AppInput id="hh-reminder" v-model="household.defaultReminderOffset" type="number" min="0" max="10080" />
+            </AppField>
+          </div>
+          <div class="settings__row-2">
             <AppField label="家庭时区" for-id="hh-tz" hint="日期与提醒按此时区计算">
               <AppSelect id="hh-tz" v-model="household.timezone" :options="timezoneOptions" />
             </AppField>
@@ -225,44 +219,11 @@ onMounted(async () => {
               <AppSelect id="hh-week" v-model="household.weekStart" :options="weekStartOptions" />
             </AppField>
           </div>
-          <AppField label="默认提醒提前量" for-id="hh-reminder" hint="单位：分钟，0 表示不提前">
-            <AppInput id="hh-reminder" v-model="household.defaultReminderOffset" type="number" min="0" max="10080" />
-          </AppField>
           <p v-if="householdError" class="settings__error" role="alert"><AppIcon name="alert" :size="16" />{{ householdError }}</p>
           <div class="settings__actions">
-            <AppButton type="submit" :loading="householdSaving">保存家庭设置</AppButton>
+            <AppButton type="submit" :loading="householdSaving">保存设置</AppButton>
           </div>
         </form>
-      </AppPanel>
-
-      <AppPanel title="显示偏好" subtitle="仅影响你自己的界面。">
-        <form class="at-stack" @submit.prevent="savePrefs">
-          <AppField label="时间格式" for-id="pref-date">
-            <AppSelect id="pref-date" v-model="prefs.dateFormat" :options="dateFormatOptions" />
-          </AppField>
-          <div class="settings__actions">
-            <AppButton type="submit" :loading="prefsSaving">保存偏好</AppButton>
-          </div>
-        </form>
-      </AppPanel>
-
-      <AppPanel title="账号安全" subtitle="密码与登录状态。">
-        <div class="at-stack">
-          <div class="settings__account-row">
-            <div>
-              <p class="settings__account-label">登录密码</p>
-              <p class="settings__account-hint">建议定期更换，至少 10 个字符。</p>
-            </div>
-            <AppButton variant="outline" @click="router.push('/change-password')">修改密码</AppButton>
-          </div>
-          <div class="settings__account-row">
-            <div>
-              <p class="settings__account-label">退出登录</p>
-              <p class="settings__account-hint">在此设备上结束当前会话。</p>
-            </div>
-            <AppButton variant="ghost" @click="logout">退出登录</AppButton>
-          </div>
-        </div>
       </AppPanel>
     </div>
 
@@ -279,9 +240,13 @@ onMounted(async () => {
 <style scoped>
 .settings__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--at-space-4);
-  align-items: start;
+  align-items: stretch;
+}
+
+.settings__card--full {
+  grid-column: 1 / -1;
 }
 
 .settings__api {
@@ -347,6 +312,7 @@ onMounted(async () => {
 
 .settings__identity {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--at-space-3);
   padding-bottom: var(--at-space-3);
@@ -388,19 +354,6 @@ onMounted(async () => {
   font-size: 13px;
 }
 
-.settings__account-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--at-space-4);
-  padding: var(--at-space-2) 0;
-  border-bottom: 1px solid var(--at-color-hairline);
-}
-
-.settings__account-row:last-child {
-  border-bottom: 0;
-}
-
 .settings__account-label {
   font-size: var(--at-text-body-sm);
   font-weight: 500;
@@ -413,6 +366,10 @@ onMounted(async () => {
 }
 
 @media (max-width: 639px) {
+  .settings__grid {
+    grid-template-columns: 1fr;
+  }
+
   .settings__row-2 {
     grid-template-columns: 1fr;
   }

@@ -279,6 +279,7 @@ type householdPatchRequest struct {
 	Name                  *string  `json:"name"`
 	Timezone              *string  `json:"timezone"`
 	WeekStart             *int     `json:"weekStart"`
+	DateFormat            *string  `json:"dateFormat"`
 	DefaultReminderOffset *int     `json:"defaultReminderOffset"`
 	DefaultWeatherCity    *string  `json:"defaultWeatherCity"`
 	DefaultWeatherLat     *float64 `json:"defaultWeatherLat"`
@@ -328,6 +329,13 @@ func (s *Server) handleHouseholdPatch(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		h.WeekStart = *req.WeekStart
+	}
+	if req.DateFormat != nil {
+		if *req.DateFormat != "24h" && *req.DateFormat != "12h" {
+			writeError(w, badRequest("时间格式需为 24h 或 12h"))
+			return
+		}
+		h.DateFormat = *req.DateFormat
 	}
 	if req.DefaultReminderOffset != nil {
 		if *req.DefaultReminderOffset < 0 || *req.DefaultReminderOffset > 10080 {

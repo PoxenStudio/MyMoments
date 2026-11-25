@@ -34,13 +34,13 @@ async function toggleDefault(value: boolean): Promise<void> {
   }
 }
 
-async function restorePersonal(): Promise<void> {
+async function followHousehold(): Promise<void> {
   busy.value = true;
   try {
-    await theme.resetPersonal();
-    toast.push('已恢复默认样式');
+    await theme.setUseDefault(true);
+    toast.push('已切换为跟随家庭样式');
   } catch (err) {
-    toast.error(err instanceof ApiError ? err.message : '恢复默认失败');
+    toast.error(err instanceof ApiError ? err.message : '设置失败');
   } finally {
     busy.value = false;
   }
@@ -69,23 +69,23 @@ async function restoreHousehold(): Promise<void> {
 
 <template>
   <div class="style-settings">
-    <AppPanel title="我的样式" subtitle="自定义会覆盖家庭默认，对你自己在所有页面生效。">
+    <AppPanel title="我的样式" subtitle="默认跟随家庭样式，自定义后仅覆盖你自己的显示。">
       <div class="style-settings__top">
         <AppSwitch
           :model-value="theme.useDefault"
-          label="使用默认配置"
-          description="开启后跟随管理员设定的家庭默认样式"
+          label="跟随家庭样式"
+          description="开启后使用管理员设定的家庭全局样式"
           :disabled="busy"
           @update:model-value="toggleDefault"
         />
-        <AppButton variant="ghost" size="sm" :disabled="busy" @click="restorePersonal">恢复默认</AppButton>
+        <AppButton variant="ghost" size="sm" :disabled="busy || theme.useDefault" @click="followHousehold">跟随家庭样式</AppButton>
       </div>
       <StyleEditor
         :model="theme.effective"
         :disabled="theme.useDefault"
         @change="updatePersonal"
       />
-      <p v-if="theme.useDefault" class="style-settings__note">当前正在使用家庭默认样式，关闭上方开关即可自定义。</p>
+      <p v-if="theme.useDefault" class="style-settings__note">当前正在跟随家庭样式，关闭上方开关即可自定义。</p>
     </AppPanel>
 
     <AppPanel

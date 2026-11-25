@@ -62,6 +62,7 @@ const isWide = ref(true);
 
 const currentName = computed(() => route.name?.toString() ?? '');
 const title = computed(() => (route.meta.title ? String(route.meta.title) : '家时光'));
+const showCreateFab = computed(() => currentName.value !== 'settings');
 const initials = computed(() => auth.user?.displayName ?? '家');
 const roleLabel = computed(() => (auth.user?.role === 'admin' ? '管理员' : '家庭成员'));
 
@@ -363,7 +364,7 @@ async function logout(): Promise<void> {
         <slot />
       </main>
 
-      <button type="button" class="fab" aria-label="快速新建" @click="createOpen = true">
+      <button v-if="showCreateFab" type="button" class="fab" aria-label="快速新建" @click="createOpen = true">
         <AppIcon name="plus" :size="22" />
       </button>
     </div>

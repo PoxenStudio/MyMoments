@@ -6,6 +6,7 @@ const props = withDefaults(defineProps<{
   id?: string;
   type?: string;
   placeholder?: string;
+  list?: string;
   invalid?: boolean;
   disabled?: boolean;
   autocomplete?: string;
@@ -18,6 +19,7 @@ const props = withDefaults(defineProps<{
   id: undefined,
   type: 'text',
   placeholder: undefined,
+  list: undefined,
   invalid: false,
   disabled: false,
   autocomplete: undefined,
@@ -44,6 +46,7 @@ const value = computed({
     :class="{ 'is-invalid': invalid }"
     :type="type"
     :placeholder="placeholder"
+    :list="list"
     :disabled="disabled"
     :autocomplete="autocomplete"
     :inputmode="inputmode"

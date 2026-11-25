@@ -1,4 +1,4 @@
-.PHONY: help dev dev-up dev-down dev-status dev-logs api web web-build build test fmt lint check docker clean
+.PHONY: help dev dev-up dev-down dev-status dev-logs api api-up api-down api-restart api-status api-logs web web-build build test fmt lint check docker clean
 
 GO ?= go
 NPM ?= npm
@@ -22,6 +22,21 @@ dev-logs: ## 跟踪本地测试服务日志
 
 api:
 	$(GO) run ./cmd/server
+
+api-up: ## 后台启动 API（日志写入 .dev/api.log）
+	@sh scripts/dev.sh api-up
+
+api-down: ## 停止 API
+	@sh scripts/dev.sh api-down
+
+api-restart: api-down ## 重启 API
+	@sh scripts/dev.sh api-up
+
+api-status: ## 查看 API 状态
+	@sh scripts/dev.sh api-status
+
+api-logs: ## 跟踪 API 日志
+	@sh scripts/dev.sh api-logs
 
 web:
 	cd web && $(NPM) run dev

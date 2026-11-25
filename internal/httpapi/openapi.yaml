@@ -223,6 +223,7 @@ paths:
                 name: { type: string }
                 timezone: { type: string }
                 weekStart: { type: integer }
+                dateFormat: { type: string, enum: ['24h', '12h'] }
                 defaultWeatherCity: { type: string, nullable: true }
                 defaultWeatherLat: { type: number, nullable: true }
                 defaultWeatherLon: { type: number, nullable: true }

@@ -28,6 +28,7 @@ type Household struct {
 	Name                  string   `json:"name"`
 	Timezone              string   `json:"timezone"`
 	WeekStart             int      `json:"weekStart"`
+	DateFormat            string   `json:"dateFormat"`
 	DefaultWeatherCity    *string  `json:"defaultWeatherCity"`
 	DefaultWeatherLat     *float64 `json:"defaultWeatherLat"`
 	DefaultWeatherLon     *float64 `json:"defaultWeatherLon"`

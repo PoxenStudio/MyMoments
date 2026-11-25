@@ -117,10 +117,25 @@ case "$cmd" in
       fi
     done
     ;;
-  logs)
-    tail -n 50 -f "$DEV_DIR/api.log" "$DEV_DIR/web.log"
+  api-up)
+    mkdir -p "$DEV_DIR"
+    start_api
+    log "API 已就绪：http://127.0.0.1:$API_PORT"
+    ;;
+  api-down)
+    stop_one api
+    ;;
+  api-status)
+    if pid_alive "$DEV_DIR/api.pid"; then
+      log "api 运行中（pid $(cat "$DEV_DIR/api.pid")）"
+    else
+      log "api 未运行"
+    fi
+    ;;
+  api-logs)
+    tail -n 50 -f "$DEV_DIR/api.log"
     ;;
   *)
-    fail "用法：$0 {up|down|status|logs}"
+    fail "用法：$0 {up|down|status|logs|api-up|api-down|api-status|api-logs}"
     ;;
 esac

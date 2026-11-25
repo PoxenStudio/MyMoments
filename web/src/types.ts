@@ -20,6 +20,7 @@ export interface Household {
   name: string;
   timezone: string;
   weekStart: number;
+  dateFormat: '24h' | '12h';
   defaultWeatherCity: string | null;
   defaultWeatherLat: number | null;
   defaultWeatherLon: number | null;

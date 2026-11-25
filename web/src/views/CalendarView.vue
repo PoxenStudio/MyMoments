@@ -7,6 +7,7 @@ import { useCalendarStore } from '@/stores/calendar';
 import { useFamilyStore } from '@/stores/family';
 import { useToastStore } from '@/stores/toast';
 import { todayISO } from '@/utils/chrono';
+import { birthdayRoute } from '@/utils/birthday';
 import {
   addDays, addMonths, dayLabel, isSameMonth, monthGrid, monthLabel, monthRange,
   nextBirthdayDate, parseDate, startOfWeek, timeOf, weekRange, agendaRange, WEEKDAYS,
@@ -122,7 +123,7 @@ const birthdayEntries = computed<DayEntry[]>(() => {
         key: `birthday-${birthday.id}-${date}`,
         kind: 'birthday',
         date,
-        title: `${birthday.name}的生日`,
+        title: `@${birthday.name} 的生日`,
         time: '全天',
         allDay: true,
         color: 'var(--at-color-warning)',
@@ -369,7 +370,7 @@ async function completeTask(task: Task): Promise<void> {
 }
 
 function goBirthday(birthday: Birthday): void {
-  void router.push({ path: '/family', query: { tab: 'birthdays', open: String(birthday.id) } });
+  void router.push(birthdayRoute(birthday));
 }
 
 function goTimeline(): void {

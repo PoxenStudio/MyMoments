@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
 import { formatShortDate, formatTime } from '@/utils/chrono';
+import { birthdayRoute } from '@/utils/birthday';
 import AppIcon from '@/components/base/AppIcon.vue';
 import { asData, type OverviewData } from '@/cards/types';
 
@@ -42,11 +43,11 @@ const nextEvent = computed(() => d.value?.nextEvent ?? null);
         <span class="overview__meta">{{ formatShortDate(nextEvent.occurrenceDate ?? nextEvent.startLocal.slice(0, 10)) }} {{ nextEvent.allDay ? '' : formatTime(nextEvent.startLocal.slice(11)) }}</span>
       </RouterLink>
 
-      <RouterLink v-if="d?.birthdays.length" :to="{ name: 'calendar' }" class="overview__row">
+      <RouterLink v-if="d?.birthdays.length" :to="birthdayRoute(d.birthdays[0])" class="overview__row">
         <span class="overview__badge"><AppIcon name="gift" :size="15" /></span>
         <span class="overview__text">
           <span class="overview__label">生日临近</span>
-          <span class="overview__value">{{ d.birthdays.map((b) => b.name).join('、') }}</span>
+          <span class="overview__value">{{ d.birthdays.map((b) => `@${b.name}`).join('、') }}</span>
         </span>
         <span class="overview__meta">{{ d.birthdays[0]?.daysUntil === 0 ? '今天' : `${d.birthdays[0]?.daysUntil} 天后` }}</span>
       </RouterLink>

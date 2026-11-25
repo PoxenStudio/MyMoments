@@ -339,7 +339,8 @@ func (s *Server) cardData(r *http.Request, u *model.User, id, today string) (any
 		if err != nil {
 			return nil, err
 		}
-		items, err := s.store.ListTasks(ctx, store.TaskFilter{ViewerID: u.ID, Scope: "open", Limit: 6})
+		from, to := monthWindow(today)
+		items, err := s.store.ListTasks(ctx, store.TaskFilter{ViewerID: u.ID, Scope: "open", From: from, To: to, Limit: 5})
 		if err != nil {
 			return nil, err
 		}
@@ -560,4 +561,15 @@ func datePlusDays(date string, days int) string {
 		return date
 	}
 	return t.AddDate(0, 0, days).Format("2006-01-02")
+}
+
+// monthWindow 返回当前月与下一个月的首尾日期，用于首页待办卡筛选。
+func monthWindow(date string) (string, string) {
+	t, err := time.Parse("2006-01-02", date)
+	if err != nil {
+		return "", ""
+	}
+	first := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
+	end := first.AddDate(0, 2, 0).AddDate(0, 0, -1)
+	return first.Format("2006-01-02"), end.Format("2006-01-02")
 }

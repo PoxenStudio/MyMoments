@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router';
 import { asData, type BirthdaysData } from '@/cards/types';
 import AppAvatar from '@/components/base/AppAvatar.vue';
 import AppEmptyState from '@/components/base/AppEmptyState.vue';
+import { birthdayRoute } from '@/utils/birthday';
 
 const props = defineProps<{ data: unknown }>();
 const d = computed(() => asData<BirthdaysData>(props.data));
@@ -23,10 +24,10 @@ function label(days: number | undefined): string {
   </div>
   <ul v-else class="birthdays">
     <li v-for="item in items" :key="item.id" class="birthdays__row">
-      <RouterLink :to="{ name: 'calendar' }" class="birthdays__link">
+      <RouterLink :to="birthdayRoute(item)" class="birthdays__link">
         <AppAvatar :name="item.name" :size="34" />
         <span class="birthdays__body">
-          <span class="birthdays__name">{{ item.name }}</span>
+          <span class="birthdays__name">@{{ item.name }}</span>
           <span class="birthdays__date">{{ item.month }}月{{ item.day }}日
             <template v-if="item.age !== null && item.age !== undefined"> · {{ item.age }} 岁</template>
           </span>

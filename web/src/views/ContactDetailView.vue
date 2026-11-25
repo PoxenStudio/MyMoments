@@ -139,9 +139,14 @@ onMounted(load);
         </ul>
       </section>
 
-      <section v-if="contact.reminders.length" class="panel at-card">
+      <section v-if="contact.reminders.length || (contact.birthdayMonth && contact.birthdayDay)" class="panel at-card">
         <h2 class="panel__title">问候与待办</h2>
         <ul class="lines">
+          <li v-if="contact.birthdayMonth && contact.birthdayDay" class="line">
+            <span class="line__k">生日祝福</span>
+            <span class="line__v">{{ contact.showInCalendar ? '生日当天显示在家庭日历与首页' : '未启用' }}</span>
+            <AppStatusTag :tone="contact.showInCalendar ? 'brand' : 'neutral'">{{ contact.showInCalendar ? '启用' : '停用' }}</AppStatusTag>
+          </li>
           <li v-for="r in contact.reminders" :key="r.id" class="line">
             <span class="line__k">{{ reminderKindLabel(r.kind) }}</span>
             <span class="line__v">{{ r.title || r.frequency || '—' }}</span>

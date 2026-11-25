@@ -68,7 +68,7 @@ const form = reactive({
 
 const editing = computed(() => props.contact !== null);
 const availableContacts = computed(() => store.items.filter((c) => c.id !== props.contact?.id));
-const hasBirthday = computed(() => form.birthdayMonth !== '' || form.birthdayDay !== '' || form.birthYear !== '');
+const hasFullBirthday = computed(() => form.birthdayMonth !== '' && form.birthdayDay !== '');
 
 const relationQuery = ref('');
 const relationOpen = ref(false);
@@ -244,7 +244,7 @@ function buildPayload(): ContactPayload {
     birthdayMonth: form.birthdayMonth ? Number(form.birthdayMonth) : null,
     birthdayDay: form.birthdayDay ? Number(form.birthdayDay) : null,
     birthYear: form.birthYear ? Number(form.birthYear) : null,
-    showInCalendar: form.showInCalendar,
+    showInCalendar: form.showInCalendar && hasFullBirthday.value,
     wechat: form.wechat || null,
     officePhone: form.officePhone || null,
     avatarKey: form.avatarKey,
@@ -330,7 +330,6 @@ async function save(): Promise<void> {
             <AppInput v-model="form.birthYear" type="number" min="1900" :max="new Date().getFullYear()" placeholder="可留空" inputmode="numeric" />
           </AppField>
         </div>
-        <AppSwitch v-if="hasBirthday" v-model="form.showInCalendar" label="显示到家庭日历" description="在家庭日历中生成每年的生日提醒" />
       </fieldset>
 
       <fieldset class="cfd__section">
@@ -408,6 +407,12 @@ async function save(): Promise<void> {
 
       <fieldset class="cfd__section">
         <legend>问候与提醒</legend>
+        <AppSwitch
+          v-model="form.showInCalendar"
+          label="生日祝福"
+          :description="hasFullBirthday ? '生日当天显示在家庭日历与首页生日列表' : '先填写上方生日月份与日期'"
+          :disabled="!hasFullBirthday"
+        />
         <AppSwitch v-model="form.springFestival" label="春节拜年" description="每年春节生成拜年待办" />
         <AppSwitch v-model="form.traditional" label="重要传统节日问候" description="元宵、清明、端午、中秋、冬至" />
         <AppSwitch v-model="form.western" label="重要西方节日问候" description="元旦、情人节、圣诞节" />

@@ -565,7 +565,7 @@ async function confirmDelete(): Promise<void> {
   margin-top: 2px;
   border: 1px solid var(--at-color-hairline-strong);
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--at-bg-surface);
 }
 
 .note__items li.is-checked {

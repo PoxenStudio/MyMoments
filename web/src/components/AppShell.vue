@@ -803,8 +803,8 @@ async function toggleScheme(): Promise<void> {
   justify-content: center;
   gap: var(--at-space-2);
   padding: 6px var(--at-space-4);
-  background: #fffbeb;
-  color: #92400e;
+  background: var(--at-color-warning-soft);
+  color: var(--at-color-warning);
   font-size: var(--at-text-micro);
 }
 

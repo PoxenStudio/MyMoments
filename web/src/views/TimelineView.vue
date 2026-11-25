@@ -475,13 +475,13 @@ function mediaURL(id: number): string {
 }
 
 .entry__icon--task_completion {
-  background: #e7f2ea;
-  color: #2f6b45;
+  background: var(--at-color-success-soft);
+  color: var(--at-color-success);
 }
 
 .entry__icon--birthday {
-  background: #f7ece8;
-  color: #8c4a3b;
+  background: var(--at-color-warm-soft);
+  color: var(--at-color-warm);
 }
 
 .entry__body {
@@ -510,18 +510,18 @@ function mediaURL(id: number): string {
 }
 
 .badge--completed {
-  background: #e7f2ea;
-  color: #2f6b45;
+  background: var(--at-color-success-soft);
+  color: var(--at-color-success);
 }
 
 .badge--overdue {
-  background: #f9e8e5;
-  color: #a03b2a;
+  background: var(--at-color-danger-soft);
+  color: var(--at-color-danger);
 }
 
 .badge--upcoming {
-  background: #f1eee2;
-  color: #7a5a20;
+  background: var(--at-color-warning-soft);
+  color: var(--at-color-warning);
 }
 
 .entry__summary {

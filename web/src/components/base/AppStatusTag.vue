@@ -29,17 +29,17 @@ withDefaults(defineProps<{
 
 .at-tag--success {
   background: var(--at-color-success-soft);
-  color: #15803d;
+  color: var(--at-color-success);
 }
 
 .at-tag--danger {
   background: var(--at-color-danger-soft);
-  color: #b91c1c;
+  color: var(--at-color-danger);
 }
 
 .at-tag--warning {
-  background: #fffbeb;
-  color: #b45309;
+  background: var(--at-color-warning-soft);
+  color: var(--at-color-warning);
 }
 
 .at-tag--brand {

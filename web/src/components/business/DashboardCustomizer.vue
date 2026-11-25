@@ -227,11 +227,13 @@ function canMove(index: number, dir: -1 | 1): boolean {
 }
 
 .customizer__swatch--default { background: var(--at-bg-surface); }
-.customizer__swatch--warm { background: #f6e8d5; }
-.customizer__swatch--sage { background: #dfe8df; }
-.customizer__swatch--sky { background: #dce8f0; }
-.customizer__swatch--sand { background: #ede2d4; }
-.customizer__swatch--gradient { background: linear-gradient(135deg, #e9e2f0, #f6e8d5 55%, #dfe8df); }
+.customizer__swatch--warm { background: var(--at-card-peach); }
+.customizer__swatch--sage { background: var(--at-card-mint); }
+.customizer__swatch--sky { background: var(--at-card-sky); }
+.customizer__swatch--sand { background: var(--at-card-sand); }
+.customizer__swatch--gradient {
+  background: linear-gradient(135deg, var(--at-card-lavender) 0%, var(--at-card-peach) 52%, var(--at-card-mint) 100%);
+}
 
 .customizer__footer {
   display: flex;

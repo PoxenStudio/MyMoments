@@ -71,13 +71,18 @@ func (s *Store) Migrate(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		var applied int
-		err = s.DB.QueryRowContext(ctx, `SELECT COUNT(1) FROM schema_migrations WHERE version = ?`, version).Scan(&applied)
-		if err != nil {
+		var appliedName string
+		err = s.DB.QueryRowContext(ctx, `SELECT name FROM schema_migrations WHERE version = ?`, version).Scan(&appliedName)
+		switch {
+		case err == nil:
+			if appliedName == name {
+				continue
+			}
+			// 同一版本号的历史迁移被替换（例如迁移合并后新增的同号文件），继续执行当前文件。
+			slog.Warn("migration file replaced for applied version", "version", version, "applied", appliedName, "current", name)
+		case errors.Is(err, sql.ErrNoRows):
+		default:
 			return fmt.Errorf("check migration %s: %w", name, err)
-		}
-		if applied > 0 {
-			continue
 		}
 		body, err := migrations.FS.ReadFile(name)
 		if err != nil {
@@ -101,7 +106,8 @@ func (s *Store) applyMigration(ctx context.Context, version int, name, body stri
 		return fmt.Errorf("apply migration %s: %w", name, err)
 	}
 	if _, err := tx.ExecContext(ctx,
-		`INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)`,
+		`INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)
+		 ON CONFLICT(version) DO UPDATE SET name = excluded.name, applied_at = excluded.applied_at`,
 		version, name, time.Now().Unix()); err != nil {
 		return fmt.Errorf("record migration %s: %w", name, err)
 	}

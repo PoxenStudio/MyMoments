@@ -160,6 +160,41 @@ func (s *Server) handleContactPatch(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"contact": updated})
 }
 
+type contactPinInput struct {
+	Pinned *bool `json:"pinned"`
+}
+
+func (s *Server) handleContactPin(w http.ResponseWriter, r *http.Request) {
+	u, _ := currentUser(r)
+	c, ok := s.loadContactFor(r, w)
+	if !ok {
+		return
+	}
+	if !canReadContact(u, c) {
+		writeError(w, notFound("联系人不存在"))
+		return
+	}
+	if !canWriteContact(u, c) {
+		writeError(w, forbidden("没有修改该联系人的权限"))
+		return
+	}
+	var in contactPinInput
+	if err := decodeJSON(r, &in); err != nil {
+		writeError(w, err)
+		return
+	}
+	if in.Pinned == nil {
+		writeError(w, badRequest("缺少置顶状态"))
+		return
+	}
+	if err := s.store.SetContactPinned(r.Context(), c.ID, *in.Pinned); err != nil {
+		writeError(w, serverError(err))
+		return
+	}
+	c.Pinned = *in.Pinned
+	writeJSON(w, http.StatusOK, map[string]any{"contact": c})
+}
+
 func (s *Server) handleContactDelete(w http.ResponseWriter, r *http.Request) {
 	u, _ := currentUser(r)
 	c, ok := s.loadContactFor(r, w)

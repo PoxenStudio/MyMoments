@@ -227,6 +227,7 @@ export interface Contact {
   birthdayDay: number | null;
   birthYear: number | null;
   showInCalendar: boolean;
+  pinned: boolean;
   category: string | null;
   avatarKey: string | null;
   wechat: string | null;

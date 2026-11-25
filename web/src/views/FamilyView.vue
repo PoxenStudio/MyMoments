@@ -8,6 +8,7 @@ import { useToastStore } from '@/stores/toast';
 import type { DashboardLayoutItem, User } from '@/types';
 import { cardDefs } from '@/cards/registry';
 import { avatarUrl, uploadAvatar } from '@/utils/avatar';
+import { relationOptions } from '@/data/relations';
 import AppAvatar from '@/components/base/AppAvatar.vue';
 import AppButton from '@/components/base/AppButton.vue';
 import AppCheckbox from '@/components/base/AppCheckbox.vue';
@@ -366,8 +367,11 @@ onMounted(() => {
           </AppField>
         </div>
         <div class="family__grid">
-          <AppField label="家庭关系" for-id="member-relation" hint="选填，如妈妈、女儿">
-            <AppInput id="member-relation" v-model="createForm.relation" placeholder="例如：妈妈" />
+          <AppField label="家庭关系" for-id="member-relation" hint="可选择或直接输入，如妈妈、女儿">
+            <AppInput id="member-relation" v-model="createForm.relation" list="member-relation-options" placeholder="例如：妈妈" />
+            <datalist id="member-relation-options">
+              <option v-for="item in relationOptions" :key="item" :value="item" />
+            </datalist>
           </AppField>
           <AppField label="角色" for-id="member-role">
             <select id="member-role" v-model="createForm.role" class="family__select">
@@ -450,8 +454,11 @@ onMounted(() => {
         <AppField label="称呼" for-id="edit-display">
           <AppInput id="edit-display" v-model="editForm.displayName" />
         </AppField>
-        <AppField label="家庭关系" for-id="edit-relation">
-          <AppInput id="edit-relation" v-model="editForm.relation" placeholder="例如：爸爸" />
+        <AppField label="家庭关系" for-id="edit-relation" hint="可选择或直接输入，如爸爸、女儿">
+          <AppInput id="edit-relation" v-model="editForm.relation" list="edit-relation-options" placeholder="例如：爸爸" />
+          <datalist id="edit-relation-options">
+            <option v-for="item in relationOptions" :key="item" :value="item" />
+          </datalist>
         </AppField>
         <div v-if="auth.isAdmin" class="family__grid">
           <AppField label="角色" for-id="edit-role">

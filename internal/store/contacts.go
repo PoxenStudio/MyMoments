@@ -12,15 +12,16 @@ import (
 
 const contactColumns = `c.id, c.name, c.organization, c.title, c.note, c.category, c.avatar_key,
 	c.birthday_month, c.birthday_day, c.birth_year, c.show_in_calendar, c.wechat, c.office_phone,
-	c.owner_scope, c.created_by, c.created_at, c.updated_at`
+	c.owner_scope, c.created_by, c.created_at, c.updated_at, c.pinned`
 
 func scanContact(scanner interface{ Scan(...any) error }) (*model.Contact, error) {
 	var c model.Contact
 	var org, title, note, category, avatar, wechat, office sql.NullString
 	var bMonth, bDay, bYear sql.NullInt64
+	var pinned int
 	if err := scanner.Scan(&c.ID, &c.Name, &org, &title, &note, &category, &avatar,
 		&bMonth, &bDay, &bYear, &c.ShowInCalendar, &wechat, &office,
-		&c.OwnerScope, &c.CreatedBy, &c.CreatedAt, &c.UpdatedAt); err != nil {
+		&c.OwnerScope, &c.CreatedBy, &c.CreatedAt, &c.UpdatedAt, &pinned); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -36,6 +37,7 @@ func scanContact(scanner interface{ Scan(...any) error }) (*model.Contact, error
 	c.BirthdayMonth = intPtr(bMonth)
 	c.BirthdayDay = intPtr(bDay)
 	c.BirthYear = intPtr(bYear)
+	c.Pinned = pinned != 0
 	c.Items = []model.ContactItem{}
 	c.Relations = []model.ContactRelation{}
 	c.Reminders = []model.ContactReminder{}
@@ -71,7 +73,7 @@ func (s *Store) ListContacts(ctx context.Context, f ContactFilter) ([]model.Cont
 		args = append(args, f.Category)
 	}
 	rows, err := s.DB.QueryContext(ctx, `SELECT `+contactColumns+` FROM contacts c WHERE `+
-		strings.Join(where, " AND ")+` ORDER BY c.name, c.id`, args...)
+		strings.Join(where, " AND ")+` ORDER BY c.pinned DESC, c.name, c.id`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -229,6 +231,21 @@ func (s *Store) UpdateContact(ctx context.Context, c *model.Contact) error {
 		}
 		return replaceContactReminders(ctx, tx, c.ID, c.Reminders)
 	})
+}
+
+// SetContactPinned 更新联系人的置顶状态。
+func (s *Store) SetContactPinned(ctx context.Context, id int64, pinned bool) error {
+	res, err := s.DB.ExecContext(ctx, `UPDATE contacts SET pinned = ?, updated_at = ? WHERE id = ?`,
+		boolInt(pinned), time.Now().Unix(), id)
+	if err != nil {
+		return err
+	}
+	if n, err := res.RowsAffected(); err != nil {
+		return err
+	} else if n == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 func nint(v *int) any {

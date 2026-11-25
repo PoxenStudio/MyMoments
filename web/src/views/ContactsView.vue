@@ -31,6 +31,7 @@ const cleanupConfirmOpen = ref(false);
 const cleanupRunning = ref(false);
 const cleanupBlocked = ref<BlockedContact[]>([]);
 const fileInput = ref<HTMLInputElement | null>(null);
+const pinning = ref<number | null>(null);
 
 const filtered = computed(() => {
   const q = searchInput.value.trim().toLowerCase();
@@ -72,6 +73,19 @@ function reminderTags(c: Contact): string[] {
 function openCreate(): void {
   editingContact.value = null;
   formOpen.value = true;
+}
+
+async function togglePin(c: Contact): Promise<void> {
+  if (pinning.value !== null) return;
+  pinning.value = c.id;
+  try {
+    await store.setPinned(c.id, !c.pinned);
+    toast.success(c.pinned ? `已取消置顶「${c.name}」` : `已置顶「${c.name}」`);
+  } catch (err) {
+    toast.error(err instanceof ApiError ? err.message : '操作失败，请稍后重试');
+  } finally {
+    pinning.value = null;
+  }
 }
 
 function openEdit(c: Contact): void {
@@ -205,6 +219,7 @@ onMounted(async () => {
         v-for="c in filtered"
         :key="c.id"
         class="contact at-card at-card--hover"
+        :class="{ 'is-pinned': c.pinned }"
         tabindex="0"
         role="button"
         @click="openEdit(c)"
@@ -216,6 +231,14 @@ onMounted(async () => {
             <h3 class="contact__name">{{ c.name }}</h3>
             <p v-if="c.title || c.organization" class="contact__org">{{ [c.title, c.organization].filter(Boolean).join(' · ') }}</p>
           </div>
+          <AppIconButton
+            :icon="c.pinned ? 'pin-off' : 'pin'"
+            :label="c.pinned ? '取消置顶' : '置顶'"
+            size="sm"
+            :active="c.pinned"
+            :disabled="pinning === c.id"
+            @click.stop="togglePin(c)"
+          />
           <AppIconButton icon="trash" label="删除联系人" size="sm" @click.stop="askDelete(c)" />
         </div>
 
@@ -332,6 +355,9 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: var(--at-space-3);
+}
+.contact.is-pinned {
+  border-color: var(--at-color-hairline-strong);
 }
 .contact__top {
   display: flex;

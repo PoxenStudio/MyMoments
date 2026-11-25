@@ -118,6 +118,7 @@ func (s *Server) routes(mux *http.ServeMux) {
 	mux.Handle("PATCH "+api+"/contacts/{id}", s.requireAuth(http.HandlerFunc(s.handleContactPatch)))
 	mux.Handle("DELETE "+api+"/contacts/{id}", s.requireAuth(http.HandlerFunc(s.handleContactDelete)))
 	mux.Handle("GET "+api+"/contacts/{id}/associations", s.requireAuth(http.HandlerFunc(s.handleContactAssociations)))
+	mux.Handle("PUT "+api+"/contacts/{id}/pinned", s.requireAuth(http.HandlerFunc(s.handleContactPin)))
 	mux.Handle("POST "+api+"/contacts/cleanup", s.requireAuth(http.HandlerFunc(s.handleContactsCleanup)))
 
 	mux.Handle("GET "+api+"/birthdays", s.requireAuth(http.HandlerFunc(s.handleBirthdaysList)))

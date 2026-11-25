@@ -5,6 +5,7 @@ import { ApiError } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { useToastStore } from '@/stores/toast';
 import { avatarUrl, uploadAvatar } from '@/utils/avatar';
+import { relationOptions } from '@/data/relations';
 import AppAvatar from '@/components/base/AppAvatar.vue';
 import AppButton from '@/components/base/AppButton.vue';
 import AppField from '@/components/base/AppField.vue';
@@ -56,11 +57,6 @@ const weekStartOptions = [
 const dateFormatOptions = [
   { value: '24h', label: '24 小时制（18:30）' },
   { value: '12h', label: '12 小时制（下午 6:30）' },
-];
-
-const relationOptions = [
-  '爸爸', '妈妈', '女儿', '儿子', '爷爷', '奶奶', '外公',
-  '外婆', '姥姥', '姥爷', '叔叔', '姑姑', '姨', '舅',
 ];
 
 async function saveProfile(): Promise<void> {

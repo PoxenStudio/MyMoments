@@ -40,7 +40,9 @@ export interface CleanupResult {
 }
 
 function sortByName(list: Contact[]): Contact[] {
-  return [...list].sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
+  return [...list].sort(
+    (a, b) => Number(b.pinned) - Number(a.pinned) || a.name.localeCompare(b.name, 'zh-CN'),
+  );
 }
 
 export const useContactsStore = defineStore('contacts', () => {
@@ -83,6 +85,12 @@ export const useContactsStore = defineStore('contacts', () => {
     return res.contact;
   }
 
+  async function setPinned(id: number, pinned: boolean): Promise<Contact> {
+    const res = await api.put<{ contact: Contact }>(`/contacts/${id}/pinned`, { pinned });
+    items.value = sortByName(items.value.map((c) => (c.id === id ? res.contact : c)));
+    return res.contact;
+  }
+
   async function remove(id: number): Promise<void> {
     await api.del(`/contacts/${id}`);
     items.value = items.value.filter((c) => c.id !== id);
@@ -111,5 +119,5 @@ export const useContactsStore = defineStore('contacts', () => {
     error.value = null;
   }
 
-  return { items, loading, loaded, error, load, get, create, update, remove, associations, cleanup, importFile, reset };
+  return { items, loading, loaded, error, load, get, create, update, setPinned, remove, associations, cleanup, importFile, reset };
 });

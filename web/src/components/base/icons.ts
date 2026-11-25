@@ -51,6 +51,7 @@ import {
   mdiPause,
   mdiPaletteOutline,
   mdiPencilOutline,
+  mdiPinOffOutline,
   mdiPinOutline,
   mdiPlay,
   mdiPlus,
@@ -76,7 +77,7 @@ export type IconName =
   | 'bell' | 'search' | 'plus' | 'minus' | 'close' | 'check' | 'more' | 'chevron-down' | 'chevron-up'
   | 'chevron-left' | 'chevron-right' | 'arrow-left' | 'arrow-right' | 'clock' | 'map-pin' | 'gift'
   | 'sun' | 'cloud' | 'cloud-rain' | 'cloud-snow' | 'cloud-storm' | 'cloud-fog' | 'moon'
-  | 'edit' | 'trash' | 'pin' | 'image' | 'play' | 'pause' | 'upload' | 'download' | 'refresh'
+  | 'edit' | 'trash' | 'pin' | 'pin-off' | 'image' | 'play' | 'pause' | 'upload' | 'download' | 'refresh'
   | 'lock' | 'key' | 'sparkles' | 'shield' | 'user' | 'user-plus' | 'menu' | 'grid' | 'list'
   | 'filter' | 'alert' | 'info' | 'check-circle' | 'x-circle' | 'eye' | 'eye-off' | 'logout'
   | 'wifi-off' | 'link' | 'copy' | 'external' | 'camera' | 'volume' | 'file' | 'archive' | 'undo'
@@ -118,6 +119,7 @@ export const icons: Record<IconName, string> = {
   edit: mdiPencilOutline,
   trash: mdiTrashCanOutline,
   pin: mdiPinOutline,
+  'pin-off': mdiPinOffOutline,
   palette: mdiPaletteOutline,
   image: mdiImageOutline,
   play: mdiPlay,

@@ -203,6 +203,7 @@ type Contact struct {
 	BirthdayDay    *int              `json:"birthdayDay"`
 	BirthYear      *int              `json:"birthYear"`
 	ShowInCalendar bool              `json:"showInCalendar"`
+	Pinned         bool              `json:"pinned"`
 	Category       *string           `json:"category"`
 	AvatarKey      *string           `json:"avatarKey"`
 	Wechat         *string           `json:"wechat"`

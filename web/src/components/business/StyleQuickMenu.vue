@@ -197,7 +197,7 @@ async function restore(): Promise<void> {
 
 .quick-menu__tones {
   display: grid;
-  grid-template-columns: repeat(11, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(22px, 1fr));
   gap: 4px;
 }
 

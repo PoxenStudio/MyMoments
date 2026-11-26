@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import AppSlider from '@/components/base/AppSlider.vue';
 import {
+  DEFAULT_BACKGROUND_OPACITY,
   backgroundPresets,
   cardTonePresets,
   cornerPresets,
@@ -50,6 +51,10 @@ function setColor(event: Event): void {
 
 function setBlur(value: number): void {
   emit('change', { pageBackground: { blur: value } });
+}
+
+function setOpacity(value: number): void {
+  emit('change', { pageBackground: { opacity: value / 100 } });
 }
 
 function pickBackground(key: string): void {
@@ -198,6 +203,16 @@ function setCornerOpacity(value: number): void {
           :disabled="disabled"
           @change="setBlur"
         />
+        <AppSlider
+          :model-value="Math.round((selectedBg.opacity ?? DEFAULT_BACKGROUND_OPACITY) * 100)"
+          :min="20"
+          :max="100"
+          :step="5"
+          label="图片浓度"
+          suffix="%"
+          :disabled="disabled"
+          @change="setOpacity"
+        />
       </template>
     </section>
 
@@ -254,6 +269,9 @@ function setCornerOpacity(value: number): void {
             ? `url('${backgroundPresets.find((item) => item.key === selectedBg.image)?.image}')`
             : undefined,
           filter: selectedBg.kind === 'image' ? `blur(${selectedBg.blur ?? 0}px)` : undefined,
+          opacity: selectedBg.kind === 'image' && selectedBg.image
+            ? String(selectedBg.opacity ?? DEFAULT_BACKGROUND_OPACITY)
+            : undefined,
         }"
       />
       <div class="preview-card" :style="{ borderRadius: `${radiusPx[model.cardRadius]}px` }">

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import {
+  DEFAULT_BACKGROUND_OPACITY,
   SYSTEM_THEME,
   backgroundByKey,
   cornerByKey,
@@ -72,6 +73,7 @@ export const useThemeStore = defineStore('theme', () => {
     return backgroundByKey[bg.image] ?? null;
   });
   const pageBlur = computed(() => effective.value.pageBackground.blur ?? 0);
+  const pageOpacity = computed(() => effective.value.pageBackground.opacity ?? DEFAULT_BACKGROUND_OPACITY);
   const cornerImage = computed(() => {
     const key = effective.value.cardCorner.image;
     return key ? cornerByKey[key]?.image ?? null : null;
@@ -208,6 +210,7 @@ export const useThemeStore = defineStore('theme', () => {
     scheme,
     pageImage,
     pageBlur,
+    pageOpacity,
     cornerImage,
     load,
     apply,

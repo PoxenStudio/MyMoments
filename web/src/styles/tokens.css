@@ -286,6 +286,36 @@ html[data-theme='cartoon-lemon'] {
   --at-border: #ece3c9;
 }
 
+html[data-theme='festival-spring'] {
+  --at-tone-page-dark: #1a0e0c;
+  --at-tone-surface-dark: #291a16;
+  --at-bg-page: #f6ded9;
+  --at-bg-canvas-soft: #fdf3f1;
+  --at-bg-surface: #fffdfd;
+  --at-bg-surface-strong: #f2d8d3;
+  --at-color-hairline: #ecd3ce;
+  --at-color-hairline-soft: #f7e9e6;
+  --at-color-hairline-strong: #dcbfb9;
+  --at-color-muted: #7d6a66;
+  --at-color-muted-soft: #b7a19c;
+  --at-border: #ecd3ce;
+}
+
+html[data-theme='festival-mid-autumn'] {
+  --at-tone-page-dark: #1b100a;
+  --at-tone-surface-dark: #291b13;
+  --at-bg-page: #f7e3d7;
+  --at-bg-canvas-soft: #fdf5ef;
+  --at-bg-surface: #fffdfb;
+  --at-bg-surface-strong: #f3dccf;
+  --at-color-hairline: #eddcd1;
+  --at-color-hairline-soft: #f7ece5;
+  --at-color-hairline-strong: #dcc4b5;
+  --at-color-muted: #7d6a5d;
+  --at-color-muted-soft: #b7a293;
+  --at-border: #eddcd1;
+}
+
 /* 卡片色调：独立于页面色调，只覆盖卡片表面与内衬，不改画布 */
 html[data-card-tone='soft'] {
   --at-card-surface-dark: #1a1715;

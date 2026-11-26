@@ -232,6 +232,7 @@ async function toggleScheme(): Promise<void> {
       :style="{
         backgroundImage: theme.pageImage ? `url('${theme.pageImage}')` : undefined,
         filter: theme.pageImage ? `blur(${theme.pageBlur}px)` : undefined,
+        opacity: theme.pageImage ? String(theme.pageOpacity) : undefined,
       }"
     />
     <a class="shell__skip" href="#main">跳到主要内容</a>
@@ -415,7 +416,6 @@ async function toggleScheme(): Promise<void> {
   background-size: cover;
   background-position: center;
   pointer-events: none;
-  opacity: 0.72;
 }
 
 .shell.is-collapsed {

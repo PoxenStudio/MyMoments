@@ -33,7 +33,8 @@ export interface Household {
 export type ThemeTone =
   | 'default'
   | 'warm-sun' | 'warm-sand' | 'warm-peach' | 'warm-cream' | 'warm-rose'
-  | 'cartoon-macaron' | 'cartoon-sky' | 'cartoon-mint' | 'cartoon-berry' | 'cartoon-lemon';
+  | 'cartoon-macaron' | 'cartoon-sky' | 'cartoon-mint' | 'cartoon-berry' | 'cartoon-lemon'
+  | 'festival-spring' | 'festival-mid-autumn';
 
 export type CardRadius = 'sm' | 'md' | 'lg' | 'xl';
 
@@ -46,6 +47,7 @@ export interface ThemeBackground {
   color?: string;
   image?: string;
   blur?: number;
+  opacity?: number;
 }
 
 export interface ThemeCorner {

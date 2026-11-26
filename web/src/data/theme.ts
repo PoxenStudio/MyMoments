@@ -7,7 +7,7 @@ function svgUrl(svg: string): string {
 export interface TonePreset {
   key: ThemeTone;
   label: string;
-  group: 'basic' | 'warm' | 'cartoon';
+  group: 'basic' | 'warm' | 'cartoon' | 'festival';
   swatch: string;
   description: string;
 }
@@ -24,6 +24,8 @@ export const tonePresets: TonePreset[] = [
   { key: 'cartoon-mint', label: '薄荷绿', group: 'cartoon', swatch: '#eaf4ef', description: '淡绿' },
   { key: 'cartoon-berry', label: '浆果粉', group: 'cartoon', swatch: '#f7e6ec', description: '莓粉' },
   { key: 'cartoon-lemon', label: '柠檬黄', group: 'cartoon', swatch: '#f8f2dd', description: '淡黄' },
+  { key: 'festival-spring', label: '春节', group: 'festival', swatch: '#f6ded9', description: '新春红' },
+  { key: 'festival-mid-autumn', label: '中秋', group: 'festival', swatch: '#f7e3d7', description: '月圆红' },
 ];
 
 export const radiusOptions: { key: CardRadius; label: string; px: number }[] = [
@@ -125,6 +127,53 @@ const bgBerryDots = svgUrl(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0
   </g>
 </svg>`);
 
+function lantern(cx: number, cy: number, r: number, fill: string): string {
+  const capW = r * 0.72;
+  const capH = r * 0.22;
+  const tassel = r * 0.6;
+  const top = cy - r * 1.16;
+  const bottom = cy + r * 1.16;
+  return `<g>
+    <line x1="${cx}" y1="${top - capH - 22}" x2="${cx}" y2="${top - capH}" stroke="#c08a3e" stroke-width="3"/>
+    <rect x="${cx - capW / 2}" y="${top - capH}" width="${capW}" height="${capH}" rx="${capH / 2}" fill="#c08a3e"/>
+    <ellipse cx="${cx}" cy="${cy}" rx="${r}" ry="${r * 1.16}" fill="${fill}"/>
+    <ellipse cx="${cx}" cy="${cy}" rx="${r * 0.28}" ry="${r * 1.16}" fill="rgba(255,255,255,0.16)"/>
+    <path d="M${cx - r * 0.5} ${cy} Q${cx} ${cy - r * 0.45} ${cx + r * 0.5} ${cy} Q${cx} ${cy + r * 0.45} ${cx - r * 0.5} ${cy} Z" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="2"/>
+    <rect x="${cx - capW / 2}" y="${bottom}" width="${capW}" height="${capH}" rx="${capH / 2}" fill="#c08a3e"/>
+    <line x1="${cx}" y1="${bottom + capH}" x2="${cx}" y2="${bottom + capH + tassel}" stroke="#c08a3e" stroke-width="3"/>
+    <circle cx="${cx}" cy="${bottom + capH + tassel + 6}" r="${capH * 0.55}" fill="#c08a3e"/>
+  </g>`;
+}
+
+const bgFestivalSpring = svgUrl(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="#f6ded9"/>
+  <g fill="#e8b84a" opacity="0.55">
+    <circle cx="120" cy="70" r="3"/><circle cx="690" cy="90" r="3"/><circle cx="600" cy="40" r="3"/>
+    <circle cx="230" cy="40" r="2"/><circle cx="470" cy="60" r="2"/><circle cx="350" cy="30" r="3"/>
+  </g>
+  ${lantern(180, 150, 42, '#d6453f')}
+  ${lantern(430, 112, 30, '#e0574f')}
+  ${lantern(660, 156, 42, '#d6453f')}
+  ${lantern(300, 320, 34, '#e0574f')}
+  ${lantern(560, 320, 34, '#d6453f')}
+  ${lantern(190, 480, 30, '#e0574f')}
+  ${lantern(640, 480, 34, '#d6453f')}
+</svg>`);
+
+const bgFestivalMidAutumn = svgUrl(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="#f7e3d7"/>
+  <circle cx="640" cy="150" r="92" fill="#f0c66a" opacity="0.9"/>
+  <circle cx="640" cy="150" r="92" fill="none" stroke="#e6b95c" stroke-width="2" opacity="0.5"/>
+  <g fill="#e0b15e" opacity="0.5">
+    <circle cx="610" cy="128" r="7"/><circle cx="668" cy="164" r="5"/><circle cx="662" cy="120" r="4"/>
+  </g>
+  ${lantern(170, 190, 36, '#d6453f')}
+  ${lantern(430, 130, 26, '#e0574f')}
+  ${lantern(300, 370, 30, '#d6453f')}
+  ${lantern(560, 390, 30, '#d6453f')}
+  ${lantern(180, 520, 28, '#e0574f')}
+</svg>`);
+
 export const backgroundPresets: BackgroundPreset[] = [
   { key: 'bg-warm-glow', label: '暖光', swatch: '#ffe9c9', image: bgWarmGlow },
   { key: 'bg-sand-hills', label: '沙丘', swatch: '#e9dcc5', image: bgSandHills },
@@ -132,6 +181,8 @@ export const backgroundPresets: BackgroundPreset[] = [
   { key: 'bg-sky-cloud', label: '云朵', swatch: '#e3eef9', image: bgSkyCloud },
   { key: 'bg-mint-leaf', label: '薄荷叶', swatch: '#c9e8d6', image: bgMintLeaf },
   { key: 'bg-berry-dots', label: '莓果点', swatch: '#f0c3d2', image: bgBerryDots },
+  { key: 'bg-festival-spring', label: '春节红灯笼', swatch: '#d6453f', image: bgFestivalSpring },
+  { key: 'bg-festival-mid-autumn', label: '中秋红灯笼', swatch: '#e6a23c', image: bgFestivalMidAutumn },
 ];
 
 export const backgroundByKey: Record<string, string> = Object.fromEntries(
@@ -258,13 +309,14 @@ export const cornerByKey: Record<string, CornerPreset> = Object.fromEntries(
   cornerPresets.map((item) => [item.key, item]),
 );
 
+export const DEFAULT_BACKGROUND_COLOR = '#f5f5f5';
+export const DEFAULT_BACKGROUND_OPACITY = 0.72;
+
 export const SYSTEM_THEME: ThemeConfig = {
   scheme: 'light',
   cardTone: 'default',
   tone: 'default',
   cardRadius: 'lg',
-  pageBackground: { kind: 'color', blur: 8 },
+  pageBackground: { kind: 'color', blur: 8, opacity: DEFAULT_BACKGROUND_OPACITY },
   cardCorner: { image: null, opacity: 0.12 },
 };
-
-export const DEFAULT_BACKGROUND_COLOR = '#f5f5f5';

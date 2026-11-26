@@ -84,12 +84,15 @@
           autocapitalize="off"
           autocorrect="off"
           spellcheck="false"
+          autofocus
           placeholder="https://moments.example.com"
+          list="recent"
         />
+        <datalist id="recent"></datalist>
         <button id="submit" type="submit">连接</button>
         <p id="error" class="error" role="alert" hidden></p>
       </form>
-      <p class="hint">支持 https:// 或局域网 http://192.168.1.10:8080。地址保存在本机，下次启动自动连接。</p>
+      <p class="hint">支持 https:// 或局域网 http://192.168.1.10:8080。地址保存在本机，下次启动自动连接，输入框可下拉选择最近用过的地址。</p>
     </main>
     <script type="module" src="main.js"></script>
   </body>

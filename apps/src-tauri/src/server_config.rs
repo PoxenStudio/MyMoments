@@ -5,6 +5,9 @@ use tauri::{AppHandle, Manager, Url};
 
 const CONFIG_FILE: &str = "server.json";
 const CONFIG_KEY: &str = "server_url";
+const HISTORY_KEY: &str = "history";
+/// 最多保留的历史地址数量。
+const HISTORY_LIMIT: usize = 5;
 
 /// 把用户输入规整为 http/https 服务器地址；未写协议时按 http 补齐。
 pub fn normalize(input: &str) -> Result<Url, String> {
@@ -38,16 +41,86 @@ pub fn load(app: &AppHandle) -> Option<String> {
         .map(str::to_string)
 }
 
-/// 持久化服务器地址，供下次启动自动连接。
+/// 持久化服务器地址，并把地址记入历史（最近使用的排在前面）。
 pub fn save(app: &AppHandle, url: &str) -> Result<(), String> {
+    let mut history = load_history(app);
+    remember(&mut history, url);
+
     let path = config_path(app)?;
-    let payload = serde_json::json!({ CONFIG_KEY: url });
+    let payload = serde_json::json!({ CONFIG_KEY: url, HISTORY_KEY: history });
     let bytes = serde_json::to_vec_pretty(&payload).map_err(|err| err.to_string())?;
     fs::write(path, bytes).map_err(|err| err.to_string())
+}
+
+/// 读取历史服务器地址，最近使用的在前。
+pub fn load_history(app: &AppHandle) -> Vec<String> {
+    let Some(path) = config_path(app).ok() else {
+        return Vec::new();
+    };
+    match fs::read_to_string(path) {
+        Ok(text) => parse_history(&text),
+        Err(_) => Vec::new(),
+    }
+}
+
+/// 把地址插入历史首位并去重、截断。
+fn remember(history: &mut Vec<String>, url: &str) {
+    history.retain(|item| item != url);
+    history.insert(0, url.to_string());
+    history.truncate(HISTORY_LIMIT);
+}
+
+fn parse_history(text: &str) -> Vec<String> {
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(text) else {
+        return Vec::new();
+    };
+    value
+        .get(HISTORY_KEY)
+        .and_then(|item| item.as_array())
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|item| item.as_str())
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 fn config_path(app: &AppHandle) -> Result<PathBuf, String> {
     let dir = app.path().app_config_dir().map_err(|err| err.to_string())?;
     fs::create_dir_all(&dir).map_err(|err| err.to_string())?;
     Ok(dir.join(CONFIG_FILE))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn remember_puts_latest_first_and_dedups() {
+        let mut history = vec!["http://a".to_string(), "http://b".to_string()];
+        remember(&mut history, "http://b");
+        assert_eq!(history, vec!["http://b", "http://a"]);
+    }
+
+    #[test]
+    fn remember_limits_history_size() {
+        let mut history = Vec::new();
+        for i in 0..(HISTORY_LIMIT + 2) {
+            remember(&mut history, &format!("http://host{i}"));
+        }
+        assert_eq!(history.len(), HISTORY_LIMIT);
+        assert_eq!(history[0], format!("http://host{}", HISTORY_LIMIT + 1));
+    }
+
+    #[test]
+    fn parse_history_tolerates_bad_payloads() {
+        assert!(parse_history("not json").is_empty());
+        assert!(parse_history(r#"{"server_url":"http://a"}"#).is_empty());
+        assert_eq!(
+            parse_history(r#"{"history":["http://a",1,null,"http://b"]}"#),
+            vec!["http://a", "http://b"]
+        );
+    }
 }

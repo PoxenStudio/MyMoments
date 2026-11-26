@@ -332,11 +332,33 @@ async function refresh(): Promise<void> {
   await load(true);
 }
 
+interface TauriInvoke {
+  invoke<T = unknown>(cmd: string, args?: Record<string, unknown>): Promise<T>;
+}
+
+interface TauriGlobal {
+  core?: TauriInvoke;
+}
+
+/** 在 Tauri 原生壳内时返回 invoke，普通浏览器返回 undefined。 */
+function tauriInvoke(): TauriInvoke | undefined {
+  return (globalThis as { __TAURI__?: TauriGlobal }).__TAURI__?.core;
+}
+
 function fullscreenTarget(): HTMLElement | null {
   return homeRef.value?.closest('main') ?? null;
 }
 
 async function toggleFullscreen(): Promise<void> {
+  const invoke = tauriInvoke();
+  if (invoke) {
+    try {
+      isFullscreen.value = await invoke.invoke<boolean>('toggle_fullscreen');
+    } catch {
+      toast.error('切换全屏失败');
+    }
+    return;
+  }
   if (!document.fullscreenEnabled) {
     toast.error('当前环境不支持全屏');
     return;

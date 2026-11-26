@@ -1,4 +1,4 @@
-.PHONY: help dev dev-up dev-down dev-status dev-logs api api-up api-down api-restart api-status api-logs web web-build build test fmt lint check docker docker-build setup-multiarch build-multiarch-local app app-build app-icons clean
+.PHONY: help dev dev-up dev-down dev-status dev-logs api api-up api-down api-restart api-status api-logs web web-build webui-check build test fmt lint check docker docker-build setup-multiarch build-multiarch-local app app-build app-icons clean
 
 GO ?= go
 NPM ?= npm
@@ -27,7 +27,7 @@ dev-status: ## 查看本地测试服务状态
 dev-logs: ## 跟踪本地测试服务日志
 	@bash scripts/dev.sh logs
 
-api:
+api: webui-check
 	$(GO) run ./cmd/server
 
 api-up: ## 后台启动 API（日志写入 .dev/api.log）
@@ -52,6 +52,9 @@ web-build:
 	cd web && $(NPM) ci && $(NPM) run build
 	rm -rf internal/webui/static
 	cp -R web/dist internal/webui/static
+
+webui-check: ## 校验内嵌前端产物与 index.html 引用一致（缺失时自动重建）
+	@sh scripts/webui-check.sh
 
 build: web-build
 	CGO_ENABLED=0 $(GO) build -trimpath -ldflags="-s -w" -o build/mymoments ./cmd/server

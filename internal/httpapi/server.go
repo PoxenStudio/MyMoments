@@ -221,6 +221,11 @@ func (s *Server) handleStatic(w http.ResponseWriter, r *http.Request) {
 	}
 	b, err := fs.ReadFile(s.web, name)
 	if err != nil {
+		// 缺失的静态资源必须 404，不能回退 HTML：否则会被当作 immutable 缓存一年。
+		if path.Ext(name) != "" {
+			http.NotFound(w, r)
+			return
+		}
 		name = "index.html"
 		b, err = fs.ReadFile(s.web, name)
 		if err != nil {

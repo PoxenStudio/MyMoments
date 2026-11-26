@@ -201,7 +201,7 @@ function setCornerOpacity(value: number): void {
           label="虚化程度"
           suffix=" px"
           :disabled="disabled"
-          @change="setBlur"
+          @commit="setBlur"
         />
         <AppSlider
           :model-value="Math.round((selectedBg.opacity ?? DEFAULT_BACKGROUND_OPACITY) * 100)"
@@ -211,7 +211,7 @@ function setCornerOpacity(value: number): void {
           label="图片浓度"
           suffix="%"
           :disabled="disabled"
-          @change="setOpacity"
+          @commit="setOpacity"
         />
       </template>
     </section>
@@ -255,7 +255,7 @@ function setCornerOpacity(value: number): void {
         label="角图浓度"
         suffix="%"
         :disabled="disabled || !selectedCorner"
-        @change="setCornerOpacity"
+        @commit="setCornerOpacity"
       />
     </section>
 

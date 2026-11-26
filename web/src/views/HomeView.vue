@@ -336,13 +336,19 @@ interface TauriInvoke {
   invoke<T = unknown>(cmd: string, args?: Record<string, unknown>): Promise<T>;
 }
 
-interface TauriGlobal {
-  core?: TauriInvoke;
+interface TauriWindow {
+  isFullscreen(): Promise<boolean>;
+  setFullscreen(value: boolean): Promise<void>;
 }
 
-/** 在 Tauri 原生壳内时返回 invoke，普通浏览器返回 undefined。 */
-function tauriInvoke(): TauriInvoke | undefined {
-  return (globalThis as { __TAURI__?: TauriGlobal }).__TAURI__?.core;
+interface TauriGlobal {
+  core?: TauriInvoke;
+  window?: { getCurrentWindow(): TauriWindow };
+}
+
+/** 在 Tauri 原生壳内时返回窗口对象；普通浏览器返回 undefined。 */
+function tauriWindow(): TauriWindow | undefined {
+  return (globalThis as { __TAURI__?: TauriGlobal }).__TAURI__?.window?.getCurrentWindow();
 }
 
 function fullscreenTarget(): HTMLElement | null {
@@ -350,10 +356,12 @@ function fullscreenTarget(): HTMLElement | null {
 }
 
 async function toggleFullscreen(): Promise<void> {
-  const invoke = tauriInvoke();
-  if (invoke) {
+  const window = tauriWindow();
+  if (window) {
     try {
-      isFullscreen.value = await invoke.invoke<boolean>('toggle_fullscreen');
+      const next = !(await window.isFullscreen());
+      await window.setFullscreen(next);
+      isFullscreen.value = next;
     } catch {
       toast.error('切换全屏失败');
     }
@@ -379,6 +387,22 @@ async function toggleFullscreen(): Promise<void> {
 function onFullscreenChange(): void {
   isFullscreen.value =
     document.fullscreenElement !== null && document.fullscreenElement === fullscreenTarget();
+}
+
+let resizeTimer: number | undefined;
+
+/** 窗口尺寸变化（含通过系统方式退出原生全屏）时同步全屏状态。 */
+function onWindowResize(): void {
+  window.clearTimeout(resizeTimer);
+  resizeTimer = window.setTimeout(async () => {
+    const current = tauriWindow();
+    if (!current) return;
+    try {
+      isFullscreen.value = await current.isFullscreen();
+    } catch {
+      // 读取失败时保持现状
+    }
+  }, 200);
 }
 
 async function resetLayout(): Promise<void> {
@@ -421,6 +445,7 @@ onMounted(async () => {
   await load();
   if (editing.value) selectedId.value = displayItems.value[0]?.id ?? '';
   document.addEventListener('fullscreenchange', onFullscreenChange);
+  window.addEventListener('resize', onWindowResize);
   timer = window.setInterval(() => {
     if (document.hidden || editing.value) return;
     void load(todayISO() !== dashboard.today ? false : true);
@@ -430,13 +455,15 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   if (timer) window.clearInterval(timer);
   document.removeEventListener('fullscreenchange', onFullscreenChange);
+  window.removeEventListener('resize', onWindowResize);
+  window.clearTimeout(resizeTimer);
   if (isFullscreen.value) void document.exitFullscreen().catch(() => undefined);
   removeDragListeners();
 });
 </script>
 
 <template>
-  <div ref="homeRef" class="home" :class="{ 'home--editing': editing }">
+  <div ref="homeRef" class="home" :class="{ 'home--editing': editing, 'home--fullscreen': isFullscreen }">
     <header class="hero">
       <div class="hero__text">
         <p class="at-caption-upper hero__date">{{ dateText }}</p>
@@ -644,6 +671,16 @@ onBeforeUnmount(() => {
   max-width: var(--at-content-max);
   margin: 0 auto;
   padding: var(--at-space-8) var(--at-space-6) var(--at-space-12);
+}
+
+/* 原生壳内窗口全屏后，让首页内容铺满整个屏幕，隐藏应用外壳与页面空白 */
+.home--fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  max-width: none;
+  overflow: auto;
+  background: var(--at-bg-page);
 }
 
 .hero {

@@ -107,22 +107,7 @@ fn recent_servers(app: tauri::AppHandle) -> Vec<String> {
     server_config::load_history(&app)
 }
 
-/// 切换桌面窗口的原生全屏；移动端天然全屏，此命令不执行任何操作。
-#[tauri::command]
-fn toggle_fullscreen(window: tauri::WebviewWindow) -> Result<bool, String> {
-    #[cfg(desktop)]
-    {
-        let next = !window.is_fullscreen().map_err(|err| err.to_string())?;
-        window.set_fullscreen(next).map_err(|err| err.to_string())?;
-        Ok(next)
-    }
-    #[cfg(not(desktop))]
-    {
-        let _ = window;
-        Ok(false)
-    }
-}
-
+/// 桌面窗口全屏由前端通过 window 插件命令控制（见 capabilities）。
 fn create_window(
     app: &tauri::AppHandle,
     target: WebviewUrl,
@@ -185,11 +170,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(state)
-        .invoke_handler(tauri::generate_handler![
-            save_server_url,
-            recent_servers,
-            toggle_fullscreen
-        ])
+        .invoke_handler(tauri::generate_handler![save_server_url, recent_servers])
         .on_menu_event(|app, event| handle_menu_event(app, &event.id().0))
         .on_window_event(|window, event| {
             // macOS：关闭窗口即退出应用，而不是仅隐藏窗口常驻 Dock。

@@ -1,7 +1,15 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "默认能力：核心 API 与系统浏览器打开外链",
+  "description": "默认能力：核心 API 与系统浏览器打开外链。remote 允许用户配置的服务器页面调用本机命令（导航已由 Rust 侧 allowlist 限制）",
   "windows": ["main"],
-  "permissions": ["core:default", "opener:default"]
+  "remote": {
+    "urls": ["http://*:*/*", "https://*:*/*"]
+  },
+  "permissions": [
+    "core:default",
+    "core:window:allow-is-fullscreen",
+    "core:window:allow-set-fullscreen",
+    "opener:default"
+  ]
 }

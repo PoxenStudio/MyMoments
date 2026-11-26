@@ -6,7 +6,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEV_DIR="$ROOT/.dev"
 API_PORT=8080
 WEB_PORT="${WEB_PORT:-5173}"
-DATA_DIR="${MYMOMENTS_DATA_DIR:-$DEV_DIR/data}"
+DATA_DIR="${MYMOMENTS_DATA_DIR:-$ROOT/data}"
 
 log() { printf '[dev] %s\n' "$*"; }
 fail() { printf '[dev] %s\n' "$*" >&2; exit 1; }

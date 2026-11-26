@@ -16,34 +16,34 @@ help: ## 列出可用目标
 dev: dev-up
 
 dev-up: ## 启动本地测试页面（API + Vite）
-	@sh scripts/dev.sh up
+	@bash scripts/dev.sh up
 
 dev-down: ## 停止本地测试页面
-	@sh scripts/dev.sh down
+	@bash scripts/dev.sh down
 
 dev-status: ## 查看本地测试服务状态
-	@sh scripts/dev.sh status
+	@bash scripts/dev.sh status
 
 dev-logs: ## 跟踪本地测试服务日志
-	@sh scripts/dev.sh logs
+	@bash scripts/dev.sh logs
 
 api:
 	$(GO) run ./cmd/server
 
 api-up: ## 后台启动 API（日志写入 .dev/api.log）
-	@sh scripts/dev.sh api-up
+	@bash scripts/dev.sh api-up
 
 api-down: ## 停止 API
-	@sh scripts/dev.sh api-down
+	@bash scripts/dev.sh api-down
 
 api-restart: api-down ## 重启 API
-	@sh scripts/dev.sh api-up
+	@bash scripts/dev.sh api-up
 
 api-status: ## 查看 API 状态
-	@sh scripts/dev.sh api-status
+	@bash scripts/dev.sh api-status
 
 api-logs: ## 跟踪 API 日志
-	@sh scripts/dev.sh api-logs
+	@bash scripts/dev.sh api-logs
 
 web:
 	cd web && $(NPM) run dev

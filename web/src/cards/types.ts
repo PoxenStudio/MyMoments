@@ -65,6 +65,20 @@ export interface ContactsData {
   items: Contact[];
 }
 
+export interface PhotoAlbumItem {
+  id: number;
+  originalName: string | null;
+  mimeType: string;
+  sizeBytes: number;
+  fit: 'cover' | 'contain';
+  createdBy: number;
+  createdAt: number;
+}
+
+export interface PhotoAlbumData {
+  items: PhotoAlbumItem[];
+}
+
 export function asData<T>(raw: unknown): T | null {
   if (!raw || typeof raw !== 'object') return null;
   return raw as T;

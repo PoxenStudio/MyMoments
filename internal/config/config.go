@@ -92,6 +92,9 @@ func (c Config) DSN() string {
 // MediaDir 是受控媒体目录。
 func (c Config) MediaDir() string { return filepath.Join(c.DataDir, "media") }
 
+// PhotoAlbumDir 是首页照片墙的图片存储目录。
+func (c Config) PhotoAlbumDir() string { return filepath.Join(c.DataDir, "photo_album") }
+
 // HolidayDir 是法定节假日远程数据的缓存目录。
 func (c Config) HolidayDir() string { return filepath.Join(c.DataDir, "holidays") }
 

@@ -135,6 +135,18 @@ type TaskMedia struct {
 	CreatedAt      int64   `json:"createdAt"`
 }
 
+// PhotoAlbum 是首页照片墙的一张照片，文件存储键不对外暴露。
+type PhotoAlbum struct {
+	ID           int64   `json:"id"`
+	StorageKey   string  `json:"-"`
+	OriginalName *string `json:"originalName"`
+	MimeType     string  `json:"mimeType"`
+	SizeBytes    int64   `json:"sizeBytes"`
+	Fit          string  `json:"fit"`
+	CreatedBy    int64   `json:"createdBy"`
+	CreatedAt    int64   `json:"createdAt"`
+}
+
 // TaskTemplate 是待办模板。
 type TaskTemplate struct {
 	ID                 int64    `json:"id"`

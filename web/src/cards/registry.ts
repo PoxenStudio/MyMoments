@@ -11,6 +11,7 @@ import NotesCard from './NotesCard.vue';
 import WeatherCard from './WeatherCard.vue';
 import MembersCard from './MembersCard.vue';
 import ContactsCard from './ContactsCard.vue';
+import PhotoAlbumCard from './PhotoAlbumCard.vue';
 
 export interface CardDef {
   id: string;
@@ -35,6 +36,7 @@ export const cardDefs: CardDef[] = [
   { id: 'weather', title: '天气', component: WeatherCard, icon: 'cloud', description: '当前位置的天气与预报', defaultVisible: false, supportsResize: true },
   { id: 'members', title: '家庭成员', component: MembersCard, icon: 'family', description: '家庭里的每个人', defaultVisible: false, supportsResize: true, path: '/family' },
   { id: 'contacts', title: '通讯录', component: ContactsCard, icon: 'user', description: '常联系的亲友', defaultVisible: false, supportsResize: true, path: '/family' },
+  { id: 'photos', title: '照片', component: PhotoAlbumCard, icon: 'image', description: '家庭照片墙，多张照片以走马灯展示', defaultVisible: false, supportsResize: true },
 ];
 
 export const cardRegistry: Record<string, CardDef> = Object.fromEntries(

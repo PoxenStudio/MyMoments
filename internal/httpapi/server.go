@@ -169,6 +169,11 @@ func (s *Server) routes(mux *http.ServeMux) {
 	})))
 	mux.Handle("DELETE "+api+"/media/{id}", s.requireAuth(http.HandlerFunc(s.handleMediaDelete)))
 
+	mux.Handle("GET "+api+"/photo-album", s.requireAuth(http.HandlerFunc(s.handlePhotoAlbumList)))
+	mux.Handle("POST "+api+"/photo-album", s.requireAuth(http.HandlerFunc(s.handlePhotoAlbumUpload)))
+	mux.Handle("GET "+api+"/photo-album/{id}/image", s.requireAuth(http.HandlerFunc(s.handlePhotoAlbumGet)))
+	mux.Handle("DELETE "+api+"/photo-album/{id}", s.requireAuth(http.HandlerFunc(s.handlePhotoAlbumDelete)))
+
 	mux.HandleFunc("/", s.handleStatic)
 }
 

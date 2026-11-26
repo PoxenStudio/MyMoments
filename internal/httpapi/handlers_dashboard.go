@@ -34,6 +34,7 @@ var dashboardCardDefs = []dashboardCardDef{
 	{"weather", "天气", false, "standard", "default"},
 	{"members", "家庭成员", false, "standard", "default"},
 	{"contacts", "通讯录", false, "standard", "default"},
+	{"photos", "照片", false, "wide", "default"},
 }
 
 var dashboardSizes = map[string]bool{"standard": true, "wide": true, "tall": true}
@@ -665,6 +666,12 @@ func (s *Server) cardData(r *http.Request, u *model.User, id, today string) (any
 		}
 		if len(items) > 5 {
 			items = items[:5]
+		}
+		return map[string]any{"items": items}, nil
+	case "photos":
+		items, err := s.store.ListPhotos(ctx)
+		if err != nil {
+			return nil, err
 		}
 		return map[string]any{"items": items}, nil
 	default:

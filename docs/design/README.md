@@ -14,6 +14,7 @@
 | [06-security.md](06-security.md) | 认证、会话、密码、权限执行、安全头、媒体访问控制 |
 | [07-deployment.md](07-deployment.md) | Docker、Compose、健康检查、备份恢复、迁移与升级 |
 | [08-style-customization.md](08-style-customization.md) | 样式自定义：三层级主题继承、色调/圆角/背景图/卡片角图、头像昵称、快速恢复默认 |
+| [09-tauri-apps.md](09-tauri-apps.md) | Tauri 跨平台壳：macOS / iOS / Android 连接已有服务器、全屏 webview、生命周期与未签名打包流水线 |
 
 ## 技术栈总览
 

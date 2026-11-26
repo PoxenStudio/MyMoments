@@ -1,0 +1,266 @@
+name: Release Apps
+
+# 构建 macOS / iOS / Android 安装包并上传到 GitHub Release。
+# 不做代码签名：产物为未签名包，由用户自行签名安装。
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 发布标签（留空则使用 apps-v<version>）
+        required: false
+        type: string
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-apps-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PRODUCT_NAME: mymoments
+  APP_DIR: apps
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version and tag
+        id: meta
+        run: |
+          version=$(node -p "require('./${APP_DIR}/src-tauri/tauri.conf.json').version")
+          if [ "${{ github.event_name }}" = "release" ]; then
+            tag="${{ github.event.release.tag_name }}"
+          else
+            tag="${{ inputs.tag }}"
+            if [ -z "$tag" ]; then
+              tag="apps-v${version}"
+            fi
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Ensure release exists
+        uses: actions/github-script@v7
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const tag = process.env.TAG;
+            try {
+              const { data } = await github.rest.repos.getReleaseByTag({ owner, repo, tag });
+              core.info(`Reusing release ${tag} (${data.id})`);
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              const { data } = await github.rest.repos.createRelease({
+                owner,
+                repo,
+                tag_name: tag,
+                name: `App ${process.env.VERSION}`,
+                draft: true,
+                generate_release_notes: true,
+              });
+              core.info(`Created draft release ${tag} (${data.id})`);
+            }
+
+  macos:
+    needs: prepare
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/src-tauri -> target
+          key: macos-arm64
+
+      - name: Install dependencies
+        working-directory: apps
+        run: npm ci
+
+      - name: Refresh icons
+        working-directory: apps
+        run: npm run tauri -- icon ../docs/logo/mymoment.png
+
+      - name: Build unsigned macOS app
+        working-directory: apps
+        run: npm run tauri -- build --target aarch64-apple-darwin --bundles app,dmg
+
+      - name: Upload dmg
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          dmg=$(find apps/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg -name '*.dmg' -print -quit)
+          if [ -z "$dmg" ]; then
+            echo "::error::No .dmg produced by the bundler"
+            exit 1
+          fi
+          asset="${PRODUCT_NAME}_${VERSION}_macos_arm64.dmg"
+          cp "$dmg" "$asset"
+          gh release upload "$TAG" "$asset" --clobber
+
+  ios:
+    needs: prepare
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/src-tauri -> target
+          key: ios-arm64
+
+      - name: Install dependencies
+        working-directory: apps
+        run: npm ci
+
+      - name: Refresh icons
+        working-directory: apps
+        run: npm run tauri -- icon ../docs/logo/mymoment.png
+
+      - name: Ensure CocoaPods
+        run: command -v pod >/dev/null || brew install cocoapods
+
+      - name: Init iOS project
+        working-directory: apps
+        run: npm run tauri -- ios init --ci
+
+      - name: Allow local HTTP in ATS
+        run: |
+          plist=$(find apps/src-tauri/gen/apple -name 'Info.plist' -print -quit)
+          if [ -z "$plist" ]; then
+            echo "::error::Info.plist not found under apps/src-tauri/gen/apple"
+            exit 1
+          fi
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity dict" "$plist" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSAllowsLocalNetworking true" "$plist" 2>/dev/null \
+            || /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsLocalNetworking bool true" "$plist"
+          echo "--- ATS in $plist ---"
+          /usr/libexec/PlistBuddy -c "Print :NSAppTransportSecurity" "$plist"
+
+      - name: Build unsigned ipa
+        working-directory: apps
+        run: npm run tauri -- ios build --no-sign
+
+      - name: Upload ipa
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          ipa=$(find apps/src-tauri/gen/apple/build -name '*.ipa' -print -quit)
+          if [ -z "$ipa" ]; then
+            echo "::error::No .ipa produced under apps/src-tauri/gen/apple/build"
+            exit 1
+          fi
+          asset="${PRODUCT_NAME}_${VERSION}_ios_unsigned.ipa"
+          cp "$ipa" "$asset"
+          gh release upload "$TAG" "$asset" --clobber
+
+  android:
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Install NDK
+        run: sdkmanager "ndk;27.0.12077973"
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/src-tauri -> target
+          key: android-arm64
+
+      - name: Install dependencies
+        working-directory: apps
+        run: npm ci
+
+      - name: Refresh icons
+        working-directory: apps
+        run: npm run tauri -- icon ../docs/logo/mymoment.png
+
+      - name: Init Android project
+        working-directory: apps
+        run: npm run tauri -- android init --ci
+
+      - name: Allow local HTTP (cleartext)
+        run: |
+          gradle=apps/src-tauri/gen/android/app/build.gradle.kts
+          if grep -q 'usesCleartextTraffic"\] = "false"' "$gradle"; then
+            sed -i '0,/usesCleartextTraffic"\] = "false"/s//usesCleartextTraffic"] = "true"/' "$gradle"
+            echo "Patched cleartext traffic in $gradle"
+          else
+            echo "::warning::usesCleartextTraffic placeholder not found; check the Tauri Android template"
+          fi
+
+      - name: Build unsigned apk
+        working-directory: apps
+        env:
+          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
+        run: npm run tauri -- android build --apk --target aarch64
+
+      - name: Upload apk
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          apk=$(find apps/src-tauri/gen/android/app/build/outputs/apk -name '*-release*.apk' -print -quit)
+          if [ -z "$apk" ]; then
+            echo "::error::No release apk produced under apps/src-tauri/gen/android/app/build/outputs/apk"
+            exit 1
+          fi
+          asset="${PRODUCT_NAME}_${VERSION}_android_arm64_unsigned.apk"
+          cp "$apk" "$asset"
+          gh release upload "$TAG" "$asset" --clobber

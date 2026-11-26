@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light" />
+    <title>家时光</title>
+    <style>
+      :root {
+        --ink: #292524;
+        --muted: #78716c;
+        --canvas: #f5f5f5;
+        --line: #e7e5e4;
+        --danger: #b91c1c;
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: var(--canvas);
+        color: var(--ink);
+        font-family: -apple-system, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .card {
+        width: 100%;
+        max-width: 380px;
+        padding: 32px 28px;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        box-shadow: 0 12px 40px rgba(41, 37, 36, 0.08);
+      }
+      h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: 0.02em; }
+      .lede { margin: 0 0 24px; font-size: 13px; line-height: 1.6; color: var(--muted); }
+      label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 8px; }
+      input {
+        width: 100%;
+        padding: 11px 12px;
+        font-size: 15px;
+        font-family: inherit;
+        color: var(--ink);
+        background: var(--canvas);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        outline: none;
+      }
+      input:focus { border-color: var(--ink); }
+      button {
+        width: 100%;
+        margin-top: 16px;
+        padding: 12px;
+        font-size: 15px;
+        font-family: inherit;
+        font-weight: 600;
+        color: #fff;
+        background: var(--ink);
+        border: 0;
+        border-radius: 10px;
+        cursor: pointer;
+      }
+      button:disabled { opacity: 0.6; cursor: progress; }
+      .error { margin: 12px 0 0; font-size: 12px; color: var(--danger); }
+      .hint { margin: 16px 0 0; font-size: 12px; line-height: 1.6; color: var(--muted); }
+      [hidden] { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <h1>家时光</h1>
+      <p class="lede">连接到你的家庭面板服务器，登录后即可使用。</p>
+      <form id="form" novalidate>
+        <label for="server">服务器地址</label>
+        <input
+          id="server"
+          name="server"
+          type="text"
+          inputmode="url"
+          autocomplete="url"
+          autocapitalize="off"
+          autocorrect="off"
+          spellcheck="false"
+          placeholder="https://moments.example.com"
+        />
+        <button id="submit" type="submit">连接</button>
+        <p id="error" class="error" role="alert" hidden></p>
+      </form>
+      <p class="hint">支持 https:// 或局域网 http://192.168.1.10:8080。地址保存在本机，下次启动自动连接。</p>
+    </main>
+    <script type="module" src="main.js"></script>
+  </body>
+</html>

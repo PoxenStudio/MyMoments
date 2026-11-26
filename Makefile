@@ -1,4 +1,4 @@
-.PHONY: help dev dev-up dev-down dev-status dev-logs api api-up api-down api-restart api-status api-logs web web-build build test fmt lint check docker docker-build setup-multiarch build-multiarch-local clean
+.PHONY: help dev dev-up dev-down dev-status dev-logs api api-up api-down api-restart api-status api-logs web web-build build test fmt lint check docker docker-build setup-multiarch build-multiarch-local app app-build app-icons clean
 
 GO ?= go
 NPM ?= npm
@@ -60,6 +60,15 @@ test:
 	$(GO) test -race ./...
 	cd web && $(NPM) run test
 
+app: ## 本地运行 macOS 桌面壳（首次会编译 Rust）
+	cd apps && $(NPM) install && $(NPM) run tauri -- dev
+
+app-build: ## 构建 macOS 未签名 dmg（arm64）
+	cd apps && $(NPM) ci && $(NPM) run tauri -- build --target aarch64-apple-darwin --bundles dmg
+
+app-icons: ## 由品牌 Logo 重新生成应用图标集
+	cd apps && $(NPM) run tauri -- icon ../docs/logo/mymoment.png
+
 fmt:
 	gofmt -w ./cmd ./internal ./migrations
 
@@ -71,7 +80,6 @@ check: fmt lint test
 
 docker:
 	docker build -t mymoments:latest .
-
 docker-build: ## 构建 Docker 镜像（按当前分支打 tag）
 	docker build -t $(IMAGE) .
 

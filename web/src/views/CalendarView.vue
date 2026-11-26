@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import type { Birthday, CalendarDayMeta, CalendarEvent, Task } from '@/types';
 import { api, ApiError } from '@/api/client';
@@ -213,6 +213,26 @@ watch(view, (mode) => {
 });
 watch(() => route.query.open, () => void handleOpenQuery());
 
+/** 输入框、弹窗或带修饰键时不接管方向键，避免干扰正常编辑与系统快捷键。 */
+function shouldIgnoreKey(event: KeyboardEvent): boolean {
+  if (event.metaKey || event.ctrlKey || event.altKey) return true;
+  if (formOpen.value || detailOpen.value || deleteTarget.value) return true;
+  const el = event.target as HTMLElement | null;
+  if (!el) return false;
+  return el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName);
+}
+
+function onKeydown(event: KeyboardEvent): void {
+  if (shouldIgnoreKey(event)) return;
+  if (event.key === 'ArrowLeft' || event.key === 'PageUp') {
+    event.preventDefault();
+    navigate(-1);
+  } else if (event.key === 'ArrowRight' || event.key === 'PageDown') {
+    event.preventDefault();
+    navigate(1);
+  }
+}
+
 onMounted(async () => {
   const media = window.matchMedia('(max-width: 767px)');
   if (media.matches) view.value = 'agenda';
@@ -223,6 +243,11 @@ onMounted(async () => {
     selectedDate.value = String(route.query.date);
     anchor.value = String(route.query.date);
   }
+  document.addEventListener('keydown', onKeydown);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onKeydown);
 });
 
 async function reload(): Promise<void> {

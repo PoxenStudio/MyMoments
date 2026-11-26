@@ -2,19 +2,20 @@
 -- 项目尚未正式部署，历史增量迁移已合并为此文件。
 
 CREATE TABLE household_settings (
-  id                      INTEGER PRIMARY KEY,
-  name                    TEXT    NOT NULL DEFAULT '我的家',
-  timezone                TEXT    NOT NULL DEFAULT 'Asia/Shanghai',
-  week_start              INTEGER NOT NULL DEFAULT 1,
-  default_weather_city    TEXT,
-  default_weather_lat     REAL,
-  default_weather_lon     REAL,
-  default_reminder_offset INTEGER NOT NULL DEFAULT 0,
-  default_dashboard       TEXT,
-  style                   TEXT,
-  date_format             TEXT    NOT NULL DEFAULT '24h',
-  created_at              INTEGER NOT NULL,
-  updated_at              INTEGER NOT NULL
+  id                       INTEGER PRIMARY KEY,
+  name                     TEXT    NOT NULL DEFAULT '我的家',
+  timezone                 TEXT    NOT NULL DEFAULT 'Asia/Shanghai',
+  week_start               INTEGER NOT NULL DEFAULT 1,
+  default_weather_city     TEXT,
+  default_weather_lat      REAL,
+  default_weather_lon      REAL,
+  default_weather_provider TEXT,
+  default_reminder_offset  INTEGER NOT NULL DEFAULT 0,
+  default_dashboard        TEXT,
+  style                    TEXT,
+  date_format              TEXT    NOT NULL DEFAULT '24h',
+  created_at               INTEGER NOT NULL,
+  updated_at               INTEGER NOT NULL
 );
 
 CREATE TABLE users (
@@ -218,6 +219,7 @@ CREATE TABLE contacts (
   birthday_on      TEXT,
   category         TEXT,
   avatar_key       TEXT,
+  pinned           INTEGER NOT NULL DEFAULT 0,
   owner_scope      TEXT    NOT NULL DEFAULT 'household',
   birthday_month   INTEGER,
   birthday_day     INTEGER,

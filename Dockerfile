@@ -6,6 +6,8 @@ COPY web/ ./
 RUN npm run build
 
 FROM docker.1ms.run/golang:1.23-alpine AS build
+ENV GOPROXY=https://goproxy.cn,direct \
+    GOSUMDB=sum.golang.google.cn
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download

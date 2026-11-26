@@ -92,9 +92,30 @@ const displayItems = computed(() => {
   return [...picked].sort((a, b) => a.y - b.y || a.x - b.x);
 });
 
+/** 后端默认布局（internal/httpapi/handlers_dashboard.go 的紧凑排列），首次无缓存时用于占位。 */
+const DEFAULT_LAYOUT: DashboardLayoutItem[] = [
+  { id: 'overview', visible: true, background: 'default', x: 0, y: 0, w: 8, h: 6 },
+  { id: 'tasks', visible: true, background: 'default', x: 8, y: 0, w: 4, h: 6 },
+  { id: 'calendar', visible: true, background: 'default', x: 0, y: 6, w: 4, h: 6 },
+  { id: 'birthdays', visible: true, background: 'default', x: 4, y: 6, w: 4, h: 6 },
+  { id: 'reminders', visible: true, background: 'default', x: 8, y: 6, w: 4, h: 6 },
+];
+
+/** 加载中且无数据时展示占位卡片：优先用缓存布局，保证与真实位置一致。 */
+const showSkeleton = computed(() => !dashboard.cards.length && !dashboard.error);
+
+const placeholderItems = computed<DashboardLayoutItem[]>(() => {
+  const cached = displayItems.value.length
+    ? displayItems.value
+    : dashboard.layout.filter((item) => item.visible && !!cardRegistry[item.id]);
+  const items = cached.length ? cached : DEFAULT_LAYOUT;
+  return [...items].sort((a, b) => a.y - b.y || a.x - b.x);
+});
+
 const gridRows = computed(() => {
+  const items = displayItems.value.length ? displayItems.value : placeholderItems.value;
   let max = 0;
-  for (const item of displayItems.value) max = Math.max(max, item.y + item.h);
+  for (const item of items) max = Math.max(max, item.y + item.h);
   return Math.max(max, editing.value ? 8 : 3);
 });
 
@@ -541,12 +562,31 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <div v-if="dashboard.loading && !dashboard.cards.length" class="home__grid" aria-busy="true" aria-label="正在加载首页">
-      <div v-for="n in 3" :key="n" class="home__skeleton at-card" :class="{ 'is-wide': n === 1 }">
-        <span class="home__skeleton-line home__skeleton-line--short" />
-        <span class="home__skeleton-line" />
-        <span class="home__skeleton-line" />
-      </div>
+    <div v-if="showSkeleton" class="home__grid" :style="gridStyle" aria-busy="true" aria-label="正在加载首页">
+      <article
+        v-for="item in placeholderItems"
+        :key="item.id"
+        class="dash dash--bg-default"
+        :style="itemStyle(item)"
+      >
+        <AppPanel padding="sm">
+          <template #header>
+            <div class="dash__heading">
+              <span class="dash__icon">
+                <AppIcon :name="cardRegistry[item.id].icon" :size="16" />
+              </span>
+              <div class="dash__heading-text">
+                <h2 class="dash__title">{{ cardRegistry[item.id].title }}</h2>
+              </div>
+            </div>
+          </template>
+          <div class="home__skeleton-lines">
+            <span class="home__skeleton-line home__skeleton-line--short" />
+            <span class="home__skeleton-line" />
+            <span class="home__skeleton-line" />
+          </div>
+        </AppPanel>
+      </article>
     </div>
 
     <div v-else-if="dashboard.error && !dashboard.cards.length" class="home__error">
@@ -681,6 +721,8 @@ onBeforeUnmount(() => {
   max-width: none;
   overflow: auto;
   background: var(--at-bg-page);
+  /* 内容不满一屏时垂直居中；safe 保证内容超高时从顶部开始、不被裁切 */
+  justify-content: safe center;
 }
 
 .hero {
@@ -1041,18 +1083,11 @@ onBeforeUnmount(() => {
   color: var(--at-color-ink);
 }
 
-.home__skeleton {
-  grid-column: span 4;
+.home__skeleton-lines {
   display: flex;
   flex-direction: column;
   gap: var(--at-space-3);
-  padding: var(--at-space-5);
-  min-height: 200px;
-  border-radius: var(--at-radius-xl);
-}
-
-.home__skeleton.is-wide {
-  grid-column: span 8;
+  padding-top: var(--at-space-2);
 }
 
 .home__skeleton-line {

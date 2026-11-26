@@ -13,8 +13,28 @@ interface LayoutResponse {
   layoutSource: DashboardLayoutSource;
 }
 
+/** 上次成功加载的布局，用于数据到达前按真实位置渲染占位卡片。 */
+const LAYOUT_CACHE_KEY = 'mymoments.dashboard.layout';
+
+function readCachedLayout(): DashboardLayoutItem[] {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(LAYOUT_CACHE_KEY) ?? '[]');
+    return Array.isArray(parsed) ? (parsed as DashboardLayoutItem[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeCachedLayout(items: DashboardLayoutItem[]): void {
+  try {
+    localStorage.setItem(LAYOUT_CACHE_KEY, JSON.stringify(items));
+  } catch {
+    // 隐私模式或配额不足时忽略
+  }
+}
+
 export const useDashboardStore = defineStore('dashboard', () => {
-  const layout = ref<DashboardLayoutItem[]>([]);
+  const layout = ref<DashboardLayoutItem[]>(readCachedLayout());
   const layoutSource = ref<DashboardLayoutSource>('default');
   const cards = ref<DashboardCardState[]>([]);
   const today = ref('');
@@ -41,6 +61,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
       const res = await api.get<DashboardPayload>('/dashboard');
       if (mine !== token) return;
       layout.value = res.layout;
+      writeCachedLayout(res.layout);
       layoutSource.value = res.layoutSource ?? 'default';
       cards.value = res.cards;
       today.value = res.today;
@@ -60,6 +81,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     try {
       const res = await api.put<LayoutResponse>('/dashboard/layout', { layout: items });
       layout.value = res.layout;
+      writeCachedLayout(res.layout);
       layoutSource.value = res.layoutSource;
       await load(true);
     } catch (err) {
@@ -75,6 +97,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     try {
       const res = await api.put<LayoutResponse>('/dashboard/layout', { reset: true });
       layout.value = res.layout;
+      writeCachedLayout(res.layout);
       layoutSource.value = res.layoutSource;
       await load(true);
     } catch (err) {
@@ -100,6 +123,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
   function reset(): void {
     token += 1;
     layout.value = [];
+    writeCachedLayout([]);
     cards.value = [];
     today.value = '';
     error.value = null;

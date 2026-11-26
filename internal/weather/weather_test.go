@@ -71,6 +71,35 @@ func TestCurrentCachesAndFallsBackToStale(t *testing.T) {
 	}
 }
 
+func TestManagerFallsBackToPersistedCache(t *testing.T) {
+	dir := t.TempDir()
+	seed := newDiskCache(dir)
+	seed.put(cacheKey(SourceOpenMeteo, 31.23, 121.47), Data{Temperature: 21.5, City: "上海", UpdatedAt: 1})
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadGateway)
+	}))
+	defer upstream.Close()
+
+	m := NewManager(New(upstream.URL, "", time.Minute), nil, "", dir)
+	m.now = func() time.Time { return time.Now().Add(time.Hour) }
+	data, source, err := m.Current(context.Background(), "", 31.23, 121.47, "杭州")
+	if err != nil {
+		t.Fatalf("persisted fallback: %v", err)
+	}
+	if source != SourceOpenMeteo || !data.Stale || data.Temperature != 21.5 || data.City != "杭州" {
+		t.Fatalf("unexpected fallback data: %+v source=%s", data, source)
+	}
+
+	cached, ok := m.Cached("", 31.23, 121.47, "")
+	if !ok || cached.Temperature != 21.5 || !cached.Stale {
+		t.Fatalf("unexpected cached data: %+v ok=%v", cached, ok)
+	}
+	if _, ok := m.Cached("", 39.9, 116.4, ""); ok {
+		t.Fatal("expected no cache for other coordinates")
+	}
+}
+
 func TestDescribe(t *testing.T) {
 	cases := map[int]string{0: "晴", 3: "阴", 61: "下雨", 95: "雷阵雨", 999: "天气未知"}
 	for code, want := range cases {

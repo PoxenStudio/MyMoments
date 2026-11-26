@@ -179,6 +179,15 @@ func TestWeatherEndpoint(t *testing.T) {
 	}); status != http.StatusOK {
 		t.Fatalf("set household weather: %d %v", status, body)
 	}
+	// 首页天气卡片只读缓存，不应因缺少缓存而请求上游。
+	status, body = call(t, admin, http.MethodGet, base+"/dashboard/cards/weather", nil)
+	if status != http.StatusOK || body["data"] != nil || body["error"] == nil {
+		t.Fatalf("expected cache-only weather error: %d %v", status, body)
+	}
+	if upstreamHits != 0 {
+		t.Fatalf("weather card should not hit upstream, got %d hits", upstreamHits)
+	}
+
 	status, body = call(t, admin, http.MethodGet, base+"/weather", nil)
 	if status != http.StatusOK {
 		t.Fatalf("weather: %d %v", status, body)
@@ -188,6 +197,20 @@ func TestWeatherEndpoint(t *testing.T) {
 	}
 	if upstreamHits != 1 {
 		t.Fatalf("expected one upstream hit, got %d", upstreamHits)
+	}
+
+	// 写入缓存后，单卡片接口可直接返回数据。
+	status, body = call(t, admin, http.MethodGet, base+"/dashboard/cards/weather", nil)
+	if status != http.StatusOK || body["data"] == nil || body["error"] != nil {
+		t.Fatalf("expected cached weather card data: %d %v", status, body)
+	}
+	if upstreamHits != 1 {
+		t.Fatalf("expected cached card read, got %d hits", upstreamHits)
+	}
+
+	status, _ = call(t, admin, http.MethodGet, base+"/dashboard/cards/unknown", nil)
+	if status != http.StatusBadRequest {
+		t.Fatalf("expected unknown card error, got %d", status)
 	}
 
 	// 查询坐标优先，并且命中同一坐标缓存。

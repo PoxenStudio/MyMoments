@@ -1,11 +1,12 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import { api } from '@/api/client';
+import { api, ApiError } from '@/api/client';
 import type {
+  DashboardCardPayload,
   DashboardCardState,
   DashboardLayoutItem,
+  DashboardLayoutPayload,
   DashboardLayoutSource,
-  DashboardPayload,
 } from '@/types';
 
 interface LayoutResponse {
@@ -58,13 +59,29 @@ export const useDashboardStore = defineStore('dashboard', () => {
     else loading.value = true;
     error.value = null;
     try {
-      const res = await api.get<DashboardPayload>('/dashboard');
+      const res = await api.get<DashboardLayoutPayload>('/dashboard/layout');
       if (mine !== token) return;
       layout.value = res.layout;
       writeCachedLayout(res.layout);
       layoutSource.value = res.layoutSource ?? 'default';
-      cards.value = res.cards;
-      today.value = res.today;
+      today.value = res.today ?? '';
+      // 先按布局占位，每张卡片各自独立请求，谁先返回谁先展示。
+      // 刷新时保留已有数据，避免整版卡片闪回骨架屏。
+      const previous = cardMap.value;
+      cards.value = res.layout
+        .filter((item) => item.visible)
+        .map((item) => {
+          const prev = previous[item.id];
+          return {
+            ...item,
+            error: prev?.error ?? null,
+            data: prev?.data ?? null,
+            loading: !prev?.data,
+          };
+        });
+      for (const item of res.layout) {
+        if (item.visible) void loadCard(item.id, mine);
+      }
     } catch (err) {
       if (mine === token) error.value = err;
       throw err;
@@ -74,6 +91,39 @@ export const useDashboardStore = defineStore('dashboard', () => {
         refreshing.value = false;
       }
     }
+  }
+
+  async function loadCard(id: string, mine: number): Promise<void> {
+    try {
+      const res = await api.get<DashboardCardPayload>(`/dashboard/cards/${id}`);
+      if (mine !== token) return;
+      if (res.error) {
+        // 已有数据时静默保留，避免单张卡片刷新失败把已展示内容替换成错误。
+        if (cardMap.value[id]?.data != null) {
+          updateCard(id, { error: null, loading: false });
+          return;
+        }
+        updateCard(id, { data: null, error: res.error, loading: false });
+        return;
+      }
+      updateCard(id, { data: res.data ?? null, error: null, loading: false });
+    } catch (err) {
+      if (mine !== token) return;
+      if (cardMap.value[id]?.data != null) {
+        updateCard(id, { error: null, loading: false });
+        return;
+      }
+      updateCard(id, {
+        error: err instanceof ApiError ? err.message : '内容加载失败',
+        loading: false,
+      });
+    }
+  }
+
+  function updateCard(id: string, patch: Partial<DashboardCardState>): void {
+    const index = cards.value.findIndex((card) => card.id === id);
+    if (index < 0) return;
+    cards.value[index] = { ...cards.value[index], ...patch };
   }
 
   async function saveLayout(items: DashboardLayoutItem[]): Promise<void> {

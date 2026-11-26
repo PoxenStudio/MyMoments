@@ -43,7 +43,7 @@ func New(cfg config.Config, st *store.Store) (*Server, error) {
 		store:    st,
 		web:      web,
 		limiter:  newLoginLimiter(8, 5*time.Minute),
-		weather:  weather.NewManager(openMeteo, qweather, cfg.WeatherProvider),
+		weather:  weather.NewManager(openMeteo, qweather, cfg.WeatherProvider, cfg.WeatherDir()),
 		holidays: holiday.NewService(cfg.HolidayDir(), cfg.HolidayDataURL),
 	}, nil
 }
@@ -143,6 +143,7 @@ func (s *Server) routes(mux *http.ServeMux) {
 
 	mux.Handle("GET "+api+"/dashboard", s.requireAuth(http.HandlerFunc(s.handleDashboard)))
 	mux.Handle("GET "+api+"/dashboard/layout", s.requireAuth(http.HandlerFunc(s.handleDashboardLayout)))
+	mux.Handle("GET "+api+"/dashboard/cards/{id}", s.requireAuth(http.HandlerFunc(s.handleDashboardCard)))
 	mux.Handle("PUT "+api+"/dashboard/layout", s.requireAuth(http.HandlerFunc(s.handleDashboardLayoutPut)))
 	mux.Handle("PUT "+api+"/household/default-layout", s.requireAdmin(http.HandlerFunc(s.handleHouseholdDefaultLayout)))
 	mux.Handle("GET "+api+"/weather", s.requireAuth(http.HandlerFunc(s.handleWeather)))

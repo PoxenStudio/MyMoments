@@ -5,7 +5,11 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
+
+// weatherRequestTimeout 限制单次天气请求耗时，超时后由缓存兜底，避免接口一直卡住。
+const weatherRequestTimeout = 6 * time.Second
 
 // handleWeather 代理上游天气，位置优先级：查询坐标 → 个人偏好 → 家庭默认。
 func (s *Server) handleWeather(w http.ResponseWriter, r *http.Request) {
@@ -16,7 +20,9 @@ func (s *Server) handleWeather(w http.ResponseWriter, r *http.Request) {
 		writeError(w, apiErr)
 		return
 	}
-	data, _, err := s.weather.Current(r.Context(), s.weatherProvider(r.Context()), lat, lon, city)
+	ctx, cancel := context.WithTimeout(r.Context(), weatherRequestTimeout)
+	defer cancel()
+	data, _, err := s.weather.Current(ctx, s.weatherProvider(r.Context()), lat, lon, city)
 	if err != nil {
 		writeError(w, &APIError{
 			Status:  http.StatusServiceUnavailable,

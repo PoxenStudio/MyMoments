@@ -361,7 +361,7 @@ export type TaskMedia = MediaItem;
 
 export interface DashboardCardState {
   id: string;
-  title: string;
+  title?: string;
   visible: boolean;
   background: string;
   x: number;
@@ -370,6 +370,8 @@ export interface DashboardCardState {
   h: number;
   error: string | null;
   data: unknown;
+  /** 卡片数据仍在独立加载中 */
+  loading?: boolean;
 }
 
 export interface DashboardLayoutItem {
@@ -388,11 +390,16 @@ export interface DashboardLayoutItem {
 
 export type DashboardLayoutSource = 'personal' | 'household' | 'default';
 
-export interface DashboardPayload {
+export interface DashboardLayoutPayload {
   layout: DashboardLayoutItem[];
   layoutSource?: DashboardLayoutSource;
-  cards: DashboardCardState[];
   today: string;
+}
+
+export interface DashboardCardPayload {
+  id: string;
+  data: unknown;
+  error: string | null;
 }
 
 export interface WeatherForecastDay {

@@ -150,6 +150,22 @@ function cardOf(id: string) {
   return dashboard.cardMap[id];
 }
 
+/** 卡片数据仍在独立加载中时展示骨架屏。 */
+function cardLoading(id: string): boolean {
+  return cardOf(id)?.loading === true;
+}
+
+/** 天气卡片有独立加载的数据时，忽略首页接口返回的卡片级错误。 */
+function cardError(id: string): string | null {
+  if (id === 'weather' && weather.value) return null;
+  return cardOf(id)?.error ?? null;
+}
+
+function cardData(id: string): unknown {
+  if (id === 'weather') return weather.value ?? cardOf(id)?.data ?? null;
+  return cardOf(id)?.data ?? null;
+}
+
 function itemStyle(item: DashboardLayoutItem): Record<string, string> {
   const pos = drag.value?.id === item.id ? drag.value.preview : item;
   return {
@@ -333,17 +349,28 @@ function setBackground(id: string, background: string): void {
   void persist(next);
 }
 
+/** 天气单独加载并设超时，失败时保留上次数据，不影响首页其他卡片。 */
+let weatherAbort: AbortController | null = null;
+
 async function loadWeather(): Promise<void> {
+  weatherAbort?.abort();
+  const controller = new AbortController();
+  weatherAbort = controller;
+  const timeout = window.setTimeout(() => controller.abort(), 10000);
   try {
-    weather.value = await api.get<WeatherData>('/weather');
+    weather.value = await api.get<WeatherData>('/weather', undefined, controller.signal);
   } catch {
-    weather.value = null;
+    // 天气加载失败或超时：保留已有数据，静默忽略
+  } finally {
+    window.clearTimeout(timeout);
+    if (weatherAbort === controller) weatherAbort = null;
   }
 }
 
 async function load(silent = false): Promise<void> {
+  void loadWeather();
   try {
-    await Promise.all([dashboard.load(silent), loadWeather()]);
+    await dashboard.load(silent);
   } catch {
     if (!silent) toast.error('首页加载失败，请稍后重试');
   }
@@ -475,6 +502,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   if (timer) window.clearInterval(timer);
+  weatherAbort?.abort();
   document.removeEventListener('fullscreenchange', onFullscreenChange);
   window.removeEventListener('resize', onWindowResize);
   window.clearTimeout(resizeTimer);
@@ -660,15 +688,20 @@ onBeforeUnmount(() => {
               <span>这张卡片已隐藏</span>
             </div>
             <div v-else class="dash__body">
-              <div v-if="cardOf(item.id)?.error" class="dash__card-error">
+              <div v-if="cardLoading(item.id)" class="home__skeleton-lines" aria-busy="true">
+                <span class="home__skeleton-line home__skeleton-line--short" />
+                <span class="home__skeleton-line" />
+                <span class="home__skeleton-line" />
+              </div>
+              <div v-else-if="cardError(item.id)" class="dash__card-error">
                 <AppIcon name="alert" :size="15" />
-                <span>{{ cardOf(item.id)?.error }}</span>
+                <span>{{ cardError(item.id) }}</span>
                 <button type="button" class="dash__card-retry" @click="refresh">重试</button>
               </div>
               <component
                 :is="cardRegistry[item.id].component"
                 v-else
-                :data="cardOf(item.id)?.data ?? null"
+                :data="cardData(item.id)"
                 @refresh="refresh"
                 @configure="weatherOpen = true"
               />

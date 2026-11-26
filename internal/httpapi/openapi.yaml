@@ -707,7 +707,7 @@ paths:
       tags: [dashboard]
       summary: 读取当前布局
       responses:
-        '200': { description: 布局 }
+        '200': { description: 布局与当天日期 }
     put:
       tags: [dashboard]
       summary: 保存个人布局或恢复默认
@@ -723,6 +723,18 @@ paths:
                     reset: { type: boolean }
       responses:
         '200': { description: 布局 }
+  /dashboard/cards/{id}:
+    get:
+      tags: [dashboard]
+      summary: 首页单张卡片数据（按卡片独立加载）
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: '卡片数据，或卡片级错误 { id, data, error }' }
+        '400': { description: 未知卡片 }
   /weather:
     get:
       tags: [weather]

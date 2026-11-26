@@ -98,6 +98,9 @@ func (c Config) PhotoAlbumDir() string { return filepath.Join(c.DataDir, "photo_
 // HolidayDir 是法定节假日远程数据的缓存目录。
 func (c Config) HolidayDir() string { return filepath.Join(c.DataDir, "holidays") }
 
+// WeatherDir 是天气数据的持久化缓存目录。
+func (c Config) WeatherDir() string { return filepath.Join(c.DataDir, "weather") }
+
 func loadSecret(dataDir string) ([]byte, error) {
 	if v := strings.TrimSpace(os.Getenv("MYMOMENTS_SESSION_SECRET")); v != "" {
 		return []byte(v), nil

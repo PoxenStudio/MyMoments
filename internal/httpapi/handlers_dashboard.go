@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"mymoments/internal/model"
@@ -428,26 +429,73 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	today := s.today()
-	cards := make([]dashboardCard, 0, len(layout))
-	for _, item := range layout {
-		card := dashboardCard{
-			ID: item.ID, Title: dashboardCardTitle(item.ID), Visible: item.Visible,
-			Background: item.Background, X: item.X, Y: item.Y, W: item.W, H: item.H,
-		}
-		if item.Visible {
-			data, err := s.safeCardData(r, u, item.ID, today)
-			if err != nil {
-				msg := err.Error()
-				card.Error = &msg
-			} else {
-				card.Data = data
+	cards := make([]dashboardCard, len(layout))
+	var wg sync.WaitGroup
+	for i := range layout {
+		item := layout[i]
+		wg.Add(1)
+		// 每张卡片并行取数，任一卡片变慢只影响自己，不拖住整页响应。
+		go func(index int, item dashboardLayoutItem) {
+			defer wg.Done()
+			card := dashboardCard{
+				ID: item.ID, Title: dashboardCardTitle(item.ID), Visible: item.Visible,
+				Background: item.Background, X: item.X, Y: item.Y, W: item.W, H: item.H,
 			}
-		}
-		cards = append(cards, card)
+			if item.Visible {
+				data, err := s.safeCardData(r, u, item.ID, today)
+				if err != nil {
+					msg := err.Error()
+					card.Error = &msg
+				} else {
+					card.Data = data
+				}
+			}
+			cards[index] = card
+		}(i, item)
 	}
+	wg.Wait()
 	writeJSON(w, http.StatusOK, map[string]any{
 		"layout": layout, "layoutSource": source, "cards": cards, "today": today,
 	})
+}
+
+// dashboardCardRequestTimeout 限制单张卡片取数耗时，避免单个数据源拖住前端。
+const dashboardCardRequestTimeout = 8 * time.Second
+
+type dashboardCardPayload struct {
+	ID    string  `json:"id"`
+	Data  any     `json:"data"`
+	Error *string `json:"error"`
+}
+
+// handleDashboardCard 返回单张卡片的数据，供首页按卡片独立加载。
+func (s *Server) handleDashboardCard(w http.ResponseWriter, r *http.Request) {
+	u, _ := currentUser(r)
+	id := strings.TrimSpace(r.PathValue("id"))
+	if !isDashboardCard(id) {
+		writeError(w, badRequest("未知的卡片"))
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), dashboardCardRequestTimeout)
+	defer cancel()
+	payload := dashboardCardPayload{ID: id}
+	data, err := s.safeCardData(r.WithContext(ctx), u, id, s.today())
+	if err != nil {
+		msg := err.Error()
+		payload.Error = &msg
+	} else {
+		payload.Data = data
+	}
+	writeJSON(w, http.StatusOK, payload)
+}
+
+func isDashboardCard(id string) bool {
+	for _, def := range dashboardCardDefs {
+		if def.ID == id {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Server) handleDashboardLayout(w http.ResponseWriter, r *http.Request) {
@@ -457,7 +505,7 @@ func (s *Server) handleDashboardLayout(w http.ResponseWriter, r *http.Request) {
 		writeError(w, serverError(err))
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"layout": layout, "layoutSource": source})
+	writeJSON(w, http.StatusOK, map[string]any{"layout": layout, "layoutSource": source, "today": s.today()})
 }
 
 type layoutRequest struct {
@@ -560,8 +608,9 @@ func (s *Server) safeCardData(r *http.Request, u *model.User, id, today string) 
 		if apiErr != nil {
 			return nil, fmt.Errorf("尚未设置天气位置")
 		}
-		weatherData, _, wErr := s.weather.Current(r.Context(), s.weatherProvider(r.Context()), lat, lon, city)
-		if wErr != nil {
+		// 首页只读本地缓存，不触发上游请求，避免天气卡住时阻塞其他卡片。
+		weatherData, ok := s.weather.Cached(s.weatherProvider(r.Context()), lat, lon, city)
+		if !ok {
 			return nil, fmt.Errorf("天气服务暂时不可用")
 		}
 		return weatherData, nil

@@ -86,7 +86,7 @@
 
 ## 安装说明
 
-### 方式一：Docker Compose（推荐）
+### Docker Compose（推荐）
 
 需要 Docker 与 Docker Compose。仓库自带最简 `docker-compose.yml`：
 
@@ -179,35 +179,6 @@ location / {
 ```
 
 反代部署时把 `MYMOMENTS_TRUST_PROXY` 设为 `true`，以便记录真实客户端 IP。
-
-### 方式二：从源码运行
-
-需要 Go 1.23+、Node.js 20+ 与 npm。
-
-```bash
-make web-build        # 安装前端依赖、构建并嵌入静态资源
-go run ./cmd/server   # 默认监听 :8080，数据写入 ./data
-```
-
-也可以构建单文件二进制：
-
-```bash
-make build
-./build/mymoments
-```
-
-本地开发时前后端分开启动，Vite 会把 `/api` 代理到 `127.0.0.1:8080`：
-
-```bash
-make api   # 终端一：后端
-make web   # 终端二：前端 http://127.0.0.1:5173
-```
-
-运行检查：
-
-```bash
-make check   # gofmt、go vet、Go 测试与前端测试、lint
-```
 
 ### 首次使用
 

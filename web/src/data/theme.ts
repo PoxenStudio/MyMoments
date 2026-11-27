@@ -14,18 +14,18 @@ export interface TonePreset {
 
 export const tonePresets: TonePreset[] = [
   { key: 'default', label: '默认', group: 'basic', swatch: '#f5f5f5', description: '编辑部白' },
-  { key: 'warm-sun', label: '暖阳', group: 'warm', swatch: '#f7efe2', description: '浅杏暖光' },
-  { key: 'warm-sand', label: '沙色', group: 'warm', swatch: '#f1e8db', description: '暖灰褐' },
-  { key: 'warm-peach', label: '蜜桃', group: 'warm', swatch: '#f9ece2', description: '粉杏' },
-  { key: 'warm-cream', label: '奶咖', group: 'warm', swatch: '#f5ece0', description: '奶油咖啡' },
-  { key: 'warm-rose', label: '暖粉', group: 'warm', swatch: '#f9e9ec', description: '柔和粉' },
-  { key: 'cartoon-macaron', label: '马卡龙', group: 'cartoon', swatch: '#f6eef2', description: '粉薄荷混搭' },
-  { key: 'cartoon-sky', label: '天空蓝', group: 'cartoon', swatch: '#e9f1f8', description: '淡蓝' },
-  { key: 'cartoon-mint', label: '薄荷绿', group: 'cartoon', swatch: '#eaf4ef', description: '淡绿' },
-  { key: 'cartoon-berry', label: '浆果粉', group: 'cartoon', swatch: '#f7e6ec', description: '莓粉' },
-  { key: 'cartoon-lemon', label: '柠檬黄', group: 'cartoon', swatch: '#f8f2dd', description: '淡黄' },
-  { key: 'festival-spring', label: '春节', group: 'festival', swatch: '#f6ded9', description: '新春红' },
-  { key: 'festival-mid-autumn', label: '中秋', group: 'festival', swatch: '#f7e3d7', description: '月圆红' },
+  { key: 'warm-sun', label: '暖阳', group: 'warm', swatch: '#f7ebd4', description: '浅杏暖光' },
+  { key: 'warm-sand', label: '沙色', group: 'warm', swatch: '#e3d9cf', description: '暖灰褐' },
+  { key: 'warm-peach', label: '蜜桃', group: 'warm', swatch: '#f9dfd8', description: '粉杏' },
+  { key: 'warm-cream', label: '奶咖', group: 'warm', swatch: '#f6eddf', description: '奶油咖啡' },
+  { key: 'warm-rose', label: '暖粉', group: 'warm', swatch: '#f6dfe5', description: '柔和粉' },
+  { key: 'cartoon-macaron', label: '马卡龙', group: 'cartoon', swatch: '#f0e2f3', description: '粉薄荷混搭' },
+  { key: 'cartoon-sky', label: '天空蓝', group: 'cartoon', swatch: '#daeaf6', description: '淡蓝' },
+  { key: 'cartoon-mint', label: '薄荷绿', group: 'cartoon', swatch: '#ddf3eb', description: '淡绿' },
+  { key: 'cartoon-berry', label: '浆果粉', group: 'cartoon', swatch: '#f5dbeb', description: '莓粉' },
+  { key: 'cartoon-lemon', label: '柠檬黄', group: 'cartoon', swatch: '#f9f7d2', description: '淡黄' },
+  { key: 'festival-spring', label: '春节', group: 'festival', swatch: '#f6d8d5', description: '新春红' },
+  { key: 'festival-mid-autumn', label: '中秋', group: 'festival', swatch: '#f2e0cf', description: '月圆红' },
 ];
 
 export const radiusOptions: { key: CardRadius; label: string; px: number }[] = [

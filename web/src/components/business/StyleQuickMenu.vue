@@ -78,12 +78,12 @@ async function restore(): Promise<void> {
           v-for="tone in tonePresets"
           :key="tone.key"
           type="button"
-          class="quick-tone"
+          class="quick-tone quick-tone--page"
           :class="{ 'is-active': theme.effective.tone === tone.key }"
           :aria-pressed="theme.effective.tone === tone.key"
           :aria-label="tone.label"
           :title="`${tone.label} · ${tone.description}`"
-          :style="{ background: tone.swatch }"
+          :style="{ '--swatch': tone.swatch }"
           @click="pickTone(tone.key)"
         >
           <span v-if="theme.effective.tone === tone.key" class="quick-tone__check">
@@ -105,7 +105,7 @@ async function restore(): Promise<void> {
           :aria-pressed="(theme.effective.cardTone ?? 'default') === tone.key"
           :aria-label="tone.label"
           :title="tone.label"
-          :style="{ background: tone.swatch }"
+          :style="{ '--swatch': tone.swatch }"
           @click="pickCardTone(tone.key)"
         >
           <span v-if="(theme.effective.cardTone ?? 'default') === tone.key" class="quick-tone__check">
@@ -145,7 +145,7 @@ async function restore(): Promise<void> {
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
-  width: 320px;
+  width: 384px;
   max-width: calc(100vw - 24px);
   padding: var(--at-space-4);
   display: flex;
@@ -196,21 +196,30 @@ async function restore(): Promise<void> {
 }
 
 .quick-menu__tones {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(22px, 1fr));
+  display: flex;
+  align-items: center;
   gap: 4px;
 }
 
 .quick-menu__tones--cards {
+  display: grid;
   grid-template-columns: repeat(8, 1fr);
 }
 
 .quick-tone {
   position: relative;
+  flex: 1 1 0;
+  min-width: 0;
   aspect-ratio: 1;
   border-radius: 50%;
   border: 1px solid var(--at-color-hairline-strong);
+  background: var(--swatch);
   cursor: pointer;
+}
+
+/* 深色模式下压低色块亮度，保留色相以维持区分度 */
+html[data-scheme='dark'] .quick-tone--page {
+  background: color-mix(in srgb, var(--swatch) 72%, #0c0a09);
 }
 
 .quick-tone.is-active {
@@ -222,7 +231,7 @@ async function restore(): Promise<void> {
   inset: 0;
   display: grid;
   place-items: center;
-  color: var(--at-color-ink);
+  color: #0c0a09;
 }
 
 .quick-menu__radius {
@@ -285,8 +294,7 @@ async function restore(): Promise<void> {
   }
 
   .quick-menu__tones {
-    grid-template-columns: repeat(6, 1fr);
-    gap: 6px;
+    gap: 5px;
   }
 }
 </style>

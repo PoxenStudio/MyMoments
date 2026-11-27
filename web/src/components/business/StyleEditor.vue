@@ -82,14 +82,14 @@ function setCornerOpacity(value: number): void {
           v-for="tone in tonePresets"
           :key="tone.key"
           type="button"
-          class="tone-swatch"
+          class="tone-swatch tone-swatch--page"
           :class="{ 'is-active': model.tone === tone.key }"
           :aria-pressed="model.tone === tone.key"
           :aria-label="tone.label"
           :title="`${tone.label} · ${tone.description}`"
           @click="pickTone(tone.key)"
         >
-          <span class="tone-swatch__dot" :style="{ background: tone.swatch }" />
+          <span class="tone-swatch__dot" :style="{ '--swatch': tone.swatch }" />
           <span class="tone-swatch__label">{{ tone.label }}</span>
         </button>
       </div>
@@ -112,7 +112,7 @@ function setCornerOpacity(value: number): void {
           :title="tone.label"
           @click="pickCardTone(tone.key)"
         >
-          <span class="tone-swatch__dot" :style="{ background: tone.swatch }" />
+          <span class="tone-swatch__dot" :style="{ '--swatch': tone.swatch }" />
           <span class="tone-swatch__label">{{ tone.label }}</span>
         </button>
       </div>
@@ -353,6 +353,12 @@ function setCornerOpacity(value: number): void {
   flex: none;
   border-radius: 50%;
   border: 1px solid var(--at-color-hairline-strong);
+  background: var(--swatch);
+}
+
+/* 深色模式下压低页面色调色块亮度，保留色相以维持区分度 */
+html[data-scheme='dark'] .tone-swatch--page .tone-swatch__dot {
+  background: color-mix(in srgb, var(--swatch) 72%, #0c0a09);
 }
 
 .tone-swatch__label {

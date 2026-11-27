@@ -63,3 +63,15 @@ export function nearestCity(lat: number, lon: number): CityOption | null {
   }
   return best;
 }
+
+// 按名称匹配离线城市表，忽略“市”后缀；找不到完全一致时退化为前后缀匹配。
+export function findCityByName(input: string): CityOption | null {
+  const name = input.trim().replace(/市$/, '');
+  if (!name) return null;
+  const all = provinces.flatMap((province) => province.cities);
+  return (
+    all.find((city) => city.name === name) ??
+    all.find((city) => city.name.startsWith(name) || name.startsWith(city.name)) ??
+    null
+  );
+}

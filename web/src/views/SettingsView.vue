@@ -15,6 +15,7 @@ import AppPanel from '@/components/base/AppPanel.vue';
 import AppSelect from '@/components/base/AppSelect.vue';
 import AppStatusTag from '@/components/base/AppStatusTag.vue';
 import ApiTokensPanel from '@/components/business/ApiTokensPanel.vue';
+import AvatarCropDialog from '@/components/business/AvatarCropDialog.vue';
 import StyleSettingsPanel from '@/components/business/StyleSettingsPanel.vue';
 import WeatherSettingsDialog from '@/components/business/WeatherSettingsDialog.vue';
 
@@ -27,6 +28,8 @@ const profileSaving = ref(false);
 const profileError = ref('');
 const avatarUploading = ref(false);
 const avatarInput = ref<HTMLInputElement | null>(null);
+const avatarCropOpen = ref(false);
+const avatarCropFile = ref<File | null>(null);
 
 const household = reactive({ name: '', timezone: 'Asia/Shanghai', weekStart: '1', dateFormat: '24h', defaultReminderOffset: '0' });
 const householdSaving = ref(false);
@@ -84,11 +87,16 @@ function chooseAvatar(): void {
   avatarInput.value?.click();
 }
 
-async function onAvatarChange(event: Event): Promise<void> {
+function onAvatarChange(event: Event): void {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
   input.value = '';
   if (!file) return;
+  avatarCropFile.value = file;
+  avatarCropOpen.value = true;
+}
+
+async function onAvatarCropped(file: File): Promise<void> {
   avatarUploading.value = true;
   try {
     const key = await uploadAvatar(file);
@@ -253,6 +261,7 @@ onMounted(() => {
     </div>
 
     <WeatherSettingsDialog v-model="weatherOpen" />
+    <AvatarCropDialog v-model="avatarCropOpen" :file="avatarCropFile" @confirm="onAvatarCropped" />
 
     <div class="settings__style">
       <StyleSettingsPanel />

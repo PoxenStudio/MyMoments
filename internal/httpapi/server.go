@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"mymoments/internal/config"
+	"mymoments/internal/geoip"
 	"mymoments/internal/holiday"
 	"mymoments/internal/store"
 	"mymoments/internal/weather"
@@ -33,6 +34,7 @@ type Server struct {
 	web      fs.FS
 	limiter  *loginLimiter
 	weather  *weather.Manager
+	geo      *geoip.Lookup
 	holidays *holiday.Service
 	version  string
 }
@@ -51,6 +53,7 @@ func New(cfg config.Config, st *store.Store) (*Server, error) {
 		web:      web,
 		limiter:  newLoginLimiter(8, 5*time.Minute),
 		weather:  weather.NewManager(openMeteo, qweather, cfg.WeatherProvider, cfg.WeatherDir()),
+		geo:      geoip.New(4 * time.Second),
 		holidays: holiday.NewService(cfg.HolidayDir(), cfg.HolidayDataURL),
 		version:  readVersion(),
 	}, nil
@@ -169,6 +172,7 @@ func (s *Server) routes(mux *http.ServeMux) {
 	mux.Handle("PUT "+api+"/household/default-layout", s.requireAdmin(http.HandlerFunc(s.handleHouseholdDefaultLayout)))
 	mux.Handle("GET "+api+"/weather", s.requireAuth(http.HandlerFunc(s.handleWeather)))
 	mux.Handle("GET "+api+"/weather/sources", s.requireAuth(http.HandlerFunc(s.handleWeatherSources)))
+	mux.Handle("GET "+api+"/geo/ip", s.requireAuth(http.HandlerFunc(s.handleGeoIP)))
 	mux.Handle("GET "+api+"/calendar/meta", s.requireAuth(http.HandlerFunc(s.handleCalendarMeta)))
 	mux.Handle("GET "+api+"/search", s.requireAuth(http.HandlerFunc(s.handleSearch)))
 

@@ -25,6 +25,7 @@ import AppSelect from '@/components/base/AppSelect.vue';
 import AppStatusTag from '@/components/base/AppStatusTag.vue';
 import AppTabs from '@/components/base/AppTabs.vue';
 import BirthdayManager from '@/components/business/BirthdayManager.vue';
+import AvatarCropDialog from '@/components/business/AvatarCropDialog.vue';
 
 const auth = useAuthStore();
 const family = useFamilyStore();
@@ -119,6 +120,8 @@ const editLunarDays = computed(() => Array.from({ length: 30 }, (_, index) => ({
 })));
 const editAvatarSaving = ref(false);
 const editAvatarInput = ref<HTMLInputElement | null>(null);
+const editCropOpen = ref(false);
+const editCropFile = ref<File | null>(null);
 const memberCards = reactive<Record<string, boolean>>({});
 const memberLayout = ref<DashboardLayoutItem[]>([]);
 const memberCardsLoading = ref(false);
@@ -359,11 +362,17 @@ function chooseEditAvatar(): void {
   editAvatarInput.value?.click();
 }
 
-async function onEditAvatarChange(event: Event): Promise<void> {
+function onEditAvatarChange(event: Event): void {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
   input.value = '';
-  if (!file || !editTarget.value) return;
+  if (!file) return;
+  editCropFile.value = file;
+  editCropOpen.value = true;
+}
+
+async function onEditAvatarCropped(file: File): Promise<void> {
+  if (!editTarget.value) return;
   editAvatarSaving.value = true;
   try {
     const key = await uploadAvatar(file, editTarget.value.id);
@@ -929,6 +938,8 @@ onMounted(() => {
         <AppButton :loading="resetting" @click="submitReset">重置密码</AppButton>
       </template>
     </AppDialog>
+
+    <AvatarCropDialog v-model="editCropOpen" :file="editCropFile" @confirm="onEditAvatarCropped" />
 
     <AppConfirmDialog
       :model-value="statusTarget !== null"

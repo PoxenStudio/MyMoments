@@ -4,7 +4,8 @@ import { api, ApiError } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { useToastStore } from '@/stores/toast';
 import type { Household, WeatherSource } from '@/types';
-import { nearestCity, provinces } from '@/data/cities';
+import { nearestCity, provinces, type CityOption } from '@/data/cities';
+import { detectCityByIP } from '@/utils/geo';
 import AppButton from '@/components/base/AppButton.vue';
 import AppDialog from '@/components/base/AppDialog.vue';
 import AppSelect from '@/components/base/AppSelect.vue';
@@ -91,37 +92,41 @@ async function load(): Promise<void> {
   }
 }
 
-function locate(): Promise<void> {
+function applyCity(city: CityOption | null): boolean {
+  if (!city) return false;
+  const province = provinces.find((p) => p.cities.some((c) => c.name === city.name));
+  if (province) {
+    provinceName.value = province.name;
+    cityName.value = city.name;
+  }
+  currentCity.value = city.name;
+  return true;
+}
+
+// 浏览器定位需要安全上下文（HTTPS / localhost），HTTP 页面下直接返回 null。
+function geolocateCoords(): Promise<{ lat: number; lon: number } | null> {
+  if (!navigator.geolocation) return Promise.resolve(null);
   return new Promise((resolve) => {
-    if (!navigator.geolocation) {
-      error.value = '当前浏览器不支持定位，请手动选择城市';
-      resolve();
-      return;
-    }
-    locating.value = true;
-    error.value = '';
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const city = nearestCity(position.coords.latitude, position.coords.longitude);
-        if (city) {
-          const province = provinces.find((p) => p.cities.some((c) => c.name === city.name));
-          if (province) {
-            provinceName.value = province.name;
-            cityName.value = city.name;
-          }
-          currentCity.value = city.name;
-        }
-        locating.value = false;
-        resolve();
-      },
-      () => {
-        error.value = '定位失败，请允许位置权限或手动选择城市';
-        locating.value = false;
-        resolve();
-      },
+      (position) => resolve({ lat: position.coords.latitude, lon: position.coords.longitude }),
+      () => resolve(null),
       { timeout: 8000, maximumAge: 600000 },
     );
   });
+}
+
+async function locate(): Promise<void> {
+  locating.value = true;
+  error.value = '';
+  try {
+    const coords = await geolocateCoords();
+    if (coords && applyCity(nearestCity(coords.lat, coords.lon))) return;
+    // 浏览器定位不可用时，改用出口 IP 反查：先浏览器直连，失败再走服务端代理。
+    if (applyCity(await detectCityByIP())) return;
+    error.value = '定位失败，请允许位置权限或手动选择城市';
+  } finally {
+    locating.value = false;
+  }
 }
 
 async function save(): Promise<void> {
@@ -204,7 +209,7 @@ async function save(): Promise<void> {
       </div>
 
       <div v-if="mode === 'auto'" class="weather-settings__auto">
-        <p>天气卡片会请求浏览器定位，只用于获取所在城市。若无法定位，可以改用手动选择。</p>
+        <p>天气卡片会优先请求浏览器定位，只用于获取所在城市。HTTP 页面无法使用定位时，会改用出口 IP 反查城市；仍失败可改用手动选择。</p>
         <AppButton variant="outline" size="sm" :loading="locating" @click="locate">
           <AppIcon name="map-pin" :size="15" />重新定位
         </AppButton>

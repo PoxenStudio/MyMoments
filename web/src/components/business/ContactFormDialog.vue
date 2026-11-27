@@ -10,6 +10,7 @@ import AppInput from '@/components/base/AppInput.vue';
 import AppSelect from '@/components/base/AppSelect.vue';
 import AppSwitch from '@/components/base/AppSwitch.vue';
 import AppAvatar from '@/components/base/AppAvatar.vue';
+import AvatarCropDialog from '@/components/business/AvatarCropDialog.vue';
 import { ApiError } from '@/api/client';
 import { useContactsStore, type ContactPayload } from '@/stores/contacts';
 import { useToastStore } from '@/stores/toast';
@@ -30,6 +31,8 @@ const toast = useToastStore();
 const phoneLabels = ['私人', '办公', '住宅'];
 const saving = ref(false);
 const avatarUploading = ref(false);
+const avatarCropOpen = ref(false);
+const avatarCropFile = ref<File | null>(null);
 
 interface PhoneDraft {
   value: string;
@@ -175,10 +178,16 @@ watch(
   },
 );
 
-async function onAvatarChange(event: Event): Promise<void> {
+function onAvatarChange(event: Event): void {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
+  input.value = '';
   if (!file) return;
+  avatarCropFile.value = file;
+  avatarCropOpen.value = true;
+}
+
+async function onAvatarCropped(file: File): Promise<void> {
   avatarUploading.value = true;
   try {
     form.avatarKey = await uploadContactAvatar(file);
@@ -186,7 +195,6 @@ async function onAvatarChange(event: Event): Promise<void> {
     toast.error(err instanceof ApiError ? err.message : '头像上传失败');
   } finally {
     avatarUploading.value = false;
-    input.value = '';
   }
 }
 
@@ -461,6 +469,7 @@ async function save(): Promise<void> {
       <AppButton :loading="saving" @click="save">{{ editing ? '保存' : '创建' }}</AppButton>
     </template>
   </AppDialog>
+  <AvatarCropDialog v-model="avatarCropOpen" :file="avatarCropFile" @confirm="onAvatarCropped" />
 </template>
 
 <style scoped>

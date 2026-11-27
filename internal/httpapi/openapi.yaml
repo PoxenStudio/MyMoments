@@ -789,6 +789,27 @@ paths:
                         note: { type: string }
                         available: { type: boolean }
                         default: { type: boolean }
+  /geo/ip:
+    get:
+      tags: [weather]
+      summary: 通过出口 IP 反查所在城市（浏览器定位不可用时兜底）
+      responses:
+        '200':
+          description: 出口 IP 位置
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [city, source]
+                properties:
+                  ip: { type: string }
+                  country: { type: string }
+                  province: { type: string }
+                  city: { type: string }
+                  lat: { type: number }
+                  lon: { type: number }
+                  source: { type: string }
+        '503': { description: 上游不可用 }
   /calendar/meta:
     get:
       tags: [calendar]

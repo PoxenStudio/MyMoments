@@ -228,6 +228,7 @@ async function toggleScheme(): Promise<void> {
   <div class="shell" :class="{ 'is-collapsed': collapsed, 'is-drawer-open': drawerOpen }">
     <div
       class="shell__canvas"
+      :class="{ 'has-image': !!theme.pageImage }"
       aria-hidden="true"
       :style="{
         backgroundImage: theme.pageImage ? `url('${theme.pageImage}')` : undefined,
@@ -416,6 +417,15 @@ async function toggleScheme(): Promise<void> {
   background-size: cover;
   background-position: center;
   pointer-events: none;
+}
+
+/* 深色模式下压暗背景图：叠加当前页面色调，避免浅色背景图把整页拉回浅色 */
+html[data-scheme='dark'] .shell__canvas.has-image::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--at-bg-page);
+  opacity: 0.86;
 }
 
 .shell.is-collapsed {

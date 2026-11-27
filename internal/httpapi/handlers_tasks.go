@@ -105,6 +105,10 @@ func (s *Server) handleTaskCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	task.Mentions = mentions
+	if err := s.assignMentionedMembers(r, task, mentions); err != nil {
+		writeError(w, err)
+		return
+	}
 	id, err := s.store.CreateTask(r.Context(), task)
 	if err != nil {
 		writeError(w, serverError(err))
@@ -748,6 +752,31 @@ func (s *Server) resolveAssignees(r *http.Request, ids []int64) ([]model.User, e
 		out = append(out, *u)
 	}
 	return out, nil
+}
+
+// assignMentionedMembers 把标题/说明中 @ 到的家庭成员自动加入负责人，联系人仅作提及不指派。
+func (s *Server) assignMentionedMembers(r *http.Request, task *model.Task, mentions []model.MentionTarget) error {
+	assigned := make(map[int64]bool, len(task.Assignees))
+	for _, a := range task.Assignees {
+		assigned[a.ID] = true
+	}
+	ids := make([]int64, 0, len(mentions))
+	for _, m := range mentions {
+		if m.Type != "user" || assigned[m.ID] {
+			continue
+		}
+		assigned[m.ID] = true
+		ids = append(ids, m.ID)
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	users, err := s.resolveAssignees(r, ids)
+	if err != nil {
+		return err
+	}
+	task.Assignees = append(task.Assignees, users...)
+	return nil
 }
 
 func (s *Server) syncTaskReminders(r *http.Request, task *model.Task) error {

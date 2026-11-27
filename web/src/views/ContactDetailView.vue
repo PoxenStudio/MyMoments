@@ -145,12 +145,12 @@ onMounted(load);
           <li v-if="contact.birthdayMonth && contact.birthdayDay" class="line">
             <span class="line__k">生日祝福</span>
             <span class="line__v">{{ contact.showInCalendar ? '生日当天显示在家庭日历与首页' : '未启用' }}</span>
-            <AppStatusTag :tone="contact.showInCalendar ? 'brand' : 'neutral'">{{ contact.showInCalendar ? '启用' : '停用' }}</AppStatusTag>
+            <AppStatusTag :tone="contact.showInCalendar ? 'brand' : 'neutral'">{{ contact.showInCalendar ? '启用' : '未启用' }}</AppStatusTag>
           </li>
           <li v-for="r in contact.reminders" :key="r.id" class="line">
             <span class="line__k">{{ reminderKindLabel(r.kind) }}</span>
             <span class="line__v">{{ r.title || r.frequency || '—' }}</span>
-            <AppStatusTag :tone="r.enabled ? 'brand' : 'neutral'">{{ r.enabled ? '启用' : '停用' }}</AppStatusTag>
+            <AppStatusTag :tone="r.enabled ? 'brand' : 'neutral'">{{ r.enabled ? '启用' : '未启用' }}</AppStatusTag>
           </li>
         </ul>
       </section>
@@ -257,7 +257,8 @@ onMounted(load);
 }
 .line__k {
   flex: none;
-  width: 56px;
+  width: 72px;
+  white-space: nowrap;
   color: var(--at-color-muted);
 }
 .line__v {

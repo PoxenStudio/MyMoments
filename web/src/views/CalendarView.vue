@@ -9,7 +9,7 @@ import { useToastStore } from '@/stores/toast';
 import { todayISO } from '@/utils/chrono';
 import { birthdayRoute } from '@/utils/birthday';
 import {
-  addDays, addMonths, dayLabel, isSameMonth, monthGrid, monthLabel, monthRange,
+  addDays, addMonths, dayLabel, isSameMonth, lunarDayLabel, monthGrid, monthLabel, monthRange,
   parseDate, startOfWeek, timeOf, weekRange, agendaRange, WEEKDAYS,
 } from '@/utils/calendar';
 import AppButton from '@/components/base/AppButton.vue';
@@ -313,7 +313,10 @@ function metaFor(date: string): CalendarDayMeta | undefined {
 
 function daySubLabel(date: string): string {
   const meta = metaFor(date);
-  return meta?.holiday || meta?.festival || meta?.lunar || '';
+  if (!meta) return '';
+  if (meta.holiday || meta.festival) return meta.holiday || meta.festival || '';
+  if (meta.lunarDay === 1) return meta.lunar;
+  return lunarDayLabel(meta.lunarDay);
 }
 
 function dayBadge(date: string): string {
@@ -1216,14 +1219,38 @@ function pillLabel(entry: DayEntry): string {
   }
 
   .cell {
+    min-width: 0;
     min-height: 74px;
     padding: var(--at-space-1);
     gap: 3px;
   }
 
+  .cell__top {
+    flex-wrap: wrap;
+    gap: 2px 3px;
+  }
+
   .cell__num {
-    width: 20px;
-    height: 20px;
+    min-width: 24px;
+    width: 24px;
+    height: 22px;
+    padding: 0 3px;
+  }
+
+  .cell__badge {
+    order: 1;
+    min-width: 13px;
+    height: 14px;
+    padding: 0 2px;
+    font-size: 9px;
+  }
+
+  .cell__lunar {
+    order: 2;
+    flex: 0 0 100%;
+    white-space: normal;
+    overflow: visible;
+    line-height: 1.25;
   }
 
   .pill__text,

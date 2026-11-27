@@ -229,6 +229,24 @@ func TestTaskVisibility(t *testing.T) {
 	}
 }
 
+func TestTaskMentionAssignsFamilyMember(t *testing.T) {
+	base, admin, _ := setupHousehold(t)
+	_, memberID := addMember(t, base, admin, "xiaoming", "小明")
+
+	status, body := call(t, admin, http.MethodPost, base+"/tasks", map[string]any{
+		"title":       "周末采购",
+		"description": "记得叫上 @小明 一起去",
+	})
+	if status != http.StatusCreated {
+		t.Fatalf("create task: %d %v", status, body)
+	}
+	task := body["task"].(map[string]any)
+	assignees := task["assignees"].([]any)
+	if len(assignees) != 1 || int64(assignees[0].(map[string]any)["id"].(float64)) != memberID {
+		t.Fatalf("expected mention to assign member: %v", assignees)
+	}
+}
+
 func TestTaskMediaUploadRangeAndPermission(t *testing.T) {
 	base, admin, _ := setupHousehold(t)
 	status, body := call(t, admin, http.MethodPost, base+"/tasks", map[string]any{"title": "成长记录"})

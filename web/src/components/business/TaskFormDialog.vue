@@ -373,7 +373,7 @@ async function submit(): Promise<void> {
         </AppField>
       </div>
 
-      <AppField label="指派给" hint="可多选；不选则由自己负责">
+      <AppField label="指派给" hint="可多选；标题或说明中 @ 家人会自动指派（联系人不会）">
         <div class="chips">
           <button
             v-for="member in activeMembers"

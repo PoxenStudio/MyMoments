@@ -5,6 +5,7 @@ import { ApiError, api } from '@/api/client';
 import { useToastStore } from '@/stores/toast';
 import { asData, type TasksData } from '@/cards/types';
 import { formatShortDate, todayISO } from '@/utils/chrono';
+import { useAuthStore } from '@/stores/auth';
 import AppEmptyState from '@/components/base/AppEmptyState.vue';
 import AppIcon from '@/components/base/AppIcon.vue';
 import type { Task } from '@/types';
@@ -13,6 +14,7 @@ const props = defineProps<{ data: unknown }>();
 const emit = defineEmits<{ refresh: [] }>();
 const router = useRouter();
 const toast = useToastStore();
+const auth = useAuthStore();
 const d = computed(() => asData<TasksData>(props.data));
 const completing = ref<number | null>(null);
 const today = computed(() => todayISO());
@@ -60,7 +62,12 @@ async function complete(task: Task): Promise<void> {
             <AppIcon name="clock" :size="13" />{{ task.dueDate === today ? '今天' : formatShortDate(task.dueDate) }}
           </span>
           <span v-if="task.assignees.length" class="tasks__assignees">
-            {{ task.assignees.map((u) => u.displayName).join('、') }}
+            <span
+              v-for="u in task.assignees"
+              :key="u.id"
+              class="tasks__assignee"
+              :class="u.id === auth.user?.id ? 'is-self' : 'is-other'"
+            >{{ u.displayName }}</span>
           </span>
         </span>
       </button>
@@ -144,8 +151,29 @@ async function complete(task: Task): Promise<void> {
 }
 
 .tasks__assignees {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+.tasks__assignee {
+  flex: none;
+  padding: 0 6px;
+  border-radius: var(--at-radius-pill);
+  font-size: 11px;
+  line-height: 16px;
   white-space: nowrap;
+}
+
+.tasks__assignee.is-self {
+  background: #dc2626;
+  color: #fff;
+}
+
+.tasks__assignee.is-other {
+  background: #166534;
+  color: #fff;
 }
 </style>

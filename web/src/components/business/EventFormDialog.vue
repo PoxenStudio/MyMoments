@@ -447,10 +447,15 @@ async function submit(): Promise<void> {
 }
 
 .event-form__reminders :deep(.at-checkbox) {
+  align-items: center;
   min-height: 40px;
   padding: 0 var(--at-space-3);
   border: 1px solid var(--at-color-hairline);
   border-radius: var(--at-radius-pill);
+}
+
+.event-form__reminders :deep(.at-checkbox__box) {
+  margin-top: 0;
 }
 
 .event-form__error {

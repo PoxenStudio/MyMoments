@@ -26,8 +26,8 @@ async function submit(): Promise<void> {
     error.value = '请填写当前密码与新密码';
     return;
   }
-  if (next.value.length < 10) {
-    error.value = '新密码至少需要 10 个字符';
+  if (next.value.length < 6) {
+    error.value = '新密码至少需要 6 个字符';
     return;
   }
   if (next.value === current.value) {
@@ -58,7 +58,7 @@ async function submit(): Promise<void> {
         <p class="at-caption-upper">账号安全</p>
         <h1 class="at-page__title">{{ forced ? '先设置新密码' : '修改密码' }}</h1>
         <p class="at-page__subtitle">
-          {{ forced ? '这是临时密码，首次登录需要设置自己的密码。' : '建议使用至少 10 个字符，并混合字母、数字与符号。' }}
+          {{ forced ? '这是临时密码，首次登录需要设置自己的密码。' : '建议使用至少 6 个字符，并混合字母、数字与符号。' }}
         </p>
       </div>
     </header>
@@ -66,7 +66,7 @@ async function submit(): Promise<void> {
       <AppField label="当前密码" for-id="pw-current">
         <AppInput id="pw-current" v-model="current" type="password" autocomplete="current-password" />
       </AppField>
-      <AppField label="新密码" for-id="pw-new" hint="至少 10 个字符">
+      <AppField label="新密码" for-id="pw-new" hint="至少 6 个字符">
         <AppInput id="pw-new" v-model="next" type="password" autocomplete="new-password" />
       </AppField>
       <AppField label="确认新密码" for-id="pw-confirm">

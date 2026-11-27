@@ -106,8 +106,8 @@ async function submitCreate(): Promise<void> {
     createError.value = '请填写登录名和称呼';
     return;
   }
-  if (createForm.mode === 'manual' && createForm.password.length < 10) {
-    createError.value = '临时密码至少需要 10 个字符';
+  if (createForm.mode === 'manual' && createForm.password.length < 6) {
+    createError.value = '临时密码至少需要 6 个字符';
     return;
   }
   creating.value = true;
@@ -239,8 +239,8 @@ function openReset(member: User): void {
 
 async function submitReset(): Promise<void> {
   if (!resetTarget.value) return;
-  if (resetForm.mode === 'manual' && resetForm.password.length < 10) {
-    resetError.value = '临时密码至少需要 10 个字符';
+  if (resetForm.mode === 'manual' && resetForm.password.length < 6) {
+    resetError.value = '临时密码至少需要 6 个字符';
     return;
   }
   resetting.value = true;
@@ -408,7 +408,7 @@ onMounted(() => {
             </button>
           </div>
         </AppField>
-        <AppField v-if="createForm.mode === 'manual'" label="临时密码" for-id="member-password" hint="至少 10 个字符，成员首次登录后需要修改">
+        <AppField v-if="createForm.mode === 'manual'" label="临时密码" for-id="member-password" hint="至少 6 个字符，成员首次登录后需要修改">
           <AppInput id="member-password" v-model="createForm.password" type="password" autocomplete="new-password" />
         </AppField>
         <p v-else class="family__hint">创建后将生成随机临时密码，仅在成功页面显示一次。</p>
@@ -529,7 +529,7 @@ onMounted(() => {
             自行设置
           </button>
         </div>
-        <AppField v-if="resetForm.mode === 'manual'" label="临时密码" for-id="reset-password" hint="至少 10 个字符">
+        <AppField v-if="resetForm.mode === 'manual'" label="临时密码" for-id="reset-password" hint="至少 6 个字符">
           <AppInput id="reset-password" v-model="resetForm.password" type="password" autocomplete="new-password" />
         </AppField>
         <p v-if="resetError" class="family__error" role="alert"><AppIcon name="alert" :size="16" />{{ resetError }}</p>

@@ -26,8 +26,8 @@ func ValidateUsername(username string) bool {
 
 // ValidatePassword 校验口令长度。
 func ValidatePassword(password string) error {
-	if len([]rune(password)) < 10 {
-		return errors.New("密码至少需要 10 个字符")
+	if len([]rune(password)) < 6 {
+		return errors.New("密码至少需要 6 个字符")
 	}
 	if len(password) > 256 {
 		return errors.New("密码过长")

@@ -18,6 +18,8 @@ const username = ref('');
 const displayName = ref('');
 const password = ref('');
 const confirm = ref('');
+const showPassword = ref(false);
+const showConfirm = ref(false);
 const loading = ref(false);
 const error = ref('');
 
@@ -27,8 +29,8 @@ async function submit(): Promise<void> {
     error.value = '请填写用户名和称呼';
     return;
   }
-  if (password.value.length < 10) {
-    error.value = '密码至少需要 10 个字符';
+  if (password.value.length < 6) {
+    error.value = '密码至少需要 6 个字符';
     return;
   }
   if (password.value !== confirm.value) {
@@ -63,8 +65,8 @@ async function submit(): Promise<void> {
         <span class="at-display">家时光</span>
       </div>
       <p class="at-caption-upper">首次初始化</p>
-      <h1 class="setup__title at-display">为这个家，<br />起一个名字。</h1>
-      <p class="setup__sub">创建第一个管理员账号。初始化完成后，其他家庭成员由管理员邀请加入。</p>
+      <h1 class="setup__title at-display">为家起一个名字</h1>
+      <p class="setup__sub">创建第一个管理员账号。初始化完成后，再邀请家庭成员加入。</p>
       <form class="at-stack" @submit.prevent="submit">
         <AppField label="家庭名称" for-id="setup-household">
           <AppInput id="setup-household" v-model="householdName" placeholder="我的家" />
@@ -77,14 +79,48 @@ async function submit(): Promise<void> {
             <AppInput id="setup-display" v-model="displayName" autocomplete="nickname" placeholder="例如：小明" />
           </AppField>
         </div>
-        <AppField label="密码" for-id="setup-password" hint="至少 10 个字符，建议混合字母、数字与符号">
-          <AppInput id="setup-password" v-model="password" type="password" autocomplete="new-password" />
+        <AppField label="密码" for-id="setup-password" hint="至少 6 个字符，建议混合字母、数字与符号">
+          <div class="setup__password">
+            <AppInput
+              id="setup-password"
+              v-model="password"
+              :type="showPassword ? 'text' : 'password'"
+              autocomplete="new-password"
+            />
+            <button
+              type="button"
+              class="setup__reveal"
+              :aria-label="showPassword ? '隐藏密码' : '显示密码'"
+              :aria-pressed="showPassword"
+              :title="showPassword ? '隐藏密码' : '显示密码'"
+              @click="showPassword = !showPassword"
+            >
+              <AppIcon :name="showPassword ? 'eye-off' : 'eye'" :size="18" />
+            </button>
+          </div>
         </AppField>
         <AppField label="确认密码" for-id="setup-confirm">
-          <AppInput id="setup-confirm" v-model="confirm" type="password" autocomplete="new-password" />
+          <div class="setup__password">
+            <AppInput
+              id="setup-confirm"
+              v-model="confirm"
+              :type="showConfirm ? 'text' : 'password'"
+              autocomplete="new-password"
+            />
+            <button
+              type="button"
+              class="setup__reveal"
+              :aria-label="showConfirm ? '隐藏密码' : '显示密码'"
+              :aria-pressed="showConfirm"
+              :title="showConfirm ? '隐藏密码' : '显示密码'"
+              @click="showConfirm = !showConfirm"
+            >
+              <AppIcon :name="showConfirm ? 'eye-off' : 'eye'" :size="18" />
+            </button>
+          </div>
         </AppField>
         <p v-if="error" class="setup__error" role="alert"><AppIcon name="alert" :size="16" />{{ error }}</p>
-        <AppButton type="submit" block size="lg" :loading="loading">创建家庭</AppButton>
+        <AppButton type="submit" block size="lg" :loading="loading">创建</AppButton>
       </form>
     </div>
   </div>
@@ -168,6 +204,32 @@ async function submit(): Promise<void> {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--at-space-3);
+}
+
+.setup__password {
+  position: relative;
+}
+
+.setup__password :deep(.at-input) {
+  padding-right: 46px;
+}
+
+.setup__reveal {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--at-radius-md);
+  color: var(--at-color-muted);
+}
+
+.setup__reveal:hover {
+  background: var(--at-bg-canvas-soft);
+  color: var(--at-color-ink);
 }
 
 .setup__error {

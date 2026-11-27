@@ -82,7 +82,7 @@ lint:
 check: fmt lint test
 
 docker:
-	docker build -t mymoments:latest .
+	docker build -t $(IMAGE) .
 docker-build: ## 构建 Docker 镜像（按当前分支打 tag）
 	docker build -t $(IMAGE) .
 

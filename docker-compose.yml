@@ -6,7 +6,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - /tmp/moments:/data
+      - ./data2:/data
     environment:
       - PUID=1000
       - PGID=1000

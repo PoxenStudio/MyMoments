@@ -8,7 +8,12 @@
 
 朝夕是一个可自托管的家庭生活面板：待办、行事历、生日、留言、便签、提醒、天气与家庭通讯录集中在同一个首页，数据保存在自己的服务器上。界面为中文、移动端优先，同时支持 PWA 安装到桌面与手机。它与中文家庭的日常深度贴合：日历原生显示农历与传统节日，生日同时支持公历与农历双轨记录。
 
-![朝夕首页](docs/screenshots/home-desktop.png)
+![朝夕首页](docs/screenshots/main_ui.jpg)
+
+![时间轴](docs/screenshots/timeline.jpg)
+
+![行事历](docs/screenshots/calendar.jpg)
+
 
 ## 功能介绍
 

@@ -535,6 +535,15 @@ html[data-scheme='dark'] .tone-swatch--page .tone-swatch__dot {
   transform: scale(1.1);
 }
 
+/* 与整页一致：深色模式下压暗背景图，叠加当前页面色调 */
+html[data-scheme='dark'] .preview-canvas.has-image::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--at-bg-page);
+  opacity: 0.86;
+}
+
 .preview-card {
   position: relative;
   width: min(240px, 78%);

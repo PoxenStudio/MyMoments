@@ -16,6 +16,12 @@ function label(days: number | undefined): string {
   if (days === 1) return '明天';
   return `${days} 天后`;
 }
+
+function dateLabel(item: { nextDate?: string | null; dates: { calendar: string; month: number; day: number }[] }): string {
+  if (item.nextDate) return item.nextDate.slice(5).replace('-', '/');
+  const solar = item.dates.find((date) => date.calendar === 'solar');
+  return solar ? `${solar.month}月${solar.day}日` : '';
+}
 </script>
 
 <template>
@@ -28,7 +34,7 @@ function label(days: number | undefined): string {
         <AppAvatar :name="item.name" :size="34" />
         <span class="birthdays__body">
           <span class="birthdays__name">@{{ item.name }}</span>
-          <span class="birthdays__date">{{ item.month }}月{{ item.day }}日
+          <span class="birthdays__date">{{ dateLabel(item) }}<template v-if="item.nextCalendar === 'lunar'"> · 农历</template>
             <template v-if="item.age !== null && item.age !== undefined"> · {{ item.age }} 岁</template>
           </span>
         </span>

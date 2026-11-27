@@ -63,28 +63,36 @@ func yearDays(y int) int {
 }
 
 // lunarToSolar 将农历日期转换为公历日期（按北京时区 UTC+8）。
+// 闰月按平月处理：即使该年存在同名闰月，也只取第一个平月。
 func lunarToSolar(y, m, d int) time.Time {
-	if y < baseYear || y > maxYear {
+	return lunarToSolarMonth(y, m, d, false)
+}
+
+// lunarToSolarMonth 将农历日期转换为公历日期；leap 为 true 时才取闰月。
+func lunarToSolarMonth(y, m, d int, leap bool) time.Time {
+	if y < baseYear || y > maxYear || m < 1 || m > 12 || d < 1 {
 		return time.Time{}
+	}
+	days := monthDays(y, m)
+	if leap {
+		if leapMonth(y) != m {
+			return time.Time{}
+		}
+		days = leapDays(y)
+	}
+	if d > days {
+		d = days
 	}
 	loc := time.FixedZone("CST", 8*3600)
 	offset := 0
 	for i := baseYear; i < y; i++ {
 		offset += yearDays(i)
 	}
-	leap := leapMonth(y)
-	isleap := false
-	if leap != 0 && m > leap {
-		m--
-	}
-	if leap != 0 && m == leap {
-		isleap = true
-	}
 	for i := 1; i < m; i++ {
 		offset += monthDays(y, i)
 	}
-	if isleap {
-		offset += leapDays(y)
+	if leap {
+		offset += monthDays(y, m)
 	}
 	offset += d - 1
 	base := time.Date(baseYear, 1, 31, 0, 0, 0, 0, loc) // 1900-01-31 为农历 1900 年正月初一
@@ -103,6 +111,78 @@ func Lunar(y, m, d int) string {
 		return ""
 	}
 	return t.Format("2006-01-02")
+}
+
+// LunarOccurrence 是农历日期的一次公历发生。
+type LunarOccurrence struct {
+	Date      time.Time
+	LunarYear int
+}
+
+func lunarDateIn(y, m, d int, loc *time.Location) time.Time {
+	t := lunarToSolar(y, m, d)
+	if t.IsZero() {
+		return time.Time{}
+	}
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, loc)
+}
+
+func dateOnly(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
+}
+
+// NextLunarOccurrence 返回不早于 from 的下一次农历月日对应的公历日期及发生农历年。
+// 闰月按平月处理；农历三十遇到 29 天的月份时按廿九计算。
+func NextLunarOccurrence(month, day int, from time.Time) (time.Time, int, bool) {
+	if month < 1 || month > 12 || day < 1 {
+		return time.Time{}, 0, false
+	}
+	loc := from.Location()
+	start := dateOnly(from)
+	for lunarYear := start.Year() - 1; lunarYear <= maxYear; lunarYear++ {
+		if lunarYear < baseYear {
+			continue
+		}
+		candidate := lunarDateIn(lunarYear, month, day, loc)
+		if candidate.IsZero() {
+			continue
+		}
+		if !candidate.Before(start) {
+			return candidate, lunarYear, true
+		}
+	}
+	return time.Time{}, 0, false
+}
+
+// LunarOccurrences 返回 [from, to] 范围内农历月日的全部公历发生。
+func LunarOccurrences(month, day int, from, to time.Time) []LunarOccurrence {
+	if month < 1 || month > 12 || day < 1 {
+		return nil
+	}
+	loc := from.Location()
+	start := dateOnly(from)
+	end := dateOnly(to)
+	if end.Before(start) {
+		return nil
+	}
+	out := make([]LunarOccurrence, 0, 2)
+	seen := make(map[string]bool)
+	for lunarYear := start.Year() - 1; lunarYear <= end.Year()+1; lunarYear++ {
+		if lunarYear < baseYear || lunarYear > maxYear {
+			continue
+		}
+		candidate := lunarDateIn(lunarYear, month, day, loc)
+		if candidate.IsZero() || candidate.Before(start) || candidate.After(end) {
+			continue
+		}
+		key := candidate.Format("2006-01-02")
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, LunarOccurrence{Date: candidate, LunarYear: lunarYear})
+	}
+	return out
 }
 
 // SpringFestival 返回指定公历年份的春节日期（农历正月初一）。

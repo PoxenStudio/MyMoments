@@ -294,9 +294,11 @@ func (s *Server) deleteContactDerived(ctx context.Context, c *model.Contact) err
 	}
 	b, err := s.store.GetBirthdayByContact(ctx, c.ID)
 	if err == nil && b != nil {
-		if b.CalendarEventID != nil {
-			_ = s.store.DeleteEvent(ctx, *b.CalendarEventID)
-			_ = s.store.DeleteSourceReminders(ctx, "event", *b.CalendarEventID)
+		for _, d := range b.Dates {
+			if d.CalendarEventID != nil {
+				_ = s.store.DeleteEvent(ctx, *d.CalendarEventID)
+				_ = s.store.DeleteSourceReminders(ctx, "event", *d.CalendarEventID)
+			}
 		}
 		_ = s.store.DeleteSourceReminders(ctx, "birthday", b.ID)
 		_ = s.store.DeleteBirthday(ctx, b.ID)
@@ -528,7 +530,8 @@ func reminderRule(freq string) string {
 	return `{"freq":"monthly","interval":1,"anchor":"due"}`
 }
 
-// syncContactBirthday 依据联系人生日与“显示到家庭日历”选项维护生日记录与日历事件。
+// syncContactBirthday 依据联系人生日与“显示到家庭日历”选项维护生日档案与日历事件。
+// 联系人生日只写公历日期；若档案已有农历日期则保留。
 func (s *Server) syncContactBirthday(ctx context.Context, c *model.Contact) error {
 	existing, _ := s.store.GetBirthdayByContact(ctx, c.ID)
 	hasBirthday := c.BirthdayMonth != nil && c.BirthdayDay != nil
@@ -536,26 +539,49 @@ func (s *Server) syncContactBirthday(ctx context.Context, c *model.Contact) erro
 		if existing == nil {
 			return nil
 		}
-		if existing.CalendarEventID != nil {
-			_ = s.store.DeleteEvent(ctx, *existing.CalendarEventID)
-			_ = s.store.DeleteSourceReminders(ctx, "event", *existing.CalendarEventID)
+		for _, d := range existing.Dates {
+			if d.CalendarEventID != nil {
+				_ = s.store.DeleteEvent(ctx, *d.CalendarEventID)
+				_ = s.store.DeleteSourceReminders(ctx, "event", *d.CalendarEventID)
+			}
 		}
 		_ = s.store.DeleteSourceReminders(ctx, "birthday", existing.ID)
 		return s.store.DeleteBirthday(ctx, existing.ID)
 	}
+	solarOffset := 0
+	var solarEventID *int64
+	lunarDates := make([]model.BirthdayDate, 0, 1)
+	if existing != nil {
+		for _, d := range existing.Dates {
+			if d.Calendar == "lunar" {
+				lunarDates = append(lunarDates, d)
+				continue
+			}
+			solarEventID = d.CalendarEventID
+			if d.ReminderOffset != nil {
+				solarOffset = *d.ReminderOffset
+			}
+		}
+	}
+	dates := []model.BirthdayDate{{
+		Calendar:        "solar",
+		Month:           *c.BirthdayMonth,
+		Day:             *c.BirthdayDay,
+		YearUnknown:     c.BirthYear == nil,
+		BirthYear:       c.BirthYear,
+		ReminderOffset:  &solarOffset,
+		CalendarEventID: solarEventID,
+	}}
+	dates = append(dates, lunarDates...)
 	b := &model.Birthday{
-		Name:        c.Name,
-		Month:       *c.BirthdayMonth,
-		Day:         *c.BirthdayDay,
-		YearUnknown: c.BirthYear == nil,
-		BirthYear:   c.BirthYear,
-		AvatarKey:   c.AvatarKey,
-		ContactID:   &c.ID,
-		CreatedBy:   c.CreatedBy,
+		Name:      c.Name,
+		AvatarKey: c.AvatarKey,
+		ContactID: &c.ID,
+		CreatedBy: c.CreatedBy,
+		Dates:     dates,
 	}
 	if existing != nil {
 		b.ID = existing.ID
-		b.CalendarEventID = existing.CalendarEventID
 		b.CreatedBy = existing.CreatedBy
 		if err := s.store.UpdateBirthday(ctx, b); err != nil {
 			return err

@@ -449,9 +449,15 @@ func eventEntry(ev model.CalendarEvent, date string, loc *time.Location) timelin
 }
 
 func birthdayEntries(b model.Birthday, from, to, today string, users map[int64]model.User) []timelineEntry {
-	fromYear := yearOf(from)
-	toYear := yearOf(to)
-	out := make([]timelineEntry, 0, toYear-fromYear+1)
+	loc := time.Local
+	fromTime, err := time.ParseInLocation("2006-01-02", from, loc)
+	if err != nil {
+		return nil
+	}
+	toTime, err := time.ParseInLocation("2006-01-02", to, loc)
+	if err != nil {
+		return nil
+	}
 	members := []model.User{}
 	memberIDs := []int64{}
 	if b.UserID != nil {
@@ -460,16 +466,23 @@ func birthdayEntries(b model.Birthday, from, to, today string, users map[int64]m
 			memberIDs = append(memberIDs, u.ID)
 		}
 	}
-	for year := fromYear; year <= toYear; year++ {
-		date := birthdayDate(year, b.Month, b.Day)
-		if date < from || date > to {
-			continue
+	occurrences := birthdayOccurrencesInRange(&b, fromTime, toTime)
+	out := make([]timelineEntry, 0, len(occurrences))
+	for _, occ := range occurrences {
+		date := occ.Date
+		label := ""
+		if occ.Calendar == "lunar" {
+			label = "农历"
+		} else if occ.Calendar == "both" {
+			label = "公历/农历同日"
 		}
-		summary := ""
-		if b.BirthYear != nil {
-			age := year - *b.BirthYear
-			if age > 0 {
-				summary = fmt.Sprintf("%d 岁生日", age)
+		summary := label
+		if occ.Age != nil && *occ.Age > 0 {
+			ageText := fmt.Sprintf("%d 岁生日", *occ.Age)
+			if summary != "" {
+				summary += " · " + ageText
+			} else {
+				summary = ageText
 			}
 		}
 		status := "past"
@@ -477,7 +490,7 @@ func birthdayEntries(b model.Birthday, from, to, today string, users map[int64]m
 			status = "upcoming"
 		}
 		out = append(out, timelineEntry{
-			SourceType: "birthday", SourceID: b.ID, OccurrenceKey: fmt.Sprintf("birthday:%d:%d", b.ID, year),
+			SourceType: "birthday", SourceID: b.ID, OccurrenceKey: fmt.Sprintf("birthday:%d:%s", b.ID, date),
 			OccurredOn: date, Title: b.Name + " 的生日", Summary: ptrString(summary),
 			MemberIDs: memberIDs, Members: members, Status: &status,
 			MediaPreview: []model.TaskMedia{},
@@ -644,15 +657,4 @@ func endOfDayTS(loc *time.Location, date string) int64 {
 
 func todayIn(loc *time.Location) string {
 	return time.Now().In(loc).Format("2006-01-02")
-}
-
-func birthdayDate(year, month, day int) string {
-	if month == 2 && day == 29 && !isLeapYear(year) {
-		day = 28
-	}
-	return fmt.Sprintf("%04d-%02d-%02d", year, month, day)
-}
-
-func isLeapYear(year int) bool {
-	return year%4 == 0 && (year%100 != 0 || year%400 == 0)
 }

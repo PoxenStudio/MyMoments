@@ -33,7 +33,10 @@ func TestDashboardAggregationAndLayout(t *testing.T) {
 		t.Fatalf("create note: %d %v", status, body)
 	}
 	if status, body := call(t, admin, http.MethodPost, base+"/birthdays", map[string]any{
-		"name": "妈妈", "month": 12, "day": 1, "yearUnknown": true,
+		"name": "妈妈",
+		"dates": []map[string]any{
+			{"calendar": "solar", "month": 12, "day": 1, "yearUnknown": true},
+		},
 	}); status != http.StatusCreated {
 		t.Fatalf("create birthday: %d %v", status, body)
 	}

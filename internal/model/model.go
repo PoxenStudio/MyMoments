@@ -264,25 +264,47 @@ type ContactReminder struct {
 	UpdatedAt      int64   `json:"updatedAt"`
 }
 
-// Birthday 是生日记录；月日必填，年份可未知。
-type Birthday struct {
+// BirthdayDate 是生日档案下的一个日期，公历或农历各一条。
+type BirthdayDate struct {
 	ID              int64   `json:"id"`
-	Name            string  `json:"name"`
+	Calendar        string  `json:"calendar"`
 	Month           int     `json:"month"`
 	Day             int     `json:"day"`
 	YearUnknown     bool    `json:"yearUnknown"`
 	BirthYear       *int    `json:"birthYear"`
-	Note            *string `json:"note"`
-	AvatarKey       *string `json:"avatarKey"`
-	ContactID       *int64  `json:"contactId"`
-	UserID          *int64  `json:"userId"`
 	ReminderOffset  *int    `json:"reminderOffset"`
 	CalendarEventID *int64  `json:"-"`
-	CreatedBy       int64   `json:"createdBy"`
 	CreatedAt       int64   `json:"createdAt"`
 	UpdatedAt       int64   `json:"updatedAt"`
+	NextDate        *string `json:"nextDate,omitempty"`
 	DaysUntil       *int    `json:"daysUntil,omitempty"`
 	Age             *int    `json:"age,omitempty"`
+}
+
+// BirthdayOccurrence 是某个日期范围内的一次生日发生。
+type BirthdayOccurrence struct {
+	Date     string `json:"date"`
+	Calendar string `json:"calendar"`
+	Age      *int   `json:"age,omitempty"`
+}
+
+// Birthday 是生日档案，可同时包含公历与农历日期。
+type Birthday struct {
+	ID           int64                `json:"id"`
+	Name         string               `json:"name"`
+	Note         *string              `json:"note"`
+	AvatarKey    *string              `json:"avatarKey"`
+	ContactID    *int64               `json:"contactId"`
+	UserID       *int64               `json:"userId"`
+	CreatedBy    int64                `json:"createdBy"`
+	CreatedAt    int64                `json:"createdAt"`
+	UpdatedAt    int64                `json:"updatedAt"`
+	Dates        []BirthdayDate       `json:"dates"`
+	NextDate     *string              `json:"nextDate,omitempty"`
+	DaysUntil    *int                 `json:"daysUntil,omitempty"`
+	Age          *int                 `json:"age,omitempty"`
+	NextCalendar *string              `json:"nextCalendar,omitempty"`
+	Occurrences  []BirthdayOccurrence `json:"occurrences,omitempty"`
 }
 
 // MentionTarget 是被 @ 的对象，可为家庭成员（user）或联系人（contact）。

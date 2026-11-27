@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router';
 import { ApiError, api } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { useFamilyStore } from '@/stores/family';
+import { useCalendarStore, type BirthdayDatePayload } from '@/stores/calendar';
 import { useToastStore } from '@/stores/toast';
 import type { DashboardLayoutItem, User } from '@/types';
 import { cardDefs } from '@/cards/registry';
@@ -20,12 +21,14 @@ import AppField from '@/components/base/AppField.vue';
 import AppIcon from '@/components/base/AppIcon.vue';
 import AppIconButton from '@/components/base/AppIconButton.vue';
 import AppInput from '@/components/base/AppInput.vue';
+import AppSelect from '@/components/base/AppSelect.vue';
 import AppStatusTag from '@/components/base/AppStatusTag.vue';
 import AppTabs from '@/components/base/AppTabs.vue';
 import BirthdayManager from '@/components/business/BirthdayManager.vue';
 
 const auth = useAuthStore();
 const family = useFamilyStore();
+const calendar = useCalendarStore();
 const toast = useToastStore();
 const route = useRoute();
 
@@ -50,7 +53,41 @@ const loadError = ref('');
 const createOpen = ref(false);
 const creating = ref(false);
 const createError = ref('');
-const createForm = reactive({ username: '', displayName: '', relation: '', role: 'member', mode: 'auto', password: '' });
+const createForm = reactive({
+  username: '',
+  displayName: '',
+  relation: '',
+  role: 'member',
+  mode: 'auto',
+  password: '',
+  birthMonth: '',
+  birthDay: '',
+  birthYear: '',
+  birthLunarEnabled: false,
+  birthLunarMonth: '',
+  birthLunarDay: '',
+  birthLunarYear: '',
+  birthLunarReminder: false,
+});
+const createShowPassword = ref(false);
+
+const birthMonthOptions = Array.from({ length: 12 }, (_, index) => ({
+  value: String(index + 1),
+  label: `${index + 1} 月`,
+}));
+function birthDayOptions(month: string): { value: string; label: string }[] {
+  const value = Number(month) || 1;
+  const last = value === 2 ? 29 : new Date(2024, value, 0).getDate();
+  return Array.from({ length: last }, (_, index) => ({ value: String(index + 1), label: `${index + 1} 日` }));
+}
+const createBirthDays = computed(() => birthDayOptions(createForm.birthMonth));
+watch(() => createForm.birthMonth, () => {
+  if (Number(createForm.birthDay) > createBirthDays.value.length) createForm.birthDay = '';
+});
+const createLunarDays = computed(() => Array.from({ length: 30 }, (_, index) => ({
+  value: String(index + 1),
+  label: `${index + 1} 日`,
+})));
 
 const credentialsOpen = ref(false);
 const credentials = reactive({ username: '', password: '' });
@@ -58,7 +95,28 @@ const credentials = reactive({ username: '', password: '' });
 const editTarget = ref<User | null>(null);
 const editSaving = ref(false);
 const editError = ref('');
-const editForm = reactive({ displayName: '', relation: '', role: 'member', status: 'active' });
+const editForm = reactive({
+  displayName: '',
+  relation: '',
+  role: 'member',
+  status: 'active',
+  birthMonth: '',
+  birthDay: '',
+  birthYear: '',
+  birthLunarEnabled: false,
+  birthLunarMonth: '',
+  birthLunarDay: '',
+  birthLunarYear: '',
+  birthLunarReminder: false,
+});
+const editBirthDays = computed(() => birthDayOptions(editForm.birthMonth));
+watch(() => editForm.birthMonth, () => {
+  if (Number(editForm.birthDay) > editBirthDays.value.length) editForm.birthDay = '';
+});
+const editLunarDays = computed(() => Array.from({ length: 30 }, (_, index) => ({
+  value: String(index + 1),
+  label: `${index + 1} 日`,
+})));
 const editAvatarSaving = ref(false);
 const editAvatarInput = ref<HTMLInputElement | null>(null);
 const memberCards = reactive<Record<string, boolean>>({});
@@ -96,6 +154,15 @@ function openCreate(): void {
   createForm.role = 'member';
   createForm.mode = 'auto';
   createForm.password = '';
+  createForm.birthMonth = '';
+  createForm.birthDay = '';
+  createForm.birthYear = '';
+  createForm.birthLunarEnabled = false;
+  createForm.birthLunarMonth = '';
+  createForm.birthLunarDay = '';
+  createForm.birthLunarYear = '';
+  createForm.birthLunarReminder = false;
+  createShowPassword.value = false;
   createError.value = '';
   createOpen.value = true;
 }
@@ -105,6 +172,46 @@ async function submitCreate(): Promise<void> {
   if (!createForm.username.trim() || !createForm.displayName.trim()) {
     createError.value = '请填写登录名和称呼';
     return;
+  }
+  const birthMonth = Number(createForm.birthMonth);
+  const birthDay = Number(createForm.birthDay);
+  if (!birthMonth || !birthDay) {
+    createError.value = '请选择生日月份和日期';
+    return;
+  }
+  const birthYear = createForm.birthYear.trim() ? Number(createForm.birthYear) : null;
+  if (birthYear !== null && (birthYear < 1900 || birthYear > new Date().getFullYear())) {
+    createError.value = '出生年份无效';
+    return;
+  }
+  const dates: BirthdayDatePayload[] = [{
+    calendar: 'solar',
+    month: birthMonth,
+    day: birthDay,
+    yearUnknown: birthYear === null,
+    birthYear,
+    reminderOffset: 0,
+  }];
+  if (createForm.birthLunarEnabled) {
+    const lunarMonth = Number(createForm.birthLunarMonth);
+    const lunarDay = Number(createForm.birthLunarDay);
+    if (!lunarMonth || !lunarDay) {
+      createError.value = '请选择农历生日月份和日期';
+      return;
+    }
+    const lunarYear = createForm.birthLunarYear.trim() ? Number(createForm.birthLunarYear) : null;
+    if (lunarYear !== null && (lunarYear < 1900 || lunarYear > new Date().getFullYear())) {
+      createError.value = '农历出生年份无效';
+      return;
+    }
+    dates.push({
+      calendar: 'lunar',
+      month: lunarMonth,
+      day: lunarDay,
+      yearUnknown: lunarYear === null,
+      birthYear: lunarYear,
+      reminderOffset: createForm.birthLunarReminder ? 0 : null,
+    });
   }
   if (createForm.mode === 'manual' && createForm.password.length < 6) {
     createError.value = '临时密码至少需要 6 个字符';
@@ -119,6 +226,15 @@ async function submitCreate(): Promise<void> {
       role: createForm.role,
       password: createForm.mode === 'manual' ? createForm.password : '',
     });
+    try {
+      await calendar.createBirthday({
+        name: createForm.displayName.trim(),
+        userId: res.user.id,
+        dates,
+      });
+    } catch (err) {
+      toast.error(err instanceof ApiError ? `生日保存失败：${err.message}` : '生日保存失败，可在生日列表中补充');
+    }
     createOpen.value = false;
     credentials.username = res.user.username;
     credentials.password = res.temporaryPassword;
@@ -137,10 +253,90 @@ function openEdit(member: User): void {
   editForm.relation = member.relation ?? '';
   editForm.role = member.role;
   editForm.status = member.status;
+  editForm.birthMonth = '';
+  editForm.birthDay = '';
+  editForm.birthYear = '';
+  editForm.birthLunarEnabled = false;
+  editForm.birthLunarMonth = '';
+  editForm.birthLunarDay = '';
+  editForm.birthLunarYear = '';
+  editForm.birthLunarReminder = false;
   editError.value = '';
   memberLayout.value = [];
   for (const def of editableCards) memberCards[def.id] = def.defaultVisible;
+  void loadMemberBirthday(member.id);
   if (auth.isAdmin) void loadMemberCards(member.id);
+}
+
+/** 读取成员已关联的生日，用于在编辑表单中回填。 */
+async function loadMemberBirthday(userId: number): Promise<void> {
+  try {
+    await calendar.loadBirthdays();
+  } catch {
+    return;
+  }
+  const birthday = calendar.birthdays.find((item) => item.userId === userId);
+  if (!birthday || editTarget.value?.id !== userId) return;
+  const solar = birthday.dates.find((date) => date.calendar === 'solar');
+  if (solar) {
+    editForm.birthMonth = String(solar.month);
+    editForm.birthDay = String(solar.day);
+    editForm.birthYear = solar.yearUnknown || !solar.birthYear ? '' : String(solar.birthYear);
+  }
+  const lunar = birthday.dates.find((date) => date.calendar === 'lunar');
+  if (lunar) {
+    editForm.birthLunarEnabled = true;
+    editForm.birthLunarMonth = String(lunar.month);
+    editForm.birthLunarDay = String(lunar.day);
+    editForm.birthLunarYear = lunar.yearUnknown || !lunar.birthYear ? '' : String(lunar.birthYear);
+    editForm.birthLunarReminder = lunar.reminderOffset != null;
+  }
+}
+
+/** 保存编辑表单中的生日：公历必填，农历按开关写入。 */
+async function saveMemberBirthday(userId: number): Promise<void> {
+  try {
+    await calendar.loadBirthdays();
+  } catch {
+    // 读取失败时按未关联处理，后续接口会返回具体错误。
+  }
+  const month = Number(editForm.birthMonth);
+  const day = Number(editForm.birthDay);
+  const existing = calendar.birthdays.find((item) => item.userId === userId);
+  if (!month || !day) {
+    if (existing) await calendar.deleteBirthday(existing.id);
+    return;
+  }
+  const birthYear = editForm.birthYear.trim() ? Number(editForm.birthYear) : null;
+  const dates: BirthdayDatePayload[] = [{
+    calendar: 'solar',
+    month,
+    day,
+    yearUnknown: birthYear === null,
+    birthYear,
+    reminderOffset: 0,
+  }];
+  if (editForm.birthLunarEnabled) {
+    const lunarMonth = Number(editForm.birthLunarMonth);
+    const lunarDay = Number(editForm.birthLunarDay);
+    const lunarYear = editForm.birthLunarYear.trim() ? Number(editForm.birthLunarYear) : null;
+    if (lunarMonth && lunarDay) {
+      dates.push({
+        calendar: 'lunar',
+        month: lunarMonth,
+        day: lunarDay,
+        yearUnknown: lunarYear === null,
+        birthYear: lunarYear,
+        reminderOffset: editForm.birthLunarReminder ? 0 : null,
+      });
+    }
+  }
+  const payload = {
+    name: editForm.displayName.trim(),
+    dates,
+  };
+  if (existing) await calendar.updateBirthday(existing.id, payload);
+  else await calendar.createBirthday({ ...payload, userId });
 }
 
 async function loadMemberCards(id: number): Promise<void> {
@@ -197,9 +393,40 @@ async function submitEdit(): Promise<void> {
     editError.value = '请填写称呼';
     return;
   }
+  const birthMonth = Number(editForm.birthMonth);
+  const birthDay = Number(editForm.birthDay);
+  if (auth.isAdmin) {
+    if (Boolean(birthMonth) !== Boolean(birthDay)) {
+      editError.value = '请选择完整的生日月份和日期';
+      return;
+    }
+    if (editForm.birthYear.trim()) {
+      const year = Number(editForm.birthYear);
+      if (year < 1900 || year > new Date().getFullYear()) {
+        editError.value = '出生年份无效';
+        return;
+      }
+    }
+    if (editForm.birthLunarEnabled) {
+      const lunarMonth = Number(editForm.birthLunarMonth);
+      const lunarDay = Number(editForm.birthLunarDay);
+      if (!lunarMonth || !lunarDay) {
+        editError.value = '请选择完整的农历生日月份和日期';
+        return;
+      }
+      if (editForm.birthLunarYear.trim()) {
+        const lunarYear = Number(editForm.birthLunarYear);
+        if (lunarYear < 1900 || lunarYear > new Date().getFullYear()) {
+          editError.value = '农历出生年份无效';
+          return;
+        }
+      }
+    }
+  }
   editSaving.value = true;
   try {
     const updated = await family.updateMember(target.id, payload);
+    if (auth.isAdmin) await saveMemberBirthday(target.id);
     if (auth.isAdmin && target.id !== auth.user?.id) {
       const byId = new Map(memberLayout.value.map((item) => [item.id, item]));
       const nextLayout: DashboardLayoutItem[] = cardDefs.map((def) => {
@@ -384,6 +611,78 @@ onMounted(() => {
             </select>
           </AppField>
         </div>
+        <div class="family__grid">
+          <AppField label="公历生日月份" for-id="member-birth-month" required>
+            <AppSelect
+              id="member-birth-month"
+              v-model="createForm.birthMonth"
+              :options="birthMonthOptions"
+              placeholder="月份"
+              aria-label="公历生日月份"
+            />
+          </AppField>
+          <AppField label="公历生日日期" for-id="member-birth-day" required>
+            <AppSelect
+              id="member-birth-day"
+              v-model="createForm.birthDay"
+              :options="createBirthDays"
+              placeholder="日期"
+              aria-label="公历生日日期"
+            />
+          </AppField>
+        </div>
+        <AppField label="出生年份" for-id="member-birth-year" hint="不确定时可留空，只记录月日">
+          <AppInput
+            id="member-birth-year"
+            v-model="createForm.birthYear"
+            type="number"
+            min="1900"
+            :max="new Date().getFullYear()"
+            placeholder="例如：1965"
+          />
+        </AppField>
+        <AppCheckbox
+          v-model="createForm.birthLunarEnabled"
+          label="同时记录农历生日"
+          description="农历按平月计算，闰月不单独区分"
+        />
+        <template v-if="createForm.birthLunarEnabled">
+          <div class="family__grid">
+            <AppField label="农历月份" for-id="member-lunar-month">
+              <AppSelect
+                id="member-lunar-month"
+                v-model="createForm.birthLunarMonth"
+                :options="birthMonthOptions"
+                placeholder="月份"
+                aria-label="农历生日月份"
+              />
+            </AppField>
+            <AppField label="农历日期" for-id="member-lunar-day">
+              <AppSelect
+                id="member-lunar-day"
+                v-model="createForm.birthLunarDay"
+                :options="createLunarDays"
+                placeholder="日期"
+                aria-label="农历生日日期"
+              />
+            </AppField>
+          </div>
+          <AppField label="农历出生年份" for-id="member-lunar-year" hint="不确定时可留空">
+            <AppInput
+              id="member-lunar-year"
+              v-model="createForm.birthLunarYear"
+              type="number"
+              min="1900"
+              :max="new Date().getFullYear()"
+              placeholder="例如：1965"
+            />
+          </AppField>
+          <AppCheckbox
+            v-model="createForm.birthLunarReminder"
+            label="农历生日提醒"
+            description="勾选后会在农历生日当天提醒"
+          />
+        </template>
         <AppField label="初始密码" for-id="member-password-mode">
           <div class="family__segment" role="radiogroup" aria-label="初始密码方式">
             <button
@@ -409,7 +708,24 @@ onMounted(() => {
           </div>
         </AppField>
         <AppField v-if="createForm.mode === 'manual'" label="临时密码" for-id="member-password" hint="至少 6 个字符，成员首次登录后需要修改">
-          <AppInput id="member-password" v-model="createForm.password" type="password" autocomplete="new-password" />
+          <div class="family__password">
+            <AppInput
+              id="member-password"
+              v-model="createForm.password"
+              :type="createShowPassword ? 'text' : 'password'"
+              autocomplete="new-password"
+            />
+            <button
+              type="button"
+              class="family__reveal"
+              :aria-label="createShowPassword ? '隐藏密码' : '显示密码'"
+              :aria-pressed="createShowPassword"
+              :title="createShowPassword ? '隐藏密码' : '显示密码'"
+              @click="createShowPassword = !createShowPassword"
+            >
+              <AppIcon :name="createShowPassword ? 'eye-off' : 'eye'" :size="18" />
+            </button>
+          </div>
         </AppField>
         <p v-else class="family__hint">创建后将生成随机临时密码，仅在成功页面显示一次。</p>
         <p v-if="createError" class="family__error" role="alert"><AppIcon name="alert" :size="16" />{{ createError }}</p>
@@ -464,6 +780,80 @@ onMounted(() => {
             <option v-for="item in relationOptions" :key="item" :value="item" />
           </datalist>
         </AppField>
+        <template v-if="auth.isAdmin">
+          <div class="family__grid">
+            <AppField label="公历生日月份" for-id="edit-birth-month">
+              <AppSelect
+                id="edit-birth-month"
+                v-model="editForm.birthMonth"
+                :options="birthMonthOptions"
+                placeholder="月份"
+                aria-label="公历生日月份"
+              />
+            </AppField>
+            <AppField label="公历生日日期" for-id="edit-birth-day">
+              <AppSelect
+                id="edit-birth-day"
+                v-model="editForm.birthDay"
+                :options="editBirthDays"
+                placeholder="日期"
+                aria-label="公历生日日期"
+              />
+            </AppField>
+          </div>
+          <AppField label="出生年份" for-id="edit-birth-year" hint="不确定时可留空，只记录月日">
+            <AppInput
+              id="edit-birth-year"
+              v-model="editForm.birthYear"
+              type="number"
+              min="1900"
+              :max="new Date().getFullYear()"
+              placeholder="例如：1965"
+            />
+          </AppField>
+          <AppCheckbox
+            v-model="editForm.birthLunarEnabled"
+            label="同时记录农历生日"
+            description="农历按平月计算，闰月不单独区分"
+          />
+          <template v-if="editForm.birthLunarEnabled">
+            <div class="family__grid">
+              <AppField label="农历月份" for-id="edit-lunar-month">
+                <AppSelect
+                  id="edit-lunar-month"
+                  v-model="editForm.birthLunarMonth"
+                  :options="birthMonthOptions"
+                  placeholder="月份"
+                  aria-label="农历生日月份"
+                />
+              </AppField>
+              <AppField label="农历日期" for-id="edit-lunar-day">
+                <AppSelect
+                  id="edit-lunar-day"
+                  v-model="editForm.birthLunarDay"
+                  :options="editLunarDays"
+                  placeholder="日期"
+                  aria-label="农历生日日期"
+                />
+              </AppField>
+            </div>
+            <AppField label="农历出生年份" for-id="edit-lunar-year" hint="不确定时可留空">
+              <AppInput
+                id="edit-lunar-year"
+                v-model="editForm.birthLunarYear"
+                type="number"
+                min="1900"
+                :max="new Date().getFullYear()"
+                placeholder="例如：1965"
+              />
+            </AppField>
+            <AppCheckbox
+              v-model="editForm.birthLunarReminder"
+              label="农历生日提醒"
+              description="勾选后会在农历生日当天提醒"
+            />
+          </template>
+        </template>
         <div v-if="auth.isAdmin" class="family__grid">
           <AppField label="角色" for-id="edit-role">
             <select id="edit-role" v-model="editForm.role" class="family__select">
@@ -729,6 +1119,32 @@ onMounted(() => {
   color: var(--at-text-secondary);
   font-size: var(--at-text-caption);
   line-height: 1.6;
+}
+
+.family__password {
+  position: relative;
+}
+
+.family__password :deep(.at-input) {
+  padding-right: 46px;
+}
+
+.family__reveal {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--at-radius-md);
+  color: var(--at-color-muted);
+}
+
+.family__reveal:hover {
+  background: var(--at-bg-canvas-soft);
+  color: var(--at-color-ink);
 }
 
 .family__error {

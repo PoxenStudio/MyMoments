@@ -175,21 +175,39 @@ export interface CalendarEvent {
   reminderOffsets?: number[];
 }
 
-export interface Birthday {
+export interface BirthdayDate {
   id: number;
-  name: string;
+  calendar: 'solar' | 'lunar';
   month: number;
   day: number;
   yearUnknown: boolean;
   birthYear: number | null;
+  reminderOffset: number | null;
+  nextDate?: string | null;
+  daysUntil?: number;
+  age?: number | null;
+}
+
+export interface BirthdayOccurrence {
+  date: string;
+  calendar: 'solar' | 'lunar' | 'both';
+  age?: number | null;
+}
+
+export interface Birthday {
+  id: number;
+  name: string;
   note: string | null;
   avatarKey: string | null;
   contactId: number | null;
   userId: number | null;
-  reminderOffset: number | null;
+  dates: BirthdayDate[];
   createdBy?: number;
+  nextDate?: string | null;
   daysUntil?: number;
   age?: number | null;
+  nextCalendar?: 'solar' | 'lunar' | null;
+  occurrences?: BirthdayOccurrence[];
 }
 
 export interface ContactItem {

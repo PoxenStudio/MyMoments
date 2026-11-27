@@ -137,6 +137,58 @@ func TestEventRecurrenceExceptions(t *testing.T) {
 	}
 }
 
+func TestBirthdayLunarDates(t *testing.T) {
+	base, admin, _ := setupHousehold(t)
+	status, body := call(t, admin, http.MethodPost, base+"/birthdays", map[string]any{
+		"name": "外婆",
+		"dates": []map[string]any{
+			{"calendar": "solar", "month": 2, "day": 29, "birthYear": 1940, "reminderOffset": 0},
+			{"calendar": "lunar", "month": 1, "day": 1, "yearUnknown": true},
+		},
+	})
+	if status != http.StatusCreated {
+		t.Fatalf("create dual birthday: %d %v", status, body)
+	}
+	birthday := body["birthday"].(map[string]any)
+	dates := birthday["dates"].([]any)
+	if len(dates) != 2 {
+		t.Fatalf("expected two dates: %v", birthday)
+	}
+	var lunarReminder any = "missing"
+	for _, raw := range dates {
+		item := raw.(map[string]any)
+		if item["calendar"] == "lunar" {
+			lunarReminder = item["reminderOffset"]
+		}
+	}
+	if lunarReminder != nil {
+		t.Fatalf("lunar reminder must be optional: %v", birthday)
+	}
+
+	status, body = call(t, admin, http.MethodGet, base+"/birthdays?from=2027-01-01&to=2027-12-31", nil)
+	if status != http.StatusOK {
+		t.Fatalf("list birthday occurrences: %d %v", status, body)
+	}
+	items := body["items"].([]any)
+	if len(items) != 1 {
+		t.Fatalf("unexpected birthdays: %v", body)
+	}
+	occurrences := items[0].(map[string]any)["occurrences"].([]any)
+	foundSolar, foundLunar := false, false
+	for _, raw := range occurrences {
+		occ := raw.(map[string]any)
+		switch occ["calendar"] {
+		case "solar":
+			foundSolar = occ["date"] == "2027-02-28"
+		case "lunar":
+			foundLunar = true
+		}
+	}
+	if !foundSolar || !foundLunar {
+		t.Fatalf("unexpected occurrences: %v", occurrences)
+	}
+}
+
 func TestBirthdaysAndContacts(t *testing.T) {
 	base, admin, _ := setupHousehold(t)
 	today := todayString()
@@ -166,8 +218,11 @@ func TestBirthdaysAndContacts(t *testing.T) {
 	}
 
 	status, body = call(t, admin, http.MethodPost, base+"/birthdays", map[string]any{
-		"name": "王老师", "month": month, "day": day, "birthYear": 1980,
-		"contactId": contactID, "reminderOffset": 0, "note": "喜欢兰花",
+		"name": "王老师",
+		"dates": []map[string]any{
+			{"calendar": "solar", "month": month, "day": day, "birthYear": 1980, "reminderOffset": 0},
+		},
+		"contactId": contactID, "note": "喜欢兰花",
 	})
 	if status != http.StatusCreated {
 		t.Fatalf("create birthday: %d %v", status, body)
@@ -199,7 +254,9 @@ func TestBirthdaysAndContacts(t *testing.T) {
 	}
 
 	status, body = call(t, admin, http.MethodPatch, base+"/birthdays/"+itoa(birthdayID), map[string]any{
-		"yearUnknown": true, "birthYear": 0,
+		"dates": []map[string]any{
+			{"calendar": "solar", "month": month, "day": day, "yearUnknown": true, "birthYear": 0},
+		},
 	})
 	if status != http.StatusOK {
 		t.Fatalf("patch birthday: %d %v", status, body)

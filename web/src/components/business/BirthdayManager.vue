@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue';
-import type { Birthday } from '@/types';
+import type { Birthday, BirthdayDate } from '@/types';
 import { ApiError } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
-import { useCalendarStore, type BirthdayPayload } from '@/stores/calendar';
+import { useCalendarStore, type BirthdayDatePayload, type BirthdayPayload } from '@/stores/calendar';
 import { useContactsStore } from '@/stores/contacts';
 import { useFamilyStore } from '@/stores/family';
 import { useToastStore } from '@/stores/toast';
@@ -39,7 +39,6 @@ const deleting = ref(false);
 
 const months = Array.from({ length: 12 }, (_, index) => ({ value: index + 1, label: `${index + 1} 月` }));
 const reminderOptions = [
-  { value: -1, label: '不提醒' },
   { value: 0, label: '当天提醒' },
   { value: 1, label: '提前 1 天' },
   { value: 3, label: '提前 3 天' },
@@ -48,21 +47,32 @@ const reminderOptions = [
 
 const form = reactive({
   name: '',
-  month: 1,
-  day: 1,
-  yearUnknown: true,
-  birthYear: '',
+  solarMonth: 1,
+  solarDay: 1,
+  solarYearUnknown: true,
+  solarBirthYear: '',
+  reminderDays: 0,
+  lunarEnabled: false,
+  lunarMonth: 1,
+  lunarDay: 1,
+  lunarYearUnknown: true,
+  lunarBirthYear: '',
+  lunarReminder: false,
   note: '',
   contactId: 0,
   userId: 0,
-  reminderDays: -1,
 });
 
-const daysInMonth = computed(() => {
-  if (form.month === 2) return 29;
-  return new Date(2024, form.month, 0).getDate();
-});
-const dayOptions = computed(() => Array.from({ length: daysInMonth.value }, (_, index) => ({ value: index + 1, label: `${index + 1} 日` })));
+function daysInSolarMonth(month: number): number {
+  if (month === 2) return 29;
+  return new Date(2024, month, 0).getDate();
+}
+const solarDayOptions = computed(() =>
+  Array.from({ length: daysInSolarMonth(form.solarMonth) }, (_, index) => ({ value: index + 1, label: `${index + 1} 日` })),
+);
+const lunarDayOptions = computed(() =>
+  Array.from({ length: 30 }, (_, index) => ({ value: index + 1, label: `${index + 1} 日` })),
+);
 const contactOptions = computed(() => [
   { value: 0, label: '不关联' },
   ...contacts.items.map((contact) => ({
@@ -95,27 +105,53 @@ async function load(): Promise<void> {
   if (props.openId) openEditById(props.openId);
 }
 
+function resetForm(): void {
+  Object.assign(form, {
+    name: '', solarMonth: 1, solarDay: 1, solarYearUnknown: true, solarBirthYear: '',
+    reminderDays: 0, lunarEnabled: false, lunarMonth: 1, lunarDay: 1, lunarYearUnknown: true,
+    lunarBirthYear: '', lunarReminder: false, note: '', contactId: 0, userId: 0,
+  });
+}
+
 function openCreate(): void {
   editing.value = null;
-  Object.assign(form, {
-    name: '', month: 1, day: 1, yearUnknown: true, birthYear: '', note: '',
-    contactId: 0, userId: 0, reminderDays: -1,
-  });
+  resetForm();
   formError.value = '';
   formOpen.value = true;
 }
 
+function solarDateOf(birthday: Birthday): BirthdayDate | undefined {
+  return birthday.dates.find((date) => date.calendar === 'solar');
+}
+
+function lunarDateOf(birthday: Birthday): BirthdayDate | undefined {
+  return birthday.dates.find((date) => date.calendar === 'lunar');
+}
+
 function openEdit(birthday: Birthday): void {
   editing.value = birthday;
+  resetForm();
+  const solar = solarDateOf(birthday);
+  if (solar) {
+    form.solarMonth = solar.month;
+    form.solarDay = solar.day;
+    form.solarYearUnknown = solar.yearUnknown;
+    form.solarBirthYear = solar.birthYear ? String(solar.birthYear) : '';
+    form.reminderDays = offsetToDays(solar.reminderOffset ?? 0);
+  }
+  const lunar = lunarDateOf(birthday);
+  if (lunar) {
+    form.lunarEnabled = true;
+    form.lunarMonth = lunar.month;
+    form.lunarDay = lunar.day;
+    form.lunarYearUnknown = lunar.yearUnknown;
+    form.lunarBirthYear = lunar.birthYear ? String(lunar.birthYear) : '';
+    form.lunarReminder = lunar.reminderOffset != null;
+  }
   form.name = birthday.name;
-  form.month = birthday.month;
-  form.day = birthday.day;
-  form.yearUnknown = birthday.yearUnknown;
-  form.birthYear = birthday.birthYear ? String(birthday.birthYear) : '';
   form.note = birthday.note ?? '';
   form.contactId = birthday.contactId ?? 0;
   form.userId = birthday.userId ?? 0;
-  form.reminderDays = birthday.reminderOffset == null ? -1 : offsetToDays(birthday.reminderOffset);
   formError.value = '';
   formOpen.value = true;
 }
@@ -132,8 +168,7 @@ function offsetToDays(offset: number): number {
   return 0;
 }
 
-function daysToOffset(days: number): number | null {
-  if (days < 0) return null;
+function daysToOffset(days: number): number {
   if (days === 7) return 10080;
   if (days === 3) return 2880;
   if (days === 1) return 1440;
@@ -146,21 +181,41 @@ async function submit(): Promise<void> {
     formError.value = '请填写姓名';
     return;
   }
-  const payload: BirthdayPayload = {
-    name: form.name.trim(),
-    month: form.month,
-    day: Math.min(form.day, daysInMonth.value),
-    yearUnknown: form.yearUnknown,
-    birthYear: form.yearUnknown ? null : (Number(form.birthYear) || null),
-    note: form.note.trim() || null,
-    contactId: form.contactId || null,
-    userId: form.userId || null,
-    reminderOffset: daysToOffset(form.reminderDays),
-  };
-  if (!form.yearUnknown && !payload.birthYear) {
+  const solarYear = form.solarYearUnknown ? null : Number(form.solarBirthYear);
+  if (!form.solarYearUnknown && !solarYear) {
     formError.value = '请填写出生年份，或选择年份未知';
     return;
   }
+  const dates: BirthdayDatePayload[] = [{
+    calendar: 'solar',
+    month: form.solarMonth,
+    day: Math.min(form.solarDay, daysInSolarMonth(form.solarMonth)),
+    yearUnknown: form.solarYearUnknown,
+    birthYear: solarYear,
+    reminderOffset: daysToOffset(form.reminderDays),
+  }];
+  if (form.lunarEnabled) {
+    const lunarYear = form.lunarYearUnknown ? null : Number(form.lunarBirthYear);
+    if (!form.lunarYearUnknown && !lunarYear) {
+      formError.value = '请填写农历出生年份，或选择年份未知';
+      return;
+    }
+    dates.push({
+      calendar: 'lunar',
+      month: form.lunarMonth,
+      day: form.lunarDay,
+      yearUnknown: form.lunarYearUnknown,
+      birthYear: lunarYear,
+      reminderOffset: form.lunarReminder ? 0 : null,
+    });
+  }
+  const payload: BirthdayPayload = {
+    name: form.name.trim(),
+    note: form.note.trim() || null,
+    contactId: form.contactId || null,
+    userId: form.userId || null,
+    dates,
+  };
   saving.value = true;
   try {
     if (editing.value) {
@@ -216,8 +271,9 @@ function canEdit(birthday: Birthday): boolean {
 watch(() => props.openId, (id) => {
   if (id) openEditById(id);
 });
-watch(() => form.month, () => {
-  if (form.day > daysInMonth.value) form.day = daysInMonth.value;
+watch(() => form.solarMonth, () => {
+  const last = daysInSolarMonth(form.solarMonth);
+  if (form.solarDay > last) form.solarDay = last;
 });
 
 onMounted(load);
@@ -226,7 +282,7 @@ onMounted(load);
 <template>
   <section class="birthdays">
     <div class="birthdays__bar">
-      <p class="birthdays__hint">家人生日会同步显示在日历上，并在家庭时区按设定提前提醒。</p>
+      <p class="birthdays__hint">公历生日会同步到日历并必定提醒；农历生日按每年换算后的公历日期展示，可选择是否提醒。</p>
       <AppButton variant="outline" @click="openCreate"><AppIcon name="plus" :size="16" />添加生日</AppButton>
     </div>
 
@@ -249,16 +305,21 @@ onMounted(load);
             <AppStatusTag v-if="birthday.daysUntil === 0" tone="warning">今天</AppStatusTag>
             <AppStatusTag v-else tone="neutral">{{ daysText(birthday) }}</AppStatusTag>
           </div>
-          <p class="birthday__date">
-            {{ birthday.month }} 月 {{ birthday.day }} 日
+          <p v-if="solarDateOf(birthday)" class="birthday__date">
+            公历 {{ solarDateOf(birthday)?.month }} 月 {{ solarDateOf(birthday)?.day }} 日
+            <span v-if="birthday.nextDate">· 下次 {{ birthday.nextDate }}</span>
             <span v-if="birthday.age != null">· 即将 {{ birthday.age }} 岁</span>
-            <span v-else-if="birthday.yearUnknown">· 年份未知</span>
+            <span v-else-if="solarDateOf(birthday)?.yearUnknown">· 年份未知</span>
+          </p>
+          <p v-if="lunarDateOf(birthday)" class="birthday__date">
+            农历 {{ lunarDateOf(birthday)?.month }} 月 {{ lunarDateOf(birthday)?.day }} 日
+            <span v-if="lunarDateOf(birthday)?.nextDate">· 下次 {{ lunarDateOf(birthday)?.nextDate }}</span>
+            <span v-if="lunarDateOf(birthday)?.reminderOffset != null">· 农历提醒</span>
           </p>
           <p v-if="birthday.note" class="birthday__note">{{ birthday.note }}</p>
           <p v-if="linkedContact(birthday) || linkedMember(birthday)" class="birthday__links">
             <span v-if="linkedMember(birthday)">成员：{{ linkedMember(birthday) }}</span>
             <span v-if="linkedContact(birthday)">联系人：{{ linkedContact(birthday) }}</span>
-            <span v-if="birthday.reminderOffset != null">提前提醒</span>
           </p>
         </div>
         <div v-if="canEdit(birthday)" class="birthday__actions">
@@ -273,31 +334,55 @@ onMounted(load);
         <AppField label="姓名" for-id="birthday-name" required>
           <AppInput id="birthday-name" v-model="form.name" placeholder="例如：外婆" :maxlength="80" />
         </AppField>
+
+        <p class="birthdays__section">公历生日（必填，必定提醒）</p>
         <div class="birthdays__grid">
           <AppField label="月份" for-id="birthday-month">
-            <select id="birthday-month" v-model.number="form.month" class="birthdays__select" aria-label="生日月份">
+            <select id="birthday-month" v-model.number="form.solarMonth" class="birthdays__select" aria-label="公历生日月份">
               <option v-for="month in months" :key="month.value" :value="month.value">{{ month.label }}</option>
             </select>
           </AppField>
           <AppField label="日期" for-id="birthday-day">
-            <select id="birthday-day" v-model.number="form.day" class="birthdays__select" aria-label="生日日期">
-              <option v-for="day in dayOptions" :key="day.value" :value="day.value">{{ day.label }}</option>
+            <select id="birthday-day" v-model.number="form.solarDay" class="birthdays__select" aria-label="公历生日日期">
+              <option v-for="day in solarDayOptions" :key="day.value" :value="day.value">{{ day.label }}</option>
             </select>
           </AppField>
         </div>
-        <AppSwitch
-          v-model="form.yearUnknown"
-          label="年份未知"
-          description="只记录月日，不计算年龄"
-        />
-        <AppField v-if="!form.yearUnknown" label="出生年份" for-id="birthday-year">
-          <AppInput id="birthday-year" v-model="form.birthYear" type="number" min="1900" :max="new Date().getFullYear()" />
+        <AppSwitch v-model="form.solarYearUnknown" label="年份未知" description="只记录月日，不计算年龄" />
+        <AppField v-if="!form.solarYearUnknown" label="出生年份" for-id="birthday-year">
+          <AppInput id="birthday-year" v-model="form.solarBirthYear" type="number" min="1900" :max="new Date().getFullYear()" />
         </AppField>
         <AppField label="提前提醒" for-id="birthday-reminder">
           <select id="birthday-reminder" v-model.number="form.reminderDays" class="birthdays__select" aria-label="提前提醒">
             <option v-for="option in reminderOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
           </select>
         </AppField>
+
+        <AppSwitch
+          v-model="form.lunarEnabled"
+          label="记录农历生日"
+          description="农历按平月计算，闰月不单独区分"
+        />
+        <template v-if="form.lunarEnabled">
+          <div class="birthdays__grid">
+            <AppField label="农历月份" for-id="birthday-lunar-month">
+              <select id="birthday-lunar-month" v-model.number="form.lunarMonth" class="birthdays__select" aria-label="农历生日月份">
+                <option v-for="month in months" :key="month.value" :value="month.value">{{ month.label }}</option>
+              </select>
+            </AppField>
+            <AppField label="农历日期" for-id="birthday-lunar-day">
+              <select id="birthday-lunar-day" v-model.number="form.lunarDay" class="birthdays__select" aria-label="农历生日日期">
+                <option v-for="day in lunarDayOptions" :key="day.value" :value="day.value">{{ day.label }}</option>
+              </select>
+            </AppField>
+          </div>
+          <AppSwitch v-model="form.lunarYearUnknown" label="农历年份未知" description="只记录农历月日，不计算农历周岁" />
+          <AppField v-if="!form.lunarYearUnknown" label="农历出生年份" for-id="birthday-lunar-year">
+            <AppInput id="birthday-lunar-year" v-model="form.lunarBirthYear" type="number" min="1900" :max="new Date().getFullYear()" />
+          </AppField>
+          <AppSwitch v-model="form.lunarReminder" label="农历生日提醒" description="勾选后会在农历生日当天提醒" />
+        </template>
+
         <div class="birthdays__grid">
           <AppField label="关联成员" for-id="birthday-member">
             <select id="birthday-member" v-model.number="form.userId" class="birthdays__select" aria-label="关联成员">
@@ -417,6 +502,12 @@ onMounted(load);
 .birthday__actions {
   display: flex;
   gap: 2px;
+}
+
+.birthdays__section {
+  font-size: var(--at-text-caption);
+  font-weight: 500;
+  color: var(--at-text-secondary);
 }
 
 .birthdays__grid {

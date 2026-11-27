@@ -507,6 +507,16 @@ paths:
     get:
       tags: [birthdays]
       summary: 生日列表
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: source, in: query, schema: { type: string, enum: [member, contact] } }
+        - name: from
+          in: query
+          description: 可选，需与 to 同时提供，返回区间内的生日发生日期
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
       responses:
         '200':
           description: 生日列表
@@ -1052,29 +1062,66 @@ components:
               kind: { type: string, enum: [phone, email, address] }
               label: { type: string, nullable: true }
               value: { type: string }
+    BirthdayDate:
+      type: object
+      properties:
+        id: { type: integer }
+        calendar: { type: string, enum: [solar, lunar] }
+        month: { type: integer }
+        day: { type: integer }
+        yearUnknown: { type: boolean }
+        birthYear: { type: integer, nullable: true }
+        reminderOffset: { type: integer, nullable: true }
+        nextDate: { type: string, format: date, nullable: true }
+        daysUntil: { type: integer }
+        age: { type: integer, nullable: true }
+    BirthdayOccurrence:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        calendar: { type: string, enum: [solar, lunar, both] }
+        age: { type: integer, nullable: true }
     Birthday:
       type: object
       properties:
         id: { type: integer }
         name: { type: string }
-        month: { type: integer }
-        day: { type: integer }
-        yearUnknown: { type: boolean }
-        birthYear: { type: integer, nullable: true }
         note: { type: string, nullable: true }
+        avatarKey: { type: string, nullable: true }
+        contactId: { type: integer, nullable: true }
+        userId: { type: integer, nullable: true }
+        dates:
+          type: array
+          items: { $ref: '#/components/schemas/BirthdayDate' }
+        nextDate: { type: string, format: date, nullable: true }
         daysUntil: { type: integer }
         age: { type: integer, nullable: true }
-    BirthdayInput:
+        nextCalendar: { type: string, enum: [solar, lunar] }
+        occurrences:
+          type: array
+          items: { $ref: '#/components/schemas/BirthdayOccurrence' }
+    BirthdayDateInput:
       type: object
-      required: [name, month, day]
+      required: [calendar, month, day]
       properties:
-        name: { type: string }
+        calendar: { type: string, enum: [solar, lunar] }
         month: { type: integer, minimum: 1, maximum: 12 }
-        day: { type: integer, minimum: 1, maximum: 31 }
+        day: { type: integer, minimum: 1, maximum: 30 }
         yearUnknown: { type: boolean }
         birthYear: { type: integer, nullable: true }
+        reminderOffset: { type: integer, nullable: true, minimum: 0, maximum: 10080 }
+    BirthdayInput:
+      type: object
+      required: [name, dates]
+      properties:
+        name: { type: string }
         note: { type: string, nullable: true }
-        reminderOffset: { type: integer, nullable: true }
+        avatarKey: { type: string, nullable: true }
+        contactId: { type: integer, nullable: true }
+        userId: { type: integer, nullable: true }
+        dates:
+          type: array
+          items: { $ref: '#/components/schemas/BirthdayDateInput' }
     NoteInput:
       type: object
       properties:

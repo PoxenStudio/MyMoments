@@ -20,17 +20,22 @@ export interface EventPayload {
   occurrenceDate?: string;
 }
 
-export interface BirthdayPayload {
-  name?: string;
-  month?: number;
-  day?: number;
+export interface BirthdayDatePayload {
+  calendar: 'solar' | 'lunar';
+  month: number;
+  day: number;
   yearUnknown?: boolean;
   birthYear?: number | null;
+  reminderOffset?: number | null;
+}
+
+export interface BirthdayPayload {
+  name?: string;
   note?: string | null;
   avatarKey?: string | null;
   contactId?: number | null;
   userId?: number | null;
-  reminderOffset?: number | null;
+  dates?: BirthdayDatePayload[];
 }
 
 export const useCalendarStore = defineStore('calendar', () => {

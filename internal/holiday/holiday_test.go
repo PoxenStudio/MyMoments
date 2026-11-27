@@ -1,26 +1,60 @@
 package holiday
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
-func TestKnownDates(t *testing.T) {
-	cases := map[int]string{
-		2023: "2023-01-22",
-		2024: "2024-02-10",
-		2025: "2025-01-29",
-		2026: "2026-02-17",
-		2027: "2027-02-06",
-		2028: "2028-01-26",
+func TestLunarToSolarKnownDates(t *testing.T) {
+	cases := []struct {
+		year, month, day int
+		want             string
+	}{
+		{2024, 1, 1, "2024-02-10"},
+		{2025, 1, 1, "2025-01-29"},
+		{2023, 2, 1, "2023-02-20"}, // 平月：即使 2023 有闰二月也取第一个二月
 	}
-	for y, want := range cases {
-		if got := SpringFestival(y); got != want {
-			t.Errorf("SpringFestival(%d) = %s, want %s", y, got, want)
+	for _, c := range cases {
+		if got := Lunar(c.year, c.month, c.day); got != c.want {
+			t.Fatalf("Lunar(%d,%d,%d)=%s, want %s", c.year, c.month, c.day, got, c.want)
 		}
 	}
-	// 端午、中秋：2026 端午=2026-06-19, 中秋=2026-09-25
-	if got := DragonBoat(2026); got != "2026-06-19" {
-		t.Errorf("DragonBoat(2026) = %s, want 2026-06-19", got)
+}
+
+func TestLunarLeapMonth(t *testing.T) {
+	got := lunarToSolarMonth(2023, 2, 1, true).Format("2006-01-02")
+	if got != "2023-03-22" {
+		t.Fatalf("leap 2023-2-1=%s, want 2023-03-22", got)
 	}
-	if got := MidAutumn(2026); got != "2026-09-25" {
-		t.Errorf("MidAutumn(2026) = %s, want 2026-09-25", got)
+	if !lunarToSolarMonth(2023, 3, 1, true).IsZero() {
+		t.Fatal("2023 has no leap third month")
+	}
+}
+
+func TestLunarDayClamp(t *testing.T) {
+	got := lunarToSolarMonth(2024, 3, 30, false)
+	want := lunarToSolarMonth(2024, 3, 29, false)
+	if !got.Equal(want) {
+		t.Fatalf("day 30 should clamp to 29 in a 29-day month: %s vs %s", got, want)
+	}
+}
+
+func TestNextLunarOccurrence(t *testing.T) {
+	loc := time.FixedZone("CST", 8*3600)
+	from := time.Date(2024, 12, 1, 0, 0, 0, 0, loc)
+	next, lunarYear, ok := NextLunarOccurrence(1, 1, from)
+	if !ok {
+		t.Fatal("expected an occurrence")
+	}
+	if got := next.Format("2006-01-02"); got != "2025-01-29" {
+		t.Fatalf("next=%s, want 2025-01-29", got)
+	}
+	if lunarYear != 2025 {
+		t.Fatalf("lunarYear=%d, want 2025", lunarYear)
+	}
+
+	list := LunarOccurrences(1, 1, from, time.Date(2025, 12, 31, 0, 0, 0, 0, loc))
+	if len(list) != 1 || list[0].Date.Format("2006-01-02") != "2025-01-29" {
+		t.Fatalf("unexpected occurrences: %+v", list)
 	}
 }

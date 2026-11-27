@@ -10,7 +10,7 @@ import { todayISO } from '@/utils/chrono';
 import { birthdayRoute } from '@/utils/birthday';
 import {
   addDays, addMonths, dayLabel, isSameMonth, monthGrid, monthLabel, monthRange,
-  nextBirthdayDate, parseDate, startOfWeek, timeOf, weekRange, agendaRange, WEEKDAYS,
+  parseDate, startOfWeek, timeOf, weekRange, agendaRange, WEEKDAYS,
 } from '@/utils/calendar';
 import AppButton from '@/components/base/AppButton.vue';
 import AppConfirmDialog from '@/components/base/AppConfirmDialog.vue';
@@ -48,6 +48,7 @@ const anchor = ref(today);
 const selectedDate = ref(today);
 const loading = ref(false);
 const calendarTasks = ref<Task[]>([]);
+const birthdaysInRange = ref<Birthday[]>([]);
 const dayMeta = ref<Record<string, CalendarDayMeta>>({});
 const formOpen = ref(false);
 const editingEvent = ref<CalendarEvent | null>(null);
@@ -110,20 +111,17 @@ const layerCounts = computed(() => ({
 
 const birthdayEntries = computed<DayEntry[]>(() => {
   if (!layers.birthdays) return [];
-  const from = range.value.from;
-  const to = range.value.to;
-  const startYear = Number(from.slice(0, 4));
-  const endYear = Number(to.slice(0, 4));
   const out: DayEntry[] = [];
-  for (const birthday of calendar.birthdays) {
-    for (let year = startYear; year <= endYear; year += 1) {
-      const date = nextBirthdayDate(birthday.month, birthday.day, year);
-      if (date < from || date > to) continue;
+  for (const birthday of birthdaysInRange.value) {
+    for (const occurrence of birthday.occurrences ?? []) {
+      let title = `@${birthday.name} 的生日`;
+      if (occurrence.calendar === 'both') title += '（公历/农历同日）';
+      else if (occurrence.calendar === 'lunar') title += '（农历）';
       out.push({
-        key: `birthday-${birthday.id}-${date}`,
+        key: `birthday-${birthday.id}-${occurrence.date}-${occurrence.calendar}`,
         kind: 'birthday',
-        date,
-        title: `@${birthday.name} 的生日`,
+        date: occurrence.date,
+        title,
         time: '全天',
         allDay: true,
         color: 'var(--at-color-warning)',
@@ -237,7 +235,7 @@ onMounted(async () => {
   const media = window.matchMedia('(max-width: 767px)');
   if (media.matches) view.value = 'agenda';
   void family.load().catch(() => undefined);
-  await Promise.allSettled([calendar.loadBirthdays(), reload()]);
+  await Promise.allSettled([reload()]);
   await handleOpenQuery();
   if (route.query.date) {
     selectedDate.value = String(route.query.date);
@@ -254,14 +252,18 @@ async function reload(): Promise<void> {
   const r = range.value;
   loading.value = true;
   try {
-    const [, taskRes, metaRes] = await Promise.all([
+    const [, taskRes, metaRes, birthdayRes] = await Promise.all([
       calendar.loadRange(r.from, r.to),
       api.get<{ items: Task[] }>('/tasks', { scope: 'open', from: r.from, to: r.to, limit: 200 }),
       api
         .get<{ days: CalendarDayMeta[] }>('/calendar/meta', { from: r.from, to: r.to })
         .catch(() => ({ days: [] as CalendarDayMeta[] })),
+      api
+        .get<{ items: Birthday[] }>('/birthdays', { from: r.from, to: r.to })
+        .catch(() => ({ items: [] as Birthday[] })),
     ]);
     calendarTasks.value = taskRes.items;
+    birthdaysInRange.value = birthdayRes.items;
     dayMeta.value = Object.fromEntries(metaRes.days.map((item) => [item.date, item]));
   } catch (err) {
     if (!(err instanceof ApiError)) toast.error('加载日历失败');
@@ -422,6 +424,9 @@ function pillLabel(entry: DayEntry): string {
         <p class="calendar-page__sub">{{ title }}</p>
       </div>
       <div class="calendar-page__actions">
+        <AppButton variant="outline" :disabled="loading" aria-label="刷新" @click="reload">
+          <AppIcon name="refresh" :size="16" :class="{ 'is-spinning': loading }" />刷新
+        </AppButton>
         <AppButton variant="outline" @click="goToday">今天</AppButton>
         <AppButton @click="openCreate()"><AppIcon name="plus" :size="16" />新建事件</AppButton>
       </div>
@@ -663,6 +668,14 @@ function pillLabel(entry: DayEntry): string {
   display: flex;
   gap: var(--at-space-2);
   flex: none;
+}
+
+.is-spinning {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .toolbar {

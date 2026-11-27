@@ -29,7 +29,7 @@ function target(item: NotificationItem): { name: string; query: Record<string, s
     case 'event':
       return { name: 'calendar', query: { open: String(item.sourceId), date: item.occurrenceDate ?? '' } };
     case 'birthday':
-      return { name: 'family', query: { tab: 'birthdays', openBirthday: String(item.sourceId) } };
+      return { name: 'family', query: { tab: 'birthdays', open: String(item.sourceId) } };
     case 'message':
     case 'mention':
       return { name: 'messages', query: { open: String(item.sourceId) } };

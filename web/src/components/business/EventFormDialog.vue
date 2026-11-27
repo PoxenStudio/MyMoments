@@ -147,7 +147,7 @@ function resetFromEvent(event: CalendarEvent | null): void {
       next.weekdays = [...(rule.weekdays ?? [])];
       next.until = rule.until ?? '';
     }
-    next.scope = 'this';
+    next.scope = 'all';
   } else {
     next.startDate = props.defaultDate || new Date().toISOString().slice(0, 10);
     next.startTime = props.defaultHour || '09:00';

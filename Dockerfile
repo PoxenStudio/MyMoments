@@ -17,13 +17,14 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/server 
 
 FROM docker.1ms.run/alpine:3.20
 RUN addgroup -S app && adduser -S -G app app \
-    && apk add --no-cache ca-certificates tzdata wget \
+    && apk add --no-cache ca-certificates tzdata wget supervisor \
     && mkdir -p /data && chown app:app /data
 COPY --from=build /out/server /usr/local/bin/mymoments
-USER app
+COPY conf/supervisor/supervisord.conf /etc/supervisord.conf
+COPY conf/supervisor/mymoments.conf /etc/supervisor/conf.d/
 ENV MYMOMENTS_DATA_DIR=/data MYMOMENTS_ADDR=:8080
 VOLUME ["/data"]
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=15s \
-  CMD wget -qO- http://127.0.0.1:8080/readyz >/dev/null || exit 1
-ENTRYPOINT ["mymoments"]
+  CMD wget -qO- http://127.0.0.1:8080/readyz >/dev/null 2>&1 || wget --no-check-certificate -qO- https://127.0.0.1:8080/readyz >/dev/null || exit 1
+ENTRYPOINT ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]

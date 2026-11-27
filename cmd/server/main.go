@@ -66,8 +66,15 @@ func run(cfg config.Config) error {
 	}
 	errCh := make(chan error, 1)
 	go func() {
-		slog.Info("startup", "step", "listening", "addr", cfg.Addr)
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		tlsEnabled := cfg.TLSCert != ""
+		slog.Info("startup", "step", "listening", "addr", cfg.Addr, "tls", tlsEnabled)
+		var err error
+		if tlsEnabled {
+			err = srv.ListenAndServeTLS(cfg.TLSCert, cfg.TLSKey)
+		} else {
+			err = srv.ListenAndServe()
+		}
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- err
 			return
 		}

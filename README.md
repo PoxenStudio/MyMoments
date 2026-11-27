@@ -101,6 +101,54 @@ docker compose up -d
 | `MYMOMENTS_WEATHER_API_KEY` | 空 | 天气服务密钥（Open-Meteo 无需填写） |
 | `MYMOMENTS_HOUSEHOLD_QUOTA` | `1073741824` | 家庭附件总配额（字节） |
 | `MYMOMENTS_TRUST_PROXY` | `false` | 位于反向代理后时设为 `true` |
+| `MYMOMENTS_TLS_CERT` | 空 | 内置 HTTPS 的证书路径（容器内），与 `MYMOMENTS_TLS_KEY` 同时设置才生效 |
+| `MYMOMENTS_TLS_KEY` | 空 | 内置 HTTPS 的私钥路径（容器内） |
+
+### 启用 HTTPS
+
+两种方式二选一：让应用自己提供 HTTPS，或交给反向代理终止 TLS。
+
+#### 方式一：内置 HTTPS（无需反向代理）
+
+准备证书文件（Let's Encrypt 签发或自签均可），把证书目录挂进容器，并同时设置证书与私钥路径：
+
+```yaml
+services:
+  mymoments:
+    image: mymoments:latest
+    restart: unless-stopped
+    ports:
+      - "443:8080"                  # 容器内仍监听 8080，宿主机对外暴露 443
+    volumes:
+      - ./certs:/certs:ro           # certs/ 下放置 fullchain.pem 与 privkey.pem
+    environment:
+      MYMOMENTS_TLS_CERT: /certs/fullchain.pem
+      MYMOMENTS_TLS_KEY: /certs/privkey.pem
+```
+
+启动后访问 `https://<host>/`。启用后会话 Cookie 的 `Secure` 与 HSTS 响应头会自动生效，容器健康检查也会自动改用 HTTPS 探测。
+
+注意事项：
+
+- 两个变量必须同时设置，只设置其中一个会启动失败。
+- 证书文件需对容器内 `app` 用户可读；私钥常见权限是 `0600`，挂载后按需 `chmod 644` 或调整属主。
+- 自签证书需要让浏览器与客户端信任对应 CA，否则 PWA 安装、定位等依赖安全上下文的能力不可用。
+- 应用只在该端口提供 HTTPS，不做 HTTP → HTTPS 跳转；需要 80 跳 443 时仍要在前面放一层反向代理。
+
+#### 方式二：反向代理终止 TLS
+
+保持应用只监听内网 HTTP（如 `127.0.0.1:8080`），由 Caddy / Nginx / Traefik 负责证书与 443：
+
+```nginx
+location / {
+  proxy_pass http://127.0.0.1:8080;
+  proxy_set_header Host $host;
+  proxy_set_header X-Forwarded-Proto $scheme;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+```
+
+反代部署时把 `MYMOMENTS_TRUST_PROXY` 设为 `true`，以便记录真实客户端 IP。
 
 ### 方式二：从源码运行
 
@@ -138,4 +186,4 @@ make check   # gofmt、go vet、Go 测试与前端测试、lint
 3. 在「设置 → 家庭设置」选择时区与家庭默认城市，天气卡片即可自动获取。
 4. 在首页「整理首页」中调整卡片，管理员可发布为家庭默认布局。
 
-> 建议通过 HTTPS 反向代理对外提供服务，并定期备份 `mymoments-data` 卷（或你绑定的宿主机目录）中的 `db/moments.db`、`media/` 与 `logs/`。
+> 建议通过 HTTPS（内置 TLS 或反向代理）对外提供服务，并定期备份 `mymoments-data` 卷（或你绑定的宿主机目录）中的 `db/moments.db`、`media/` 与 `logs/`。

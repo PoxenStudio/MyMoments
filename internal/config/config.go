@@ -32,6 +32,8 @@ type Config struct {
 	HouseholdQuota     int64
 	TrustedProxyHeader bool
 	Dev                bool
+	TLSCert            string
+	TLSKey             string
 }
 
 // Load 读取环境变量并补齐可推导的默认值。
@@ -53,6 +55,11 @@ func Load() (Config, error) {
 		HouseholdQuota:     1 << 30,
 		TrustedProxyHeader: envBool("MYMOMENTS_TRUST_PROXY", false),
 		Dev:                envBool("MYMOMENTS_DEV", false),
+		TLSCert:            env("MYMOMENTS_TLS_CERT", ""),
+		TLSKey:             env("MYMOMENTS_TLS_KEY", ""),
+	}
+	if (c.TLSCert == "") != (c.TLSKey == "") {
+		return Config{}, errors.New("MYMOMENTS_TLS_CERT and MYMOMENTS_TLS_KEY must be set together")
 	}
 	if v := os.Getenv("MYMOMENTS_HOUSEHOLD_QUOTA"); v != "" {
 		n, err := strconv.ParseInt(v, 10, 64)

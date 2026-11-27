@@ -6,6 +6,7 @@ docs
 web/node_modules
 web/dist
 internal/webui/static
+apps
 *.db
 *.db-shm
 *.db-wal

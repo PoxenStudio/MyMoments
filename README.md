@@ -71,19 +71,6 @@
 - Token 只能访问业务数据，不能管理账号或 Token 本身，所有调用写入审计表。
 - 提供服务端内置的 `/skill.md` 与 `/openapi.yaml`，方便把家庭数据接入 ChatGPT、Claude 等 AI Agent。
 
-<table>
-  <tr>
-    <td width="33%"><img src="docs/screenshots/tasks-desktop.png" alt="待办" /></td>
-    <td width="33%"><img src="docs/screenshots/calendar-desktop.png" alt="行事历" /></td>
-    <td width="33%"><img src="docs/screenshots/home-mobile.png" alt="移动端" /></td>
-  </tr>
-  <tr>
-    <td align="center">待办</td>
-    <td align="center">行事历</td>
-    <td align="center">移动端</td>
-  </tr>
-</table>
-
 ## 安装说明
 
 ### Docker Compose（推荐）

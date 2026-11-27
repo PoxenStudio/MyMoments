@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { ApiError } from '@/api/client';
+import { ApiError, api } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { useToastStore } from '@/stores/toast';
 import { avatarUrl, uploadAvatar } from '@/utils/avatar';
@@ -32,6 +32,7 @@ const household = reactive({ name: '', timezone: 'Asia/Shanghai', weekStart: '1'
 const householdSaving = ref(false);
 const householdError = ref('');
 const weatherOpen = ref(false);
+const version = ref('');
 
 const weatherSummary = computed(() =>
   auth.household?.defaultWeatherCity ? `家庭默认城市：${auth.household.defaultWeatherCity}` : '还没有设置家庭默认天气城市',
@@ -137,7 +138,19 @@ function syncFromState(): void {
   household.defaultReminderOffset = String(auth.household?.defaultReminderOffset ?? 0);
 }
 
-onMounted(syncFromState);
+async function loadVersion(): Promise<void> {
+  try {
+    const info = await api.get<{ version: string }>('/version');
+    version.value = info.version;
+  } catch {
+    version.value = '';
+  }
+}
+
+onMounted(() => {
+  syncFromState();
+  void loadVersion();
+});
 </script>
 
 <template>
@@ -248,6 +261,8 @@ onMounted(syncFromState);
     <div class="settings__api">
       <ApiTokensPanel />
     </div>
+
+    <p v-if="version" class="settings__version">版本 {{ version }}</p>
   </div>
 </template>
 
@@ -269,6 +284,13 @@ onMounted(syncFromState);
 
 .settings__style {
   margin-top: var(--at-space-4);
+}
+
+.settings__version {
+  margin-top: var(--at-space-6);
+  text-align: center;
+  font-size: var(--at-text-caption);
+  color: var(--at-color-muted-soft);
 }
 
 .settings__avatar-btn {

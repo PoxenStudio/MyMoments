@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"mime"
 	"net/http"
+	"os"
 	"path"
 	"strings"
 	"time"
@@ -20,6 +21,11 @@ import (
 	"mymoments/internal/webui"
 )
 
+const (
+	defaultAppVersion = "v0.1.0"
+	appVersionFile    = "/version.txt"
+)
+
 // Server 持有 API 依赖并注册路由。
 type Server struct {
 	cfg      config.Config
@@ -28,6 +34,7 @@ type Server struct {
 	limiter  *loginLimiter
 	weather  *weather.Manager
 	holidays *holiday.Service
+	version  string
 }
 
 // New 构造 HTTP 服务。
@@ -45,7 +52,20 @@ func New(cfg config.Config, st *store.Store) (*Server, error) {
 		limiter:  newLoginLimiter(8, 5*time.Minute),
 		weather:  weather.NewManager(openMeteo, qweather, cfg.WeatherProvider, cfg.WeatherDir()),
 		holidays: holiday.NewService(cfg.HolidayDir(), cfg.HolidayDataURL),
+		version:  readVersion(),
 	}, nil
+}
+
+// readVersion 读取构建时写入 /version.txt 的版本号（通常是打包分支名），缺失或为空时使用默认版本。
+func readVersion() string {
+	b, err := os.ReadFile(appVersionFile)
+	if err != nil {
+		return defaultAppVersion
+	}
+	if v := strings.TrimSpace(string(b)); v != "" {
+		return v
+	}
+	return defaultAppVersion
 }
 
 // Handler 返回完整中间件链。
@@ -63,6 +83,7 @@ func (s *Server) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /openapi.yaml", s.handleOpenAPI)
 
 	api := "/api/v1"
+	mux.HandleFunc("GET "+api+"/version", s.handleVersion)
 	mux.HandleFunc("GET "+api+"/bootstrap", s.handleBootstrap)
 	mux.HandleFunc("POST "+api+"/setup", s.handleSetup)
 	mux.HandleFunc("POST "+api+"/auth/login", s.handleLogin)
@@ -186,6 +207,10 @@ func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"status": "ready"})
+}
+
+func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]string{"version": s.version})
 }
 
 func (s *Server) handleOpenAPI(w http.ResponseWriter, r *http.Request) {

@@ -16,9 +16,12 @@ COPY --from=web /app/web/dist ./internal/webui/static
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/server ./cmd/server
 
 FROM docker.1ms.run/alpine:3.20
+# 打包时传入当前分支名作为版本号，未传参时使用默认版本
+ARG GIT_BRANCH=v0.1.0
 RUN addgroup -S app && adduser -S -G app app \
     && apk add --no-cache ca-certificates tzdata wget supervisor \
-    && mkdir -p /data && chown app:app /data
+    && mkdir -p /data && chown app:app /data \
+    && echo "${GIT_BRANCH}" > /version.txt && chmod 644 /version.txt
 COPY --from=build /out/server /usr/local/bin/mymoments
 COPY --chmod=755 docker/start.sh /usr/local/bin/start.sh
 COPY conf/supervisor/supervisord.conf /etc/supervisord.conf

@@ -6,4 +6,8 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./data:/data
+      - /tmp/moments:/data
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Shanghai

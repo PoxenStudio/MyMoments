@@ -96,7 +96,7 @@ docker compose up -d --build
 
 打开 <http://localhost:8080>，按首次引导创建家庭与管理员账号即可。系统没有预置的默认账号或密码，首次访问时创建管理员所填写的密码即为登录密码。
 
-数据写入容器内的 `/data` 目录，Compose 通过命名卷 `mymoments-data` 持久化（实际存放位置由 Docker 管理），升级时重新执行 `docker compose up -d --build` 不会丢失。如需改为宿主机目录，把 `docker-compose.yml` 中的 `mymoments-data:/data` 改为 `./data:/data`，并确保该目录对容器内的 `app` 用户可写。
+数据写入容器内的 `/data` 目录，Compose 通过命名卷 `mymoments-data` 持久化（实际存放位置由 Docker 管理），升级时重新执行 `docker compose up -d --build` 不会丢失。如需改为宿主机目录，把 `docker-compose.yml` 中的 `mymoments-data:/data` 改为 `./data:/data`。容器启动时会自动创建并修正 `/data` 属主，再以 `app` 用户做写检查，权限或挂载异常会直接退出并输出原因。
 
 所有环境变量在镜像里已内置默认值，无需额外配置；需要覆盖时在 compose 的 `environment` 中追加对应变量即可（完整清单见下表与 `.env.example`）：
 
@@ -147,7 +147,7 @@ services:
 注意事项：
 
 - 两个变量必须同时设置，只设置其中一个会启动失败。
-- 证书文件需对容器内 `app` 用户可读；私钥常见权限是 `0600`，挂载后按需 `chmod 644` 或调整属主。
+- 证书文件需对容器内 `app` 用户可读；私钥常见权限是 `0600`，挂载后按需 `chmod 644` 或调整属主。启动脚本会在拉起服务前检查证书与私钥的可读性，不可读直接退出并提示。
 - 自签证书需要让浏览器与客户端信任对应 CA，否则 PWA 安装、定位等依赖安全上下文的能力不可用。
 - 应用只在该端口提供 HTTPS，不做 HTTP → HTTPS 跳转；需要 80 跳 443 时仍要在前面放一层反向代理。
 

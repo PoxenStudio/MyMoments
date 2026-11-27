@@ -20,6 +20,7 @@ RUN addgroup -S app && adduser -S -G app app \
     && apk add --no-cache ca-certificates tzdata wget supervisor \
     && mkdir -p /data && chown app:app /data
 COPY --from=build /out/server /usr/local/bin/mymoments
+COPY --chmod=755 docker/start.sh /usr/local/bin/start.sh
 COPY conf/supervisor/supervisord.conf /etc/supervisord.conf
 COPY conf/supervisor/mymoments.conf /etc/supervisor/conf.d/
 ENV MYMOMENTS_DATA_DIR=/data \
@@ -27,9 +28,12 @@ ENV MYMOMENTS_DATA_DIR=/data \
     MYMOMENTS_DEFAULT_TZ=Asia/Shanghai \
     MYMOMENTS_WEATHER_PROVIDER=open-meteo \
     MYMOMENTS_HOUSEHOLD_QUOTA=1073741824 \
-    MYMOMENTS_TRUST_PROXY=false
+    MYMOMENTS_TRUST_PROXY=false \
+    PUID=1000 \
+    PGID=1000 \
+    TZ=Asia/Shanghai
 VOLUME ["/data"]
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=15s \
-  CMD wget -qO- http://127.0.0.1:8080/readyz >/dev/null 2>&1 || wget --no-check-certificate -qO- https://127.0.0.1:8080/readyz >/dev/null || exit 1
-ENTRYPOINT ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
+  CMD if [ -n "$MYMOMENTS_TLS_CERT" ]; then wget --no-check-certificate -qO- https://127.0.0.1:8080/readyz >/dev/null || exit 1; else wget -qO- http://127.0.0.1:8080/readyz >/dev/null || exit 1; fi
+ENTRYPOINT ["/usr/local/bin/start.sh"]

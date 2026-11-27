@@ -1048,6 +1048,11 @@ onBeforeUnmount(() => {
   min-width: 0;
 }
 
+/* 照片卡按卡片可用高度撑满，图片再按高度等比缩放 */
+.dash__body:has(> .photo) {
+  height: 100%;
+}
+
 .dash__placeholder {
   display: flex;
   flex-direction: column;

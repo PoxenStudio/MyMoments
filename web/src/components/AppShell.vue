@@ -62,7 +62,7 @@ const isMobile = ref(false);
 const isWide = ref(true);
 
 const currentName = computed(() => route.name?.toString() ?? '');
-const title = computed(() => (route.meta.title ? String(route.meta.title) : '家时光'));
+const title = computed(() => (route.meta.title ? String(route.meta.title) : '朝夕'));
 const showCreateFab = computed(() => currentName.value !== 'settings');
 const initials = computed(() => auth.user?.displayName ?? '家');
 const roleLabel = computed(() => (auth.user?.role === 'admin' ? '管理员' : '家庭成员'));
@@ -239,9 +239,9 @@ async function toggleScheme(): Promise<void> {
 
     <aside id="app-sidebar" class="sidebar" aria-label="主导航">
       <div class="sidebar__head">
-        <RouterLink to="/" class="brand" aria-label="家时光首页" :title="collapsed ? '家时光' : undefined">
+        <RouterLink to="/" class="brand" aria-label="朝夕首页" :title="collapsed ? '朝夕' : undefined">
           <img src="/icons/icon-192.png" alt="" width="30" height="30" class="brand__mark" />
-          <span class="brand__name at-display">家时光</span>
+          <span class="brand__name at-display">朝夕</span>
         </RouterLink>
         <button
           type="button"

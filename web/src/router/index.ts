@@ -62,7 +62,7 @@ router.beforeEach(async (to) => {
 });
 
 router.afterEach((to) => {
-  const base = '家时光';
+  const base = '朝夕';
   document.title = to.meta.title ? `${to.meta.title} · ${base}` : base;
 });
 

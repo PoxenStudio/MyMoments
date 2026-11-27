@@ -1,6 +1,6 @@
 # 05 · PWA 实现方案
 
-家时光以**响应式 Web (PWA)** 交付（PRD §1 客户端），桌面与手机浏览器完整可用，可安装、离线壳、后续移动端复用同一 API。PWA 用 `vite-plugin-pwa` + Workbox 生成，不引入独立移动框架。
+朝夕以**响应式 Web (PWA)** 交付（PRD §1 客户端），桌面与手机浏览器完整可用，可安装、离线壳、后续移动端复用同一 API。PWA 用 `vite-plugin-pwa` + Workbox 生成，不引入独立移动框架。
 
 ## 1. Web App Manifest
 
@@ -8,8 +8,8 @@
 
 ```json
 {
-  "name": "家时光",
-  "short_name": "家时光",
+  "name": "朝夕",
+  "short_name": "朝夕",
   "description": "家庭生活记录与规划面板",
   "lang": "zh-CN",
   "dir": "ltr",
@@ -69,7 +69,7 @@ VitePWA({
 ```html
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="家时光">
+<meta name="apple-mobile-web-app-title" content="朝夕">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 ```
 

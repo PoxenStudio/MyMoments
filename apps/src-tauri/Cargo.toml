@@ -1,7 +1,7 @@
 [package]
 name = "mymoments-app"
 version = "0.1.0"
-description = "家时光原生壳"
+description = "朝夕原生壳"
 edition = "2021"
 rust-version = "1.77.2"
 

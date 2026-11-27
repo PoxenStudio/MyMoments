@@ -1,10 +1,10 @@
-# 家时光（MyMoments）AI Skill
+# 朝夕（MyMoments）AI Skill
 
-家时光是一个自托管的家庭协作应用，提供待办、行事历、生日、通讯录、留言、便签、时光轴与提醒。这个 Skill 说明如何通过 HTTP API 让 AI Agent 安全地读取或整理家庭信息。
+朝夕是一个自托管的家庭协作应用，提供待办、行事历、生日、通讯录、留言、便签、时光轴与提醒。这个 Skill 说明如何通过 HTTP API 让 AI Agent 安全地读取或整理家庭信息。
 
 ## 连接信息
 
-- Base URL：你的家时光实例地址，例如 `https://home.example.com/api/v1`
+- Base URL：你的朝夕实例地址，例如 `https://home.example.com/api/v1`
 - 认证：`Authorization: Bearer <API_TOKEN>`
 - 内容类型：`Content-Type: application/json`
 - 时间格式：日期 `YYYY-MM-DD`，日期时间 `YYYY-MM-DD HH:MM:SS`（家庭时区，默认 `Asia/Shanghai`）

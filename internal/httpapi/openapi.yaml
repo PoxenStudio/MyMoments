@@ -3,7 +3,7 @@ info:
   title: MyMoments API
   version: v1
   description: |
-    家时光（MyMoments）家庭协作 API。浏览器使用 Cookie 会话；
+    朝夕（MyMoments）家庭协作 API。浏览器使用 Cookie 会话；
     自动化客户端使用 `Authorization: Bearer <API_TOKEN>`。
     日期为 `YYYY-MM-DD`，日期时间为 `YYYY-MM-DD HH:MM:SS`，时间戳为 Unix 秒。
 servers:

@@ -117,7 +117,7 @@ fn create_window(
 ) -> tauri::Result<()> {
     let navigation_state = state.clone();
     WebviewWindowBuilder::new(app, MAIN_WINDOW, target)
-        .title("家时光")
+        .title("朝夕")
         .inner_size(1280.0, 800.0)
         .min_inner_size(480.0, 360.0)
         .on_navigation(move |url| allow_navigation(url, &navigation_state))
@@ -130,8 +130,8 @@ fn install_menu(app: &tauri::AppHandle) -> tauri::Result<()> {
     use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
 
     let change = MenuItemBuilder::with_id("change-server", "更改服务器地址…").build(app)?;
-    let quit = PredefinedMenuItem::quit(app, Some("退出家时光"))?;
-    let app_menu = SubmenuBuilder::new(app, "家时光")
+    let quit = PredefinedMenuItem::quit(app, Some("退出朝夕"))?;
+    let app_menu = SubmenuBuilder::new(app, "朝夕")
         .item(&change)
         .separator()
         .item(&quit)
@@ -218,5 +218,5 @@ pub fn run() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("error while running 家时光");
+        .expect("error while running 朝夕");
 }

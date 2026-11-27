@@ -1,4 +1,4 @@
--- 初始架构：家时光（MyMoments）完整基线。
+-- 初始架构：朝夕（MyMoments）完整基线。
 -- 项目尚未正式部署，历史增量迁移已合并为此文件。
 
 CREATE TABLE household_settings (

@@ -63,7 +63,7 @@ async function submit(): Promise<void> {
     <aside class="auth__art">
       <div class="auth__brand">
         <img src="/icons/icon-192.png" alt="" width="40" height="40" />
-        <span class="at-display">家时光</span>
+        <span class="at-display">朝夕</span>
       </div>
       <p class="auth__quote at-display">家里的事，<br />都放在这里。</p>
       <p class="auth__note">待办、日程、留言和回忆都在这里。</p>

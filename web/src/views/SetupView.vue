@@ -45,7 +45,7 @@ async function submit(): Promise<void> {
       displayName: displayName.value.trim(),
       password: password.value,
     });
-    toast.success(`家时光已就绪，${user.displayName}`);
+    toast.success(`朝夕已就绪，${user.displayName}`);
     await router.replace('/');
   } catch (err) {
     error.value = err instanceof ApiError ? err.message : '初始化失败，请稍后重试';
@@ -62,7 +62,7 @@ async function submit(): Promise<void> {
     <div class="setup__panel">
       <div class="setup__brand">
         <img src="/icons/icon-192.png" alt="" width="36" height="36" />
-        <span class="at-display">家时光</span>
+        <span class="at-display">朝夕</span>
       </div>
       <p class="at-caption-upper">首次初始化</p>
       <h1 class="setup__title at-display">为家起一个名字</h1>

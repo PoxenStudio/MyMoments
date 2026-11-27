@@ -2,7 +2,7 @@
   "name": "mymoments-apps",
   "private": true,
   "version": "0.1.0",
-  "description": "家时光 macOS / iOS / Android 原生壳",
+  "description": "朝夕 macOS / iOS / Android 原生壳",
   "scripts": {
     "tauri": "tauri"
   },

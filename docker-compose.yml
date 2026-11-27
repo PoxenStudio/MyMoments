@@ -1,16 +1,11 @@
 services:
   mymoments:
     image: poxenstudio/mymoments:latest
-    build:
-      context: .
-      args:
-        # 版本号默认 v0.1.0；构建时可用 GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD) 覆盖
-        GIT_BRANCH: ${GIT_BRANCH:-v0.1.0}
     restart: unless-stopped
     ports:
       - "8080:8080"
     volumes:
-      - ./data2:/data
+      - /tmp/moments:/data
     environment:
       - PUID=1000
       - PGID=1000

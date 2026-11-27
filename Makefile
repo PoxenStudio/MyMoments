@@ -4,6 +4,7 @@ GO ?= go
 NPM ?= npm
 
 IMAGE_NAME := poxenstudio/mymoments
+REPO := poxenstudio/mymoments:latest
 GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
 # 不在任何分支上（detached HEAD / 无 git）时回落到默认版本号
 ifeq ($(filter-out HEAD,$(GIT_BRANCH)),)
@@ -12,6 +13,7 @@ endif
 # Docker tag 不允许出现 "/"，分支名里的斜杠（如 feature/xxx）换成 "-"
 IMAGE_TAG := $(subst /,-,$(GIT_BRANCH))
 IMAGE := $(IMAGE_NAME):$(IMAGE_TAG)
+
 BUILDER := shukubuilder
 
 help: ## 列出可用目标
@@ -100,7 +102,7 @@ build-multiarch-local: ## 构建 amd64/arm64 多架构镜像到本地缓存（�
 	docker buildx build --pull --platform=linux/amd64,linux/arm64 \
 		--builder $(BUILDER) \
 		--build-arg GIT_BRANCH=$(GIT_BRANCH) \
-		-t $(IMAGE) --load .
+		-t $(IMAGE) -t $(REPO) --load .
 
 run-docker: ## 用当前镜像临时启动容器（Ctrl+C 退出后自动删除）
 	docker run --rm -it -p 8080:8080 $(IMAGE)

@@ -304,3 +304,18 @@ func addDays(date string, days int) string {
 	}
 	return t.AddDate(0, 0, days).Format("2006-01-02")
 }
+
+// 带提醒的非重复事件没有 recurrenceRule，创建时不应 panic。
+func TestCreateEventWithReminderWithoutRecurrence(t *testing.T) {
+	base, admin, _ := setupHousehold(t)
+	today := todayString()
+	status, body := call(t, admin, http.MethodPost, base+"/events", map[string]any{
+		"title":           "小学同学聚会",
+		"startLocal":      today + " 09:00",
+		"endLocal":        today + " 09:00",
+		"reminderOffsets": []int{1440},
+	})
+	if status != http.StatusCreated {
+		t.Fatalf("create event with reminder: %d %v", status, body)
+	}
+}

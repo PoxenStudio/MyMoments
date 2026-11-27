@@ -565,10 +565,13 @@ func (s *Server) syncEventReminders(r *http.Request, ev *model.CalendarEvent) er
 		startClock = "09:00:00"
 	}
 	dates := []string{anchorDate}
-	if rule, err := recur.Parse(*ev.RecurrenceRule); err == nil && rule != nil && ev.SeriesID != nil {
-		from := s.today()
-		to := time.Now().In(loc).AddDate(2, 0, 0).Format("2006-01-02")
-		dates = recur.Expand(rule, anchorDate, from, to)
+	// 非重复事件没有 recurrenceRule，必须判空，否则带提醒的单次事件会 panic。
+	if ev.RecurrenceRule != nil && ev.SeriesID != nil {
+		if rule, err := recur.Parse(*ev.RecurrenceRule); err == nil && rule != nil {
+			from := s.today()
+			to := time.Now().In(loc).AddDate(2, 0, 0).Format("2006-01-02")
+			dates = recur.Expand(rule, anchorDate, from, to)
+		}
 	}
 	recipients := make([]int64, 0, len(ev.Assignees))
 	for _, a := range ev.Assignees {

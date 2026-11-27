@@ -165,6 +165,12 @@ watch(() => props.modelValue, (open) => {
   }
 });
 
+// 新建事件时结束日期默认与开始日期同一天：开始日期变化后整段日期跟随，而不是只换月份。
+watch(() => form.startDate, (startDate) => {
+  if (isEdit.value || !startDate || !form.endDate || form.endDate === startDate) return;
+  form.endDate = startDate;
+});
+
 function toggleWeekday(day: number): void {
   form.weekdays = form.weekdays.includes(day)
     ? form.weekdays.filter((d) => d !== day)

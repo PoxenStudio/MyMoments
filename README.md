@@ -74,7 +74,19 @@
 
 ### 方式一：Docker Compose（推荐）
 
-需要 Docker 与 Docker Compose。
+需要 Docker 与 Docker Compose。仓库自带最简 `docker-compose.yml`：
+
+```yaml
+services:
+  mymoments:
+    image: poxenstudio/mymoments:latest
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+```
 
 ```bash
 git clone <repository-url> mymoments
@@ -86,11 +98,15 @@ docker compose up -d --build
 
 数据写入容器内的 `/data` 目录，Compose 通过命名卷 `mymoments-data` 持久化（实际存放位置由 Docker 管理），升级时重新执行 `docker compose up -d --build` 不会丢失。如需改为宿主机目录，把 `docker-compose.yml` 中的 `mymoments-data:/data` 改为 `./data:/data`，并确保该目录对容器内的 `app` 用户可写。
 
-如需自定义时区、会话密钥、天气 Key 或存储配额，先复制环境变量示例再修改，Compose 会自动读取：
+所有环境变量在镜像里已内置默认值，无需额外配置；需要覆盖时在 compose 的 `environment` 中追加对应变量即可（完整清单见下表与 `.env.example`）：
 
-```bash
-cp .env.example .env
-docker compose up -d
+```yaml
+services:
+  mymoments:
+    # ...
+    environment:
+      MYMOMENTS_DEFAULT_TZ: Asia/Tokyo
+      MYMOMENTS_SESSION_SECRET: 请换成足够长的随机字符串
 ```
 
 | 变量 | 默认值 | 说明 |

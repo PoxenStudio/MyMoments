@@ -1,27 +1,9 @@
 services:
   mymoments:
-    image: mymoments:latest
+    image: poxenstudio/mymoments:latest
     build: .
     restart: unless-stopped
-    environment:
-      MYMOMENTS_ADDR: ":8080"
-      MYMOMENTS_DATA_DIR: /data
-      MYMOMENTS_DEFAULT_TZ: ${MYMOMENTS_DEFAULT_TZ:-Asia/Shanghai}
-      MYMOMENTS_SESSION_SECRET: ${MYMOMENTS_SESSION_SECRET:-}
-      MYMOMENTS_WEATHER_PROVIDER: ${MYMOMENTS_WEATHER_PROVIDER:-open-meteo}
-      MYMOMENTS_WEATHER_API_KEY: ${MYMOMENTS_WEATHER_API_KEY:-}
-      MYMOMENTS_TRUST_PROXY: ${MYMOMENTS_TRUST_PROXY:-false}
-      MYMOMENTS_HOUSEHOLD_QUOTA: ${MYMOMENTS_HOUSEHOLD_QUOTA:-1073741824}
     ports:
       - "8080:8080"
     volumes:
-      - mymoments-data:/data
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/readyz >/dev/null 2>&1 || wget --no-check-certificate -qO- https://127.0.0.1:8080/readyz >/dev/null || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
-
-volumes:
-  mymoments-data:
+      - ./data:/data

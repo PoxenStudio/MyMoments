@@ -22,7 +22,12 @@ RUN addgroup -S app && adduser -S -G app app \
 COPY --from=build /out/server /usr/local/bin/mymoments
 COPY conf/supervisor/supervisord.conf /etc/supervisord.conf
 COPY conf/supervisor/mymoments.conf /etc/supervisor/conf.d/
-ENV MYMOMENTS_DATA_DIR=/data MYMOMENTS_ADDR=:8080
+ENV MYMOMENTS_DATA_DIR=/data \
+    MYMOMENTS_ADDR=:8080 \
+    MYMOMENTS_DEFAULT_TZ=Asia/Shanghai \
+    MYMOMENTS_WEATHER_PROVIDER=open-meteo \
+    MYMOMENTS_HOUSEHOLD_QUOTA=1073741824 \
+    MYMOMENTS_TRUST_PROXY=false
 VOLUME ["/data"]
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=15s \

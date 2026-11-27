@@ -64,7 +64,7 @@ func (l *loginLimiter) success(key string) {
 }
 
 func (l *loginLimiter) cleanupLocked(now int64) {
-	cutoff := now - int64(l.window.Seconds()) * 2
+	cutoff := now - int64(l.window.Seconds())*2
 	for k, w := range l.windows {
 		if w.lastSeen < cutoff {
 			delete(l.windows, k)

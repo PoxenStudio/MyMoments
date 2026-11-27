@@ -131,7 +131,7 @@ func TestNotesChecklistVisibilityAndMentions(t *testing.T) {
 		"color":      "sand",
 		"category":   "出行",
 		"memoryDate": today,
-		"mentions":    []map[string]any{{"type": "user", "id": memberID}},
+		"mentions":   []map[string]any{{"type": "user", "id": memberID}},
 		"items": []map[string]any{
 			{"text": "充电器", "checked": false},
 			{"text": "相机", "checked": true},

@@ -24,20 +24,20 @@ func (u User) Public() User {
 
 // Household 是家庭级设置。
 type Household struct {
-	ID                    int64    `json:"-"`
-	Name                  string   `json:"name"`
-	Timezone              string   `json:"timezone"`
-	WeekStart             int      `json:"weekStart"`
-	DateFormat            string   `json:"dateFormat"`
-	DefaultWeatherCity    *string  `json:"defaultWeatherCity"`
-	DefaultWeatherLat     *float64 `json:"defaultWeatherLat"`
-	DefaultWeatherLon     *float64 `json:"defaultWeatherLon"`
-	DefaultWeatherProvider *string `json:"defaultWeatherProvider"`
-	DefaultReminderOffset int      `json:"defaultReminderOffset"`
-	DefaultDashboard      *string  `json:"defaultDashboard"`
-	Style                 *string  `json:"style"`
-	CreatedAt             int64    `json:"-"`
-	UpdatedAt             int64    `json:"-"`
+	ID                     int64    `json:"-"`
+	Name                   string   `json:"name"`
+	Timezone               string   `json:"timezone"`
+	WeekStart              int      `json:"weekStart"`
+	DateFormat             string   `json:"dateFormat"`
+	DefaultWeatherCity     *string  `json:"defaultWeatherCity"`
+	DefaultWeatherLat      *float64 `json:"defaultWeatherLat"`
+	DefaultWeatherLon      *float64 `json:"defaultWeatherLon"`
+	DefaultWeatherProvider *string  `json:"defaultWeatherProvider"`
+	DefaultReminderOffset  int      `json:"defaultReminderOffset"`
+	DefaultDashboard       *string  `json:"defaultDashboard"`
+	Style                  *string  `json:"style"`
+	CreatedAt              int64    `json:"-"`
+	UpdatedAt              int64    `json:"-"`
 }
 
 // Preferences 是个人偏好。
@@ -295,21 +295,21 @@ type MentionTarget struct {
 
 // MessagePost 是留言板主贴，含回复与提及信息。
 type MessagePost struct {
-	ID             int64          `json:"id"`
-	Body           string         `json:"body"`
-	AuthorID       int64          `json:"authorId"`
-	AuthorName     string         `json:"authorName,omitempty"`
-	OccurrenceDate *string        `json:"occurrenceDate"`
-	Pinned         bool           `json:"pinned"`
-	Visibility     string         `json:"visibility"`
-	EditedAt       *int64         `json:"editedAt"`
-	ClosedAt       *int64         `json:"closedAt"`
-	CreatedAt      int64          `json:"createdAt"`
-	UpdatedAt      int64          `json:"updatedAt"`
-	AudienceIDs    []int64        `json:"audienceIds"`
+	ID             int64           `json:"id"`
+	Body           string          `json:"body"`
+	AuthorID       int64           `json:"authorId"`
+	AuthorName     string          `json:"authorName,omitempty"`
+	OccurrenceDate *string         `json:"occurrenceDate"`
+	Pinned         bool            `json:"pinned"`
+	Visibility     string          `json:"visibility"`
+	EditedAt       *int64          `json:"editedAt"`
+	ClosedAt       *int64          `json:"closedAt"`
+	CreatedAt      int64           `json:"createdAt"`
+	UpdatedAt      int64           `json:"updatedAt"`
+	AudienceIDs    []int64         `json:"audienceIds"`
 	Mentions       []MentionTarget `json:"mentions"`
-	Replies        []MessageReply `json:"replies"`
-	ReplyCount     int            `json:"replyCount"`
+	Replies        []MessageReply  `json:"replies"`
+	ReplyCount     int             `json:"replyCount"`
 }
 
 // MessageReply 是留言下的回复。

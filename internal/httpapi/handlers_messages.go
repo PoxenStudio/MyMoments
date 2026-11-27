@@ -248,5 +248,3 @@ func (s *Server) applyMessageInput(r *http.Request, m *model.MessagePost, in *me
 	}
 	return nil
 }
-
-

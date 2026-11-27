@@ -1,9 +1,9 @@
-.PHONY: help dev dev-up dev-down dev-status dev-logs api api-up api-down api-restart api-status api-logs web web-build webui-check build test fmt lint check docker docker-build setup-multiarch build-multiarch-local app app-build app-icons clean
+.PHONY: help dev dev-up dev-down dev-status dev-logs api api-up api-down api-restart api-status api-logs web web-build webui-check build test fmt lint check docker docker-build setup-multiarch build-multiarch-local run-docker app app-build app-icons clean
 
 GO ?= go
 NPM ?= npm
 
-IMAGE_NAME := mymoments
+IMAGE_NAME := poxenstudio/mymoments
 GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 # Docker tag 不允许出现 "/"，分支名里的斜杠（如 feature/xxx）换成 "-"
 IMAGE_TAG := $(subst /,-,$(GIT_BRANCH))
@@ -96,6 +96,9 @@ build-multiarch-local: ## 构建 amd64/arm64 多架构镜像到本地缓存（�
 	docker buildx build --pull --platform=linux/amd64,linux/arm64 \
 		--builder $(BUILDER) \
 		-t $(IMAGE) --load .
+
+run-docker: ## 用当前镜像临时启动容器（Ctrl+C 退出后自动删除）
+	docker run --rm -it -p 8080:8080 $(IMAGE)
 
 clean:
 	rm -rf build web/dist internal/webui/static

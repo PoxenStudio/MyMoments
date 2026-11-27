@@ -8,6 +8,7 @@ pub const MAIN_WINDOW: &str = "main";
 
 /// 本地引导页：相对路径用于窗口初始加载，绝对地址用于从服务器页返回。
 const GUIDE_PAGE: &str = "index.html";
+#[cfg(desktop)]
 const GUIDE_URL: &str = "tauri://localhost/index.html";
 
 /// 允许在 webview 内导航的来源集合：开发服务器与已配置服务器，跨回调共享。
@@ -31,6 +32,7 @@ fn allow_origin(state: &SharedOrigin, url: &Url) {
     }
 }
 
+#[cfg(desktop)]
 fn reset_origins(state: &SharedOrigin, keep: Option<&Url>) {
     if let Ok(mut list) = state.0.lock() {
         list.clear();
@@ -149,6 +151,7 @@ fn install_menu(app: &tauri::AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
+#[cfg(desktop)]
 fn handle_menu_event(app: &tauri::AppHandle, id: &str) {
     if id != "change-server" {
         return;
@@ -167,11 +170,16 @@ fn handle_menu_event(app: &tauri::AppHandle, id: &str) {
 pub fn run() {
     let state = SharedOrigin::default();
 
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(state)
-        .invoke_handler(tauri::generate_handler![save_server_url, recent_servers])
-        .on_menu_event(|app, event| handle_menu_event(app, &event.id().0))
+        .invoke_handler(tauri::generate_handler![save_server_url, recent_servers]);
+
+    // 菜单仅在桌面端存在，移动端（Android/iOS）没有 on_menu_event。
+    #[cfg(desktop)]
+    let builder = builder.on_menu_event(|app, event| handle_menu_event(app, &event.id().0));
+
+    builder
         .on_window_event(|window, event| {
             // macOS：关闭窗口即退出应用，而不是仅隐藏窗口常驻 Dock。
             #[cfg(desktop)]

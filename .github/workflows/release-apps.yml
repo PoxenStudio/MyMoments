@@ -1,6 +1,6 @@
 name: Release Apps
 
-# 构建 macOS / iOS / Android 安装包并上传到 GitHub Release。
+# 构建 Windows / macOS / iOS / Android 安装包并上传到 GitHub Release。
 # 不做代码签名：产物为未签名包，由用户自行签名安装。
 
 on:
@@ -119,6 +119,55 @@ jobs:
           fi
           asset="${PRODUCT_NAME}_${VERSION}_macos_arm64.dmg"
           cp "$dmg" "$asset"
+          gh release upload "$TAG" "$asset" --clobber
+
+  windows:
+    needs: prepare
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/src-tauri -> target
+          key: windows-x64
+
+      - name: Install dependencies
+        working-directory: apps
+        run: npm ci
+
+      - name: Refresh icons
+        working-directory: apps
+        run: npm run tauri -- icon ../docs/logo/mymoment.png
+
+      - name: Build unsigned Windows installer
+        working-directory: apps
+        run: npm run tauri -- build --target x86_64-pc-windows-msvc --bundles nsis
+
+      - name: Upload installer
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          exe=$(find apps/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis -name '*.exe' -print -quit)
+          if [ -z "$exe" ]; then
+            echo "::error::No NSIS installer produced by the bundler"
+            exit 1
+          fi
+          asset="${PRODUCT_NAME}_${VERSION}_windows_x64_setup.exe"
+          cp "$exe" "$asset"
           gh release upload "$TAG" "$asset" --clobber
 
   ios:
